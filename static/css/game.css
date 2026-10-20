@@ -1,0 +1,997 @@
+/* ==========================================================================
+   ESTILOS PRINCIPALES: LA TORRE OSCURA (16-BIT RPG PIXEL ART)
+   image-rendering: pixelated; paleta retro cuidada, efectos de luz y pergamino
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;900&family=VT323&family=Press+Start+2P&family=MedievalSharp&display=swap');
+
+:root {
+  --bg-dark: #0a080d;
+  --panel-bg: rgba(20, 16, 28, 0.95);
+  --border-gold: #c99e38;
+  --border-gold-glow: rgba(201, 158, 56, 0.4);
+  --border-dark: #120e18;
+  --text-gold: #f4d06f;
+  --text-light: #e5ded0;
+  --text-muted: #8c8299;
+  
+  --hp-red: #d9383a;
+  --hp-red-dark: #7a1517;
+  --mp-blue: #3282b8;
+  --mp-blue-dark: #133b5c;
+  --exp-gold: #e5a93b;
+  
+  --rarity-common: #9e9e9e;
+  --rarity-rare: #3498db;
+  --rarity-epic: #9b59b6;
+  --rarity-legendary: #f39c12;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Contenedor del Gabinete / Pantalla de Juego */
+#game-container {
+  position: relative;
+  width: 1024px;
+  height: 720px;
+  max-width: 100vw;
+  max-height: 100vh;
+  background: #000;
+  border: 4px solid #2a2035;
+  box-shadow: 0 0 50px rgba(185, 45, 45, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Regla global para todos los lienzos de pixel art */
+canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Canvas Principal de Renderizado */
+#gameCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #0d0b12;
+  display: block;
+}
+
+/* ==========================================================================
+   PANTALLA DE TÍTULO
+   ========================================================================== */
+#title-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/static/assets/title_screen.jpg') center center / cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+  padding: 30px 20px 40px;
+}
+
+.title-header {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.title-header h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 52px;
+  color: #ff3344;
+  text-shadow: 0 0 15px #ff1a1a, 3px 3px 0 #000;
+  letter-spacing: 4px;
+  line-height: 1.1;
+  animation: pulseTitle 3s ease-in-out infinite alternate;
+}
+
+.title-header h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--text-gold);
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 3px;
+  margin-top: 8px;
+}
+
+@keyframes pulseTitle {
+  0% { text-shadow: 0 0 12px #ff1a1a, 3px 3px 0 #000; transform: scale(1); }
+  100% { text-shadow: 0 0 24px #ff6666, 0 0 40px #ff0000, 3px 3px 0 #000; transform: scale(1.02); }
+}
+
+.title-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 340px;
+  background: rgba(12, 10, 18, 0.88);
+  border: 3px solid var(--border-gold);
+  border-radius: 6px;
+  padding: 24px 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.9), inset 0 0 15px var(--border-gold-glow);
+}
+
+.pixel-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #fff;
+  background: linear-gradient(180deg, #3d2b4e 0%, #1c1526 100%);
+  border: 2px solid #5a4270;
+  border-bottom: 4px solid #140d1c;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.pixel-btn:hover {
+  background: linear-gradient(180deg, #624480 0%, #2f2042 100%);
+  border-color: var(--border-gold);
+  color: var(--text-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(201, 158, 56, 0.3);
+}
+
+.pixel-btn:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+.pixel-btn.btn-gold {
+  background: linear-gradient(180deg, #c99e38 0%, #7d5e16 100%);
+  border-color: #ffd875;
+  border-bottom-color: #423007;
+  color: #120902;
+  font-weight: bold;
+}
+
+.pixel-btn.btn-gold:hover {
+  background: linear-gradient(180deg, #dfb44c 0%, #99751e 100%);
+  color: #000;
+}
+
+/* ==========================================================================
+   HUD DEL JUEGO (SUPERIOR E INFERIOR)
+   ========================================================================== */
+#game-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: none;
+  z-index: 35;
+}
+
+.hud-top-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 36;
+}
+
+.player-status-card {
+  pointer-events: auto;
+  background: rgba(18, 14, 25, 0.92);
+  backdrop-filter: blur(4px);
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  min-width: 260px;
+  z-index: 36;
+}
+
+.player-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-gold);
+  margin-bottom: 8px;
+}
+
+.hud-stat-bar {
+  position: relative;
+  height: 16px;
+  background: #181120;
+  border: 2px solid #362942;
+  border-radius: 2px;
+  margin-bottom: 6px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.2s ease-out;
+}
+
+.hp-fill {
+  background: linear-gradient(90deg, var(--hp-red-dark) 0%, var(--hp-red) 100%);
+}
+
+.mp-fill {
+  background: linear-gradient(90deg, var(--mp-blue-dark) 0%, var(--mp-blue) 100%);
+}
+
+.exp-fill {
+  background: linear-gradient(90deg, #8a6316 0%, var(--exp-gold) 100%);
+}
+
+.bar-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Indicador Central de Piso */
+.floor-indicator {
+  background: rgba(14, 10, 20, 0.92);
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 8px 16px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+}
+
+.floor-indicator .floor-num {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #ff3b4e;
+  text-shadow: 0 0 8px rgba(255, 59, 78, 0.6);
+}
+
+.floor-indicator .floor-name {
+  font-family: 'MedievalSharp', cursive;
+  font-size: 17px;
+  color: var(--text-gold);
+  margin-top: 2px;
+}
+
+/* Minimapa */
+.minimap-container {
+  pointer-events: auto;
+  background: rgba(10, 8, 14, 0.9);
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 4px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+}
+
+#minimapCanvas {
+  display: block;
+  image-rendering: pixelated;
+  background: #050408;
+}
+
+/* Botón Mute / Sonido en HUD */
+.hud-mute-btn {
+  pointer-events: auto;
+  background: rgba(18, 14, 25, 0.92);
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  color: var(--text-gold);
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.8);
+  transition: all 0.15s ease;
+}
+
+.hud-mute-btn:hover {
+  background: #2a1b38;
+  border-color: #ffd700;
+  transform: translateY(-1px);
+}
+
+.hud-mute-btn.muted {
+  border-color: #e74c3c;
+  color: #ff6b6b;
+  background: rgba(45, 15, 20, 0.92);
+}
+
+/* Barra Inferior (Hotbar y Controles) */
+.hud-bottom-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.quick-action-slot {
+  width: 48px;
+  height: 48px;
+  background: var(--panel-bg);
+  border: 2px solid #5a4570;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.quick-action-slot:hover {
+  border-color: var(--border-gold);
+  transform: scale(1.05);
+}
+
+.slot-key {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--text-gold);
+}
+
+.slot-count {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Barra de Botones del Jugador */
+.hud-buttons-menu {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.hud-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  background: var(--panel-bg);
+  border: 2px solid var(--border-gold);
+  color: var(--text-gold);
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.hud-btn:hover {
+  background: #39284d;
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* Indicador de Jefe Activo */
+.boss-health-card {
+  position: absolute;
+  top: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 500px;
+  background: rgba(14, 8, 16, 0.95);
+  border: 3px solid #ff2a3b;
+  border-radius: 6px;
+  padding: 10px 18px;
+  box-shadow: 0 0 25px rgba(255, 42, 59, 0.5);
+  display: none;
+  z-index: 25;
+}
+
+.boss-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #ff5e6c;
+  margin-bottom: 6px;
+}
+
+.boss-hp-bar {
+  height: 18px;
+  background: #200a0d;
+  border: 2px solid #5a141a;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.boss-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #99101b 0%, #ff2a3b 100%);
+  transition: width 0.2s ease-out;
+}
+
+/* ==========================================================================
+   MODALES (Inventario, Atributos, Lore, Salón de la Fama)
+   ========================================================================== */
+.game-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(4, 3, 6, 0.85);
+  backdrop-filter: blur(4px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 60;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-window {
+  background: #140f1c;
+  border: 3px solid var(--border-gold);
+  border-radius: 6px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(201, 158, 56, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-header {
+  background: linear-gradient(180deg, #2b1d3a 0%, #170f22 100%);
+  border-bottom: 2px solid var(--border-gold);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  color: var(--text-gold);
+  letter-spacing: 2px;
+}
+
+.close-modal-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #ff5566;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.close-modal-btn:hover {
+  color: #fff;
+  text-shadow: 0 0 8px #ff2233;
+}
+
+/* MODAL DE SELECCIÓN DE CLASE */
+#class-select-modal .modal-window {
+  width: 860px;
+  max-width: 95%;
+}
+
+.class-cards-container {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  justify-content: center;
+}
+
+.class-card {
+  flex: 1;
+  background: #1c1426;
+  border: 2px solid #4a3660;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.class-card:hover, .class-card.selected {
+  border-color: var(--border-gold);
+  background: #2a1b3d;
+  box-shadow: 0 0 20px rgba(201, 158, 56, 0.4);
+  transform: translateY(-4px);
+}
+
+.class-preview-img {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  margin-bottom: 12px;
+}
+
+.class-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: var(--text-gold);
+  margin-bottom: 8px;
+}
+
+.class-desc {
+  font-size: 16px;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.class-stats-list {
+  width: 100%;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-val {
+  color: #fff;
+}
+
+/* MODAL DE INVENTARIO (30 ESPACIOS + VISUALIZACIÓN) */
+#inventory-modal .modal-window {
+  width: 780px;
+  display: flex;
+  flex-direction: column;
+}
+
+.inventory-layout {
+  display: flex;
+  padding: 18px;
+  gap: 20px;
+}
+
+.character-equipment-panel {
+  width: 240px;
+  background: #100b17;
+  border: 2px solid #3d2c50;
+  border-radius: 4px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.equip-doll-canvas {
+  width: 96px;
+  height: 96px;
+  image-rendering: pixelated;
+  margin-bottom: 14px;
+  background: rgba(0,0,0,0.4);
+  border: 2px dashed #423057;
+  border-radius: 4px;
+}
+
+.equip-slots-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.equip-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #191224;
+  border: 1px solid #48345e;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.equip-slot-icon {
+  width: 32px;
+  height: 32px;
+  background: #0a0710;
+  border: 1px solid var(--border-gold);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.inventory-grid-panel {
+  flex: 1;
+}
+
+.inventory-grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-gold);
+  line-height: 1.4;
+}
+
+.inventory-section-title {
+  display: inline-block;
+  line-height: 1.5;
+  margin-bottom: 15px;
+  padding-top: 5px;
+  letter-spacing: 0.5px;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-gap: 8px;
+  background: #0d0914;
+  border: 2px solid #332344;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.item-slot {
+  width: 48px;
+  height: 48px;
+  background: #181222;
+  border: 2px solid #3b284e;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.1s ease;
+}
+
+.item-slot:hover {
+  border-color: var(--border-gold);
+  background: #251b36;
+}
+
+.item-slot.rarity-common { border-color: var(--rarity-common); }
+.item-slot.rarity-rare { border-color: var(--rarity-rare); }
+.item-slot.rarity-epic { border-color: var(--rarity-epic); }
+.item-slot.rarity-legendary { border-color: var(--rarity-legendary); box-shadow: 0 0 8px rgba(243, 156, 18, 0.4); }
+
+.item-qty {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Tooltip de Ítems */
+.item-tooltip,
+#item-tooltip {
+  position: absolute;
+  z-index: 9999;
+  width: 250px;
+  background: rgba(14, 10, 20, 0.98);
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  padding: 10px;
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.95);
+  box-sizing: border-box;
+}
+
+/* Menú Contextual de Clic Derecho en Inventario */
+.item-context-menu {
+  position: absolute;
+  z-index: 10000;
+  background: #150f1f;
+  border: 2px solid var(--border-gold);
+  border-radius: 4px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.9);
+  display: none;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  overflow: hidden;
+}
+
+.item-context-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.1s ease;
+  border-radius: 2px;
+}
+
+.item-context-btn:hover {
+  background: #2f1d44;
+  color: var(--text-gold);
+}
+
+.item-context-btn.danger:hover {
+  background: #50141b;
+  color: #ff6b6b;
+}
+
+.tooltip-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+
+.tooltip-type {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.tooltip-stats {
+  font-size: 17px;
+  color: #55efc4;
+  margin-bottom: 8px;
+}
+
+.tooltip-lore {
+  font-size: 15px;
+  color: var(--text-light);
+  font-style: italic;
+  border-top: 1px dashed #3a2a4c;
+  padding-top: 6px;
+}
+
+/* ==========================================================================
+   MODAL DE LORE EN PERGAMINO ANTIGUO (Pausa la acción)
+   ========================================================================== */
+#lore-modal .modal-window {
+  width: 600px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.parchment-scroll-container {
+  width: 100%;
+  min-height: 520px;
+  background: url('/static/assets/scroll_parchment.jpg') center center / cover no-repeat;
+  border-radius: 8px;
+  padding: 50px 65px;
+  color: #2b1f14;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.95);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.parchment-scroll-container h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 24px;
+  color: #5c1813;
+  text-align: center;
+  border-bottom: 2px solid #8c6843;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.parchment-author {
+  font-family: 'MedievalSharp', cursive;
+  font-size: 17px;
+  color: #664f33;
+  text-align: right;
+  margin-bottom: 16px;
+}
+
+.parchment-text {
+  font-family: 'MedievalSharp', cursive;
+  font-size: 21px;
+  line-height: 1.35;
+  color: #2e1d0f;
+  margin-bottom: 20px;
+  text-align: justify;
+}
+
+.parchment-tip-box {
+  background: rgba(140, 95, 55, 0.2);
+  border: 1px dashed #7a542e;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-family: 'MedievalSharp', cursive;
+  font-size: 19px;
+  color: #8a1d1d;
+  font-weight: bold;
+}
+
+.parchment-close-hint {
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #593c20;
+  margin-top: 14px;
+  animation: blinkHint 1.2s infinite;
+}
+
+@keyframes blinkHint {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ==========================================================================
+   MODAL DE SALÓN DE LA FAMA
+   ========================================================================== */
+#hall-of-fame-modal .modal-window {
+  width: 700px;
+  padding: 20px;
+}
+
+.hof-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+}
+
+.hof-table th {
+  background: #2b1f38;
+  color: var(--text-gold);
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-gold);
+}
+
+.hof-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #332344;
+  color: #fff;
+}
+
+.hof-table tr:hover td {
+  background: #251934;
+}
+
+.outcome-badge {
+  padding: 3px 6px;
+  border-radius: 2px;
+  font-size: 8px;
+}
+.outcome-victory { background: #27ae60; color: #fff; }
+.outcome-defeat { background: #c0392b; color: #fff; }
+
+/* ==========================================================================
+   PANTALLAS FINALES (Game Over & Victoria)
+   ========================================================================== */
+#victory-screen, #game-over-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 50px;
+  z-index: 70;
+}
+
+#victory-screen {
+  background: url('/static/assets/victory_screen.jpg') center center / cover no-repeat;
+}
+
+#game-over-screen {
+  background: url('/static/assets/game_over_screen.jpg') center center / cover no-repeat;
+}
+
+.ending-card-box {
+  background: rgba(12, 10, 18, 0.92);
+  border: 3px solid var(--border-gold);
+  border-radius: 6px;
+  padding: 24px 30px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(0,0,0,0.9);
+  max-width: 550px;
+}
+
+.ending-title {
+  font-family: 'Cinzel', serif;
+  font-size: 34px;
+  margin-bottom: 12px;
+}
+
+.victory-text { color: #f1c40f; text-shadow: 0 0 15px rgba(241, 196, 15, 0.6); }
+.defeat-text { color: #e74c3c; text-shadow: 0 0 15px rgba(231, 76, 60, 0.6); }
+
+.ending-stats-summary {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--text-light);
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+/* Efecto de Viñeta y Filtro CRT Sutil */
+.crt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 65%, rgba(0, 0, 0, 0.6) 100%);
+  z-index: 90;
+}
