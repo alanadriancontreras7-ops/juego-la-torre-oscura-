@@ -1,3 +1,5 @@
+
+
 /**
  * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES)
  * Controla el HUD, el inventario de 30 casillas, visualización del personaje,
