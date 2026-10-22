@@ -12,23 +12,23 @@ class SpriteManager {
 
         // Rutas de todas las hojas de sprites
         this.assetUrls = {
-            warrior: '/static/assets/sprites/player_warrior.png',
-            archer: '/static/assets/sprites/player_archer.png',
-            mage: '/static/assets/sprites/player_mage.png',
-            bandit: '/static/assets/sprites/enemy_bandit.png',
-            skeleton: '/static/assets/sprites/enemy_skeleton.png',
-            spider: '/static/assets/sprites/enemy_spider.png',
-            rat: '/static/assets/sprites/enemy_rat.png',
-            werewolf: '/static/assets/sprites/enemy_werewolf.png',
-            demon: '/static/assets/sprites/enemy_demon.png',
-            abracadabra: '/static/assets/sprites/boss_abracadabra.png',
-            hong: '/static/assets/sprites/boss_hong.png',
-            tiles_crypt: '/static/assets/sprites/tileset_crypt.png',
-            tiles_demon: '/static/assets/sprites/tileset_demon.png',
-            tiles_acid: '/static/assets/sprites/tileset_acid.png',
-            tiles_apex: '/static/assets/sprites/tileset_apex.png',
-            props: '/static/assets/sprites/props.png',
-            icons: '/static/assets/sprites/icons.png'
+            warrior: '/static/assets/sprites/player_warrior.png?v=2',
+            archer: '/static/assets/sprites/player_archer.png?v=2',
+            mage: '/static/assets/sprites/player_mage.png?v=2',
+            bandit: '/static/assets/sprites/enemy_bandit.png?v=2',
+            skeleton: '/static/assets/sprites/enemy_skeleton.png?v=2',
+            spider: '/static/assets/sprites/enemy_spider.png?v=2',
+            rat: '/static/assets/sprites/enemy_rat.png?v=2',
+            werewolf: '/static/assets/sprites/enemy_werewolf.png?v=2',
+            demon: '/static/assets/sprites/enemy_demon.png?v=2',
+            abracadabra: '/static/assets/sprites/boss_abracadabra.png?v=2',
+            hong: '/static/assets/sprites/boss_hong.png?v=2',
+            tiles_crypt: '/static/assets/sprites/tileset_crypt.png?v=3',
+            tiles_demon: '/static/assets/sprites/tileset_demon.png?v=3',
+            tiles_acid: '/static/assets/sprites/tileset_acid.png?v=3',
+            tiles_apex: '/static/assets/sprites/tileset_apex.png?v=3',
+            props: '/static/assets/sprites/props.png?v=2',
+            icons: '/static/assets/sprites/icons.png?v=2'
         };
     }
 
@@ -42,7 +42,8 @@ class SpriteManager {
             img.onload = () => {
                 // Procesar la imagen en un canvas auxiliar para asegurar canal alfa transparente estricto
                 // Si la imagen trae un fondo gris o no-alfa, lo eliminamos con un filtro de transparencia
-                this.sheets[key] = this.processAlphaChannel(img);
+                // Los tilesets son opacos a propósito: el chroma-key borraría píxeles de suelo/pared
+                this.sheets[key] = key.startsWith('tiles_') ? img : this.processAlphaChannel(img);
                 this.loadCount++;
                 if (this.loadCount >= this.totalAssets) {
                     this.loaded = true;

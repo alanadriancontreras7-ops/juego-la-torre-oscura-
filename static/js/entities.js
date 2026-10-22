@@ -340,19 +340,22 @@ class Player {
                 this.direction = dy > 0 ? 0 : 3; // 0: Abajo, 3: Arriba
             }
 
-            // Aplicar velocidad con colisión con el mapa
+            // Aplicar velocidad con colisión con el mapa y deslizamiento suave en paredes (Wall-Slide Resolver)
             const moveSpeed = this.speed;
-            const newX = this.x + dx * moveSpeed + this.knockbackX;
-            const newY = this.y + dy * moveSpeed + this.knockbackY;
 
-            if (!world.isSolid(newX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
-                this.x = newX;
-            }
-            if (!world.isSolid(this.x - this.width / 2, newY - this.height / 2, this.width, this.height)) {
-                this.y = newY;
+            // 1. Evaluar movimiento en el eje X primero
+            let nextX = this.x + dx * moveSpeed + this.knockbackX;
+            if (!world.isSolid(nextX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
+                this.x = nextX;
             }
 
-            // Ciclo de animación de caminata (4 frames)
+            // 2. Evaluar movimiento en el eje Y de forma 100% independiente
+            let nextY = this.y + dy * moveSpeed + this.knockbackY;
+            if (!world.isSolid(this.x - this.width / 2, nextY - this.height / 2, this.width, this.height)) {
+                this.y = nextY;
+            }
+
+            // Ciclo de animación de caminata (4 frames): Se mantiene activo siempre que se presionen teclas de dirección
             this.animTimer++;
             if (this.animTimer >= 7) {
                 this.animFrame = (this.animFrame + 1) % 4;
@@ -361,13 +364,15 @@ class Player {
         } else {
             this.animFrame = 0;
             this.animTimer = 0;
-            // Mantener física de knockback incluso quieto
+            // Mantener física de knockback incluso quieto con AABB centrada
             if (Math.abs(this.knockbackX) > 0.1 || Math.abs(this.knockbackY) > 0.1) {
-                if (!world.isSolid(this.x + this.knockbackX, this.y, this.width, this.height)) {
-                    this.x += this.knockbackX;
+                let nextKbX = this.x + this.knockbackX;
+                if (!world.isSolid(nextKbX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
+                    this.x = nextKbX;
                 }
-                if (!world.isSolid(this.x, this.y + this.knockbackY, this.width, this.height)) {
-                    this.y += this.knockbackY;
+                let nextKbY = this.y + this.knockbackY;
+                if (!world.isSolid(this.x - this.width / 2, nextKbY - this.height / 2, this.width, this.height)) {
+                    this.y = nextKbY;
                 }
             }
         }
@@ -659,6 +664,7 @@ class Enemy {
                 const nx = this.x + Math.cos(angle) * this.speed + this.knockbackX;
                 const ny = this.y + Math.sin(angle) * this.speed + this.knockbackY;
 
+                // Deslizamiento independiente en X e Y con caja delimitadora completa centrada
                 if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                     this.x = nx;
                 }
@@ -840,7 +846,7 @@ class BossAbracadabra {
             // Rastro de polvo y lodo
             particles.push(new Particle(this.x, this.y + 16, -this.chargeVx * 0.2, -0.5, '#6b5438', 5, 20));
 
-            if (world.isSolid(nx, ny, this.width, this.height) || this.stateTimer > 35) {
+            if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 35) {
                 // Impacto o fin de embestida -> Agotado
                 this.state = 'exhausted';
                 this.stateTimer = 0;

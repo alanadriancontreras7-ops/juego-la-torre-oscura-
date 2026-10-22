@@ -3,6 +3,14 @@
  * Genera mazmorras, salas de jefe, coloca antorchas, cofres, barriles y pergaminos de lore.
  */
 
+// Colores de borde (rim) y de sombra de contacto por bioma
+const BIOME_STYLE = {
+    crypt: { rim: 'rgba(150,135,175,0.55)', shade: '6,4,10' },
+    demon: { rim: 'rgba(200,95,105,0.50)', shade: '14,2,4' },
+    acid: { rim: 'rgba(140,190,120,0.50)', shade: '2,8,2' },
+    apex: { rim: 'rgba(140,135,205,0.50)', shade: '4,3,12' }
+};
+
 class World {
     constructor(floor = 1) {
         this.floor = floor;
@@ -28,6 +36,10 @@ class World {
 
         this.flameTimer = 0;
         this.flameFrame = 0;
+
+        // Mapa pre-renderizado (se hornea una sola vez por piso)
+        this.baked = null;
+        this.bakedSheet = null;
 
         this.generateFloor();
     }
@@ -61,22 +73,31 @@ class World {
             this.generateDungeonRooms();
         }
 
-        // Variaciones decorativas de suelo y muro
+        // Variaciones decorativas
+        // floorVariations: 0-3 = losas base, 4 = grieta, 5 = acento A, 6 = acento B, 7 = escombros
+        // wallVariations:  1 = ladrillo A, 2 = ladrillo B, 3 = ladrillo con acento
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 if (this.grid[r][c] === 0) {
-                    // 15% de probabilidad de tener charco o huesos
-                    this.floorVariations[r][c] = (Math.random() < 0.16) ? 2 : 0;
+                    const roll = Math.random();
+                    let v;
+                    if (roll < 0.025) v = 4;
+                    else if (roll < 0.040) v = 5;
+                    else if (roll < 0.055) v = 6;
+                    else if (roll < 0.075) v = 7;
+                    else v = Math.floor(Math.random() * 4);
+                    this.floorVariations[r][c] = v;
                 } else if (this.grid[r][c] === 1) {
-                    // Muros con rejilla de alcantarilla si tienen suelo transitable debajo
-                    if (r < this.rows - 1 && this.grid[r + 1][c] === 0 && Math.random() < 0.12) {
+                    const roll = Math.random();
+                    if (r < this.rows - 1 && this.grid[r + 1][c] === 0 && roll < 0.10) {
                         this.wallVariations[r][c] = 3;
                     } else {
-                        this.wallVariations[r][c] = 1;
+                        this.wallVariations[r][c] = (roll < 0.55) ? 2 : 1;
                     }
                 }
             }
         }
+        this.baked = null;
 
         // Colocar antorchas decorativas en los muros interiores
         this.placeTorches();
@@ -362,10 +383,12 @@ class World {
     }
 
     isSolid(x, y, w, h) {
-        const left = Math.floor(x / this.tileSize);
-        const right = Math.floor((x + w) / this.tileSize);
-        const top = Math.floor(y / this.tileSize);
-        const bottom = Math.floor((y + h) / this.tileSize);
+        // Margen de tolerancia de 1px hacia adentro para evitar atascos por redondeo de flotantes en esquinas
+        const margin = 1;
+        const left = Math.floor((x + margin) / this.tileSize);
+        const right = Math.floor((x + w - margin) / this.tileSize);
+        const top = Math.floor((y + margin) / this.tileSize);
+        const bottom = Math.floor((y + h - margin) / this.tileSize);
 
         for (let r = top; r <= bottom; r++) {
             for (let c = left; c <= right; c++) {
@@ -377,7 +400,7 @@ class World {
         // Colisión con barriles y cajas no rotos
         for (const b of this.barrels) {
             if (!b.broken) {
-                if (x < b.x + 24 && x + w > b.x + 4 && y < b.y + 24 && y + h > b.y + 4) {
+                if (x + margin < b.x + 24 && x + w - margin > b.x + 4 && y + margin < b.y + 24 && y + h - margin > b.y + 4) {
                     return true;
                 }
             }
@@ -385,7 +408,7 @@ class World {
 
         for (const c of this.crates) {
             if (!c.broken) {
-                if (x < c.x + 24 && x + w > c.x + 4 && y < c.y + 24 && y + h > c.y + 4) {
+                if (x + margin < c.x + 24 && x + w - margin > c.x + 4 && y + margin < c.y + 24 && y + h - margin > c.y + 4) {
                     return true;
                 }
             }
@@ -419,42 +442,136 @@ class World {
         }
     }
 
+    // ------------------------------------------------------------------
+    // RENDER DE TERRENO (pared con volumen, sombras de contacto, mapa horneado)
+    // ------------------------------------------------------------------
+    _isWall(r, c) {
+        if (r < 0 || r >= this.rows || c < 0 || c >= this.cols) return true;
+        return this.grid[r][c] === 1;
+    }
+
+    _isFloor(r, c) {
+        if (r < 0 || r >= this.rows || c < 0 || c >= this.cols) return false;
+        return this.grid[r][c] === 0;
+    }
+
+    _hash(r, c) {
+        let h = Math.imul(r, 73856093) ^ Math.imul(c, 19349663);
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    }
+
+    // Sombras de contacto en bandas (estilo pixel art, sin degradados suaves)
+    _makeShadows(shade) {
+        const mk = (fn) => {
+            const cv = document.createElement('canvas');
+            cv.width = 32; cv.height = 32;
+            fn(cv.getContext('2d'));
+            return cv;
+        };
+        const col = (a) => `rgba(${shade},${a})`;
+        return {
+            n: mk(g => { [0.42, 0.27, 0.13].forEach((a, i) => { g.fillStyle = col(a); g.fillRect(0, i * 4, 32, 4); }); }),
+            w: mk(g => { [0.32, 0.18, 0.08].forEach((a, i) => { g.fillStyle = col(a); g.fillRect(i * 3, 0, 3, 32); }); }),
+            e: mk(g => { [0.32, 0.18, 0.08].forEach((a, i) => { g.fillStyle = col(a); g.fillRect(29 - i * 3, 0, 3, 32); }); }),
+            s: mk(g => { [0.20, 0.10].forEach((a, i) => { g.fillStyle = col(a); g.fillRect(0, 30 - i * 3, 32, 3); }); })
+        };
+    }
+
+    /**
+     * Pre-renderiza todo el terreno en un canvas auxiliar (una sola vez por piso).
+     * Layout del tileset (4x4 tiles de 32px):
+     *   fila 0: suelo A-D | fila 1: grieta, acento A, acento B, escombros
+     *   fila 2: muro frontal A, B, con acento, cima plana | fila 3: vacío, cima plana B
+     */
+    bakeMap(sheet, biome) {
+        const T = this.tileSize;
+        const cv = document.createElement('canvas');
+        cv.width = this.cols * T;
+        cv.height = this.rows * T;
+        const g = cv.getContext('2d');
+        g.imageSmoothingEnabled = false;
+
+        const style = BIOME_STYLE[biome] || BIOME_STYLE.crypt;
+        const sh = this._makeShadows(style.shade);
+        const tile = (col, row, dx, dy) => g.drawImage(sheet, col * 32, row * 32, 32, 32, dx, dy, 32, 32);
+
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const dx = c * T;
+                const dy = r * T;
+
+                if (this.grid[r][c] === 0) {
+                    // SUELO + sombras de contacto contra los muros vecinos
+                    const v = this.floorVariations[r][c];
+                    if (v < 4) tile(v, 0, dx, dy); else tile(v - 4, 1, dx, dy);
+                    if (this._isWall(r - 1, c)) g.drawImage(sh.n, dx, dy);
+                    if (this._isWall(r, c - 1)) g.drawImage(sh.w, dx, dy);
+                    if (this._isWall(r, c + 1)) g.drawImage(sh.e, dx, dy);
+                    if (this._isWall(r + 1, c)) g.drawImage(sh.s, dx, dy);
+                    continue;
+                }
+
+                if (this._isFloor(r + 1, c)) {
+                    // CARA FRONTAL: el muro que mira al jugador (con ladrillos)
+                    const wv = this.wallVariations[r][c];
+                    tile(wv === 3 ? 2 : (wv === 2 ? 1 : 0), 2, dx, dy);
+                    if (this._isFloor(r, c - 1)) g.drawImage(sh.w, dx, dy);
+                    if (this._isFloor(r, c + 1)) g.drawImage(sh.e, dx, dy);
+                    continue;
+                }
+
+                // CIMA o ROCA PROFUNDA
+                let nearFloor = false;
+                for (let dr = -1; dr <= 1 && !nearFloor; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (this._isFloor(r + dr, c + dc)) { nearFloor = true; break; }
+                    }
+                }
+                if (!nearFloor) {
+                    tile(0, 3, dx, dy);               // vacío liso (sin ruido)
+                } else {
+                    if (this._hash(r, c) < 0.5) tile(3, 2, dx, dy); else tile(1, 3, dx, dy);
+                    // Borde claro hacia el suelo para definir la silueta de la sala
+                    g.fillStyle = style.rim;
+                    if (this._isFloor(r - 1, c)) g.fillRect(dx, dy, 32, 2);
+                    if (this._isFloor(r, c - 1)) g.fillRect(dx, dy, 2, 32);
+                    if (this._isFloor(r, c + 1)) g.fillRect(dx + 30, dy, 2, 32);
+                }
+            }
+        }
+        return cv;
+    }
+
+    drawTerrain(ctx, viewport, sheet, biome) {
+        if (!sheet) {
+            // Respaldo si el tileset no cargó
+            for (let r = 0; r < this.rows; r++) {
+                for (let c = 0; c < this.cols; c++) {
+                    ctx.fillStyle = (this.grid[r][c] === 1) ? '#282430' : '#453f50';
+                    ctx.fillRect(c * this.tileSize, r * this.tileSize, 32, 32);
+                }
+            }
+            return;
+        }
+        if (!this.baked || this.bakedSheet !== sheet) {
+            this.baked = this.bakeMap(sheet, biome);
+            this.bakedSheet = sheet;
+        }
+        const sx = Math.max(0, Math.floor(viewport.x));
+        const sy = Math.max(0, Math.floor(viewport.y));
+        const sw = Math.min(this.baked.width - sx, Math.ceil(viewport.width) + 1);
+        const sh = Math.min(this.baked.height - sy, Math.ceil(viewport.height) + 1);
+        if (sw > 0 && sh > 0) ctx.drawImage(this.baked, sx, sy, sw, sh, sx, sy, sw, sh);
+    }
+
     draw(ctx, viewport) {
         const biome = this.getBiome();
         const tileSheetKey = `tiles_${biome}`;
         const sheet = window.spriteManager.sheets[tileSheetKey];
 
-        // Rango visible en pantalla
-        const startCol = Math.max(0, Math.floor(viewport.x / this.tileSize));
-        const endCol = Math.min(this.cols - 1, Math.ceil((viewport.x + viewport.width) / this.tileSize));
-        const startRow = Math.max(0, Math.floor(viewport.y / this.tileSize));
-        const endRow = Math.min(this.rows - 1, Math.ceil((viewport.y + viewport.height) / this.tileSize));
-
-        // 1. Dibujar Suelo y Muros con perspectiva 2.5D y variaciones
-        for (let r = startRow; r <= endRow; r++) {
-            for (let c = startCol; c <= endCol; c++) {
-                const tileType = this.grid[r][c];
-                const dx = c * this.tileSize;
-                const dy = r * this.tileSize;
-
-                if (sheet) {
-                    if (tileType === 1) {
-                        // Pared 2.5D: Muro estándar (col 1: sx=32) o muro con rejilla/alcantarilla (col 3: sx=96)
-                        const wallVar = (this.wallVariations && this.wallVariations[r]) ? this.wallVariations[r][c] : 1;
-                        const sx = (wallVar === 3) ? 96 : 32;
-                        ctx.drawImage(sheet, sx, 0, 32, 32, dx, dy, 32, 32);
-                    } else {
-                        // Suelo: Baldosa agrietada estándar (col 0: sx=0) o suelo con charco/huesos (col 2: sx=64)
-                        const floorVar = (this.floorVariations && this.floorVariations[r]) ? this.floorVariations[r][c] : 0;
-                        const sx = (floorVar === 2) ? 64 : 0;
-                        ctx.drawImage(sheet, sx, 0, 32, 32, dx, dy, 32, 32);
-                    }
-                } else {
-                    ctx.fillStyle = (tileType === 1) ? '#282430' : '#453f50';
-                    ctx.fillRect(dx, dy, 32, 32);
-                }
-            }
-        }
+        // 1. Terreno (suelo, muros con volumen y sombras) desde el mapa horneado
+        this.drawTerrain(ctx, viewport, sheet, biome);
 
         // 2. Charcos de ácido
         this.acidPools.forEach(pool => {
@@ -470,10 +587,10 @@ class World {
         const propsSheet = window.spriteManager.sheets.props;
         if (!propsSheet) return;
 
-        // 3. Puertas de madera con arco de sillería de piedra (col 8, sx=256)
-        this.doors.forEach(d => {
-            ctx.drawImage(propsSheet, 256, 0, 32, 32, d.x, d.y, 32, 32);
-        });
+        // 3. Puertas: desactivadas (no se dibujan). Para volver a mostrarlas, descomenta:
+        // this.doors.forEach(d => {
+        //     ctx.drawImage(propsSheet, 256, 0, 32, 32, d.x, d.y, 32, 32);
+        // });
 
         // 4. Esqueletos caídos en el suelo (col 7, sx=224)
         this.skeletons.forEach(s => {
@@ -507,16 +624,22 @@ class World {
         // 9. Antorchas con animación de llama y halo de luz cálida (col 0, sx=0)
         this.torches.forEach(t => {
             const flickerOffset = (this.flameFrame % 2 === 0) ? 0 : (this.flameFrame === 1 ? -1 : 1);
-            
-            // Halo de iluminación ambiental cálida
-            const radGrad = ctx.createRadialGradient(t.x + 16, t.y + 10, 4, t.x + 16, t.y + 10, 42);
-            radGrad.addColorStop(0, 'rgba(255, 185, 60, 0.28)');
-            radGrad.addColorStop(0.5, 'rgba(255, 100, 20, 0.12)');
-            radGrad.addColorStop(1, 'transparent');
+
+            // Halo de luz cálida (mezcla aditiva + parpadeo leve), cae sobre el suelo
+            const flick = 0.9 + 0.1 * Math.sin(this.flameTimer * 0.18 + t.x * 0.37);
+            const lx = t.x + 16;
+            const ly = t.y + 22;
+            const radGrad = ctx.createRadialGradient(lx, ly, 4, lx, ly, 66);
+            radGrad.addColorStop(0, `rgba(255, 175, 70, ${0.30 * flick})`);
+            radGrad.addColorStop(0.5, `rgba(255, 105, 30, ${0.12 * flick})`);
+            radGrad.addColorStop(1, 'rgba(255, 80, 20, 0)');
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
             ctx.fillStyle = radGrad;
             ctx.beginPath();
-            ctx.arc(t.x + 16, t.y + 10, 42, 0, Math.PI * 2);
+            ctx.arc(lx, ly, 66, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
 
             // Dibujar antorcha
             ctx.drawImage(propsSheet, 0, 0, 32, 32, t.x, t.y + flickerOffset, 32, 32);

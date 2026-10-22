@@ -14,13 +14,13 @@
   --text-gold: #f4d06f;
   --text-light: #e5ded0;
   --text-muted: #8c8299;
-  
+
   --hp-red: #d9383a;
   --hp-red-dark: #7a1517;
   --mp-blue: #3282b8;
   --mp-blue-dark: #133b5c;
   --exp-gold: #e5a93b;
-  
+
   --rarity-common: #9e9e9e;
   --rarity-rare: #3498db;
   --rarity-epic: #9b59b6;
@@ -129,8 +129,15 @@ canvas {
 }
 
 @keyframes pulseTitle {
-  0% { text-shadow: 0 0 12px #ff1a1a, 3px 3px 0 #000; transform: scale(1); }
-  100% { text-shadow: 0 0 24px #ff6666, 0 0 40px #ff0000, 3px 3px 0 #000; transform: scale(1.02); }
+  0% {
+    text-shadow: 0 0 12px #ff1a1a, 3px 3px 0 #000;
+    transform: scale(1);
+  }
+
+  100% {
+    text-shadow: 0 0 24px #ff6666, 0 0 40px #ff0000, 3px 3px 0 #000;
+    transform: scale(1.02);
+  }
 }
 
 .title-menu {
@@ -221,7 +228,7 @@ canvas {
   border: 2px solid var(--border-gold);
   border-radius: 4px;
   padding: 10px 14px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
   min-width: 260px;
   z-index: 36;
 }
@@ -285,7 +292,7 @@ canvas {
   border-radius: 4px;
   padding: 8px 16px;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
 }
 
 .floor-indicator .floor-num {
@@ -309,7 +316,7 @@ canvas {
   border: 2px solid var(--border-gold);
   border-radius: 4px;
   padding: 4px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
 }
 
 #minimapCanvas {
@@ -330,7 +337,7 @@ canvas {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.8);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
   transition: all 0.15s ease;
 }
 
@@ -485,8 +492,13 @@ canvas {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-window {
@@ -555,7 +567,8 @@ canvas {
   transition: all 0.2s ease;
 }
 
-.class-card:hover, .class-card.selected {
+.class-card:hover,
+.class-card.selected {
   border-color: var(--border-gold);
   background: #2a1b3d;
   box-shadow: 0 0 20px rgba(201, 158, 56, 0.4);
@@ -632,7 +645,7 @@ canvas {
   height: 96px;
   image-rendering: pixelated;
   margin-bottom: 14px;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0, 0, 0, 0.4);
   border: 2px dashed #423057;
   border-radius: 4px;
 }
@@ -716,10 +729,22 @@ canvas {
   background: #251b36;
 }
 
-.item-slot.rarity-common { border-color: var(--rarity-common); }
-.item-slot.rarity-rare { border-color: var(--rarity-rare); }
-.item-slot.rarity-epic { border-color: var(--rarity-epic); }
-.item-slot.rarity-legendary { border-color: var(--rarity-legendary); box-shadow: 0 0 8px rgba(243, 156, 18, 0.4); }
+.item-slot.rarity-common {
+  border-color: var(--rarity-common);
+}
+
+.item-slot.rarity-rare {
+  border-color: var(--rarity-rare);
+}
+
+.item-slot.rarity-epic {
+  border-color: var(--rarity-epic);
+}
+
+.item-slot.rarity-legendary {
+  border-color: var(--rarity-legendary);
+  box-shadow: 0 0 8px rgba(243, 156, 18, 0.4);
+}
 
 .item-qty {
   position: absolute;
@@ -743,7 +768,7 @@ canvas {
   padding: 10px;
   pointer-events: none;
   display: none;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.95);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.95);
   box-sizing: border-box;
 }
 
@@ -754,7 +779,7 @@ canvas {
   background: #150f1f;
   border: 2px solid var(--border-gold);
   border-radius: 4px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.9);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.9);
   display: none;
   flex-direction: column;
   min-width: 150px;
@@ -831,7 +856,7 @@ canvas {
   border-radius: 8px;
   padding: 50px 65px;
   color: #2b1f14;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.95);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.95);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -886,8 +911,15 @@ canvas {
 }
 
 @keyframes blinkHint {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* ==========================================================================
@@ -929,13 +961,22 @@ canvas {
   border-radius: 2px;
   font-size: 8px;
 }
-.outcome-victory { background: #27ae60; color: #fff; }
-.outcome-defeat { background: #c0392b; color: #fff; }
+
+.outcome-victory {
+  background: #27ae60;
+  color: #fff;
+}
+
+.outcome-defeat {
+  background: #c0392b;
+  color: #fff;
+}
 
 /* ==========================================================================
    PANTALLAS FINALES (Game Over & Victoria)
    ========================================================================== */
-#victory-screen, #game-over-screen {
+#victory-screen,
+#game-over-screen {
   position: absolute;
   top: 0;
   left: 0;
@@ -963,7 +1004,7 @@ canvas {
   border-radius: 6px;
   padding: 24px 30px;
   text-align: center;
-  box-shadow: 0 0 40px rgba(0,0,0,0.9);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.9);
   max-width: 550px;
 }
 
@@ -973,8 +1014,15 @@ canvas {
   margin-bottom: 12px;
 }
 
-.victory-text { color: #f1c40f; text-shadow: 0 0 15px rgba(241, 196, 15, 0.6); }
-.defeat-text { color: #e74c3c; text-shadow: 0 0 15px rgba(231, 76, 60, 0.6); }
+.victory-text {
+  color: #f1c40f;
+  text-shadow: 0 0 15px rgba(241, 196, 15, 0.6);
+}
+
+.defeat-text {
+  color: #e74c3c;
+  text-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+}
 
 .ending-stats-summary {
   font-family: 'Press Start 2P', monospace;
@@ -994,4 +1042,34 @@ canvas {
   pointer-events: none;
   background: radial-gradient(circle, transparent 65%, rgba(0, 0, 0, 0.6) 100%);
   z-index: 90;
+}
+
+/* ==========================================================================
+   MARCOS Y RETRATOS DE HÉROES (SELECCIÓN DE PERSONAJE)
+   ========================================================================== */
+.class-portrait-wrapper {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 12px auto;
+  background: #0a0612;
+  border: 2px solid #5a3d75;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.class-card.selected .class-portrait-wrapper {
+  border-color: #f1c40f;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+}
+
+.class-portrait-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
