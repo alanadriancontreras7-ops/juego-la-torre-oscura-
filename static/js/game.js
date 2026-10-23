@@ -305,9 +305,11 @@ class DarkTowerGame {
                 const goldAmt = Math.floor(Math.random() * (entry.goldMax - entry.goldMin + 1)) + entry.goldMin;
                 if (goldAmt > 0) {
                     this.lootDrops.push(new GroundItem(
-                        x + (Math.random() - 0.5) * 12,
-                        y + (Math.random() - 0.5) * 12,
-                        null, true, goldAmt
+                        x + (Math.random() - 0.5) * 14,
+                        y + (Math.random() - 0.5) * 14,
+                        null,
+                        true,
+                        goldAmt
                     ));
                 }
             } else if (Math.random() <= entry.chance) {
@@ -322,7 +324,6 @@ class DarkTowerGame {
             }
         });
     }
-
     triggerGameOver() {
         this.state = this.STATE_GAMEOVER;
         window.soundEngine.stopBgm();

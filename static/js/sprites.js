@@ -1,6 +1,6 @@
 /**
  * GESTOR Y RENDERIZADOR DE SPRITES PIXEL ART
- * Carga las hojas de sprites pregeneradas y proporciona renderizado con parpadeo rojo y dirección.
+ * Carga las hojas de sprites y provee renderizado seguro sin crasheos de GPU.
  */
 
 class SpriteManager {
@@ -10,26 +10,35 @@ class SpriteManager {
         this.loadCount = 0;
         this.totalAssets = 0;
 
-        // Rutas de todas las hojas de sprites
         this.assetUrls = {
-            warrior: '/static/assets/sprites/player_warrior.png?v=2',
-            archer: '/static/assets/sprites/player_archer.png?v=2',
-            mage: '/static/assets/sprites/player_mage.png?v=2',
-            bandit: '/static/assets/sprites/enemy_bandit.png?v=2',
-            skeleton: '/static/assets/sprites/enemy_skeleton.png?v=2',
-            spider: '/static/assets/sprites/enemy_spider.png?v=2',
-            rat: '/static/assets/sprites/enemy_rat.png?v=2',
-            werewolf: '/static/assets/sprites/enemy_werewolf.png?v=2',
-            demon: '/static/assets/sprites/enemy_demon.png?v=2',
-            abracadabra: '/static/assets/sprites/boss_abracadabra.png?v=2',
-            hong: '/static/assets/sprites/boss_hong.png?v=2',
-            tiles_crypt: '/static/assets/sprites/tileset_crypt.png?v=3',
-            tiles_demon: '/static/assets/sprites/tileset_demon.png?v=3',
-            tiles_acid: '/static/assets/sprites/tileset_acid.png?v=3',
-            tiles_apex: '/static/assets/sprites/tileset_apex.png?v=3',
-            props: '/static/assets/sprites/props.png?v=2',
-            icons: '/static/assets/sprites/icons.png?v=3'
+            warrior: '/static/assets/sprites/player_warrior.png?v=4',
+            archer: '/static/assets/sprites/player_archer.png?v=4',
+            mage: '/static/assets/sprites/player_mage.png?v=4',
+            bandit: '/static/assets/sprites/enemy_bandit.png?v=3',
+            skeleton: '/static/assets/sprites/enemy_skeleton.png?v=3',
+            spider: '/static/assets/sprites/enemy_spider.png?v=3',
+            rat: '/static/assets/sprites/enemy_rat.png?v=3',
+            werewolf: '/static/assets/sprites/enemy_werewolf.png?v=3',
+            demon: '/static/assets/sprites/enemy_demon.png?v=3',
+            abracadabra: '/static/assets/sprites/boss_abracadabra.png?v=3',
+            hong: '/static/assets/sprites/boss_hong.png?v=3',
+            tiles_crypt: '/static/assets/sprites/tileset_crypt.png?v=4',
+            tiles_demon: '/static/assets/sprites/tileset_demon.png?v=4',
+            tiles_acid: '/static/assets/sprites/tileset_acid.png?v=4',
+            tiles_apex: '/static/assets/sprites/tileset_apex.png?v=4',
+            props: '/static/assets/sprites/props.png?v=4',
+            icons: '/static/assets/sprites/icons.png?v=5'
         };
+
+        // Registrar dinámicamente las 9 variantes visuales (arma x armadura) de cada héroe
+        ['warrior', 'archer', 'mage'].forEach(cls => {
+            for (let w = 0; w < 3; w++) {
+                for (let a = 0; a < 3; a++) {
+                    const key = `player_${cls}_w${w}_a${a}`;
+                    this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=4`;
+                }
+            }
+        });
     }
 
     loadAll(onComplete) {
@@ -40,9 +49,6 @@ class SpriteManager {
             const img = new Image();
             img.src = this.assetUrls[key];
             img.onload = () => {
-                // Procesar la imagen en un canvas auxiliar para asegurar canal alfa transparente estricto
-                // Si la imagen trae un fondo gris o no-alfa, lo eliminamos con un filtro de transparencia
-                // Los tilesets son opacos a propósito: el chroma-key borraría píxeles de suelo/pared
                 this.sheets[key] = key.startsWith('tiles_') ? img : this.processAlphaChannel(img);
                 this.loadCount++;
                 if (this.loadCount >= this.totalAssets) {
@@ -51,7 +57,7 @@ class SpriteManager {
                 }
             };
             img.onerror = () => {
-                console.warn(`Error al cargar sprite: ${key}`);
+                console.warn(`No se pudo cargar sprite opcional: ${key}`);
                 this.loadCount++;
                 if (this.loadCount >= this.totalAssets) {
                     this.loaded = true;
@@ -61,11 +67,6 @@ class SpriteManager {
         });
     }
 
-    /**
-     * Asegura canal alfa transparente estricto en la hoja de sprites.
-     * Si la imagen contiene un fondo opaco gris/negro sólido no deseado,
-     * detecta el color de la esquina y lo convierte a transparente (RGBA 0,0,0,0).
-     */
     processAlphaChannel(img) {
         try {
             const canvas = document.createElement('canvas');
@@ -80,7 +81,6 @@ class SpriteManager {
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
 
-            // Verificar si la imagen ya tiene pixeles transparentes
             let hasAlpha = false;
             for (let i = 3; i < data.length; i += 4) {
                 if (data[i] === 0) {
@@ -89,42 +89,37 @@ class SpriteManager {
                 }
             }
 
-            // Si ya tiene transparencia nativa perfecta en PNG, devolvemos la imagen o el canvas
-            if (hasAlpha) {
-                return canvas;
-            }
+            if (hasAlpha) return canvas;
 
-            // Si no tiene alfa (fondo sólido gris/opaco común en JPGs o renders sin canal alfa),
-            // tomamos el color del pixel de fondo en (0,0) como clave de color (chroma key)
-            const bgR = data[0];
-            const bgG = data[1];
-            const bgB = data[2];
-
-            const tolerance = 25; // Tolerancia para tonos grises comprimidos
+            const bgR = data[0], bgG = data[1], bgB = data[2];
+            const tolerance = 25;
             for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-
-                const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+                const diff = Math.abs(data[i] - bgR) + Math.abs(data[i + 1] - bgG) + Math.abs(data[i + 2] - bgB);
                 if (diff <= tolerance) {
-                    data[i + 3] = 0; // Transparente total
+                    data[i + 3] = 0;
                 }
             }
 
             ctx.putImageData(imgData, 0, 0);
             return canvas;
         } catch (e) {
-            console.warn("No se pudo procesar alfa en canvas, usando imagen original:", e);
             return img;
         }
     }
 
     /**
-     * Dibuja un sprite individual de la hoja con soporte para parpadeo rojo (feedback de daño)
+     * Dibuja el sprite con soporte de tinte de daño seguro (sin ctx.filter que crashea).
      */
+    /**
+         * Dibuja un sprite individual con soporte de parpadeo rojo seguro
+         */
     draw(ctx, sheetKey, col, row, frameW, frameH, dx, dy, destW, destH, flipX = false, flashRed = false) {
-        const sheet = this.sheets[sheetKey];
+        // Si falta la variante específica (ej: warrior_w1_a2), se usa la base de la clase
+        let sheet = this.sheets[sheetKey];
+        if (!sheet) {
+            const baseClass = String(sheetKey).replace('player_', '').split('_')[0];
+            sheet = this.sheets[baseClass] || this.sheets[`player_${baseClass}`] || this.sheets['warrior'];
+        }
         if (!sheet) return;
 
         ctx.save();
@@ -139,19 +134,20 @@ class SpriteManager {
         const sx = col * frameW;
         const sy = row * frameH;
 
-        if (flashRed) {
-            // Efecto de parpadeo rojo de daño usando un canvas temporal o filtro
-            ctx.filter = 'brightness(1.5) sepia(1) saturate(1000%) hue-rotate(320deg)';
-        }
-
         ctx.drawImage(sheet, sx, sy, frameW, frameH, dx, dy, destW, destH);
+
+        // Feedback de daño seguro (sin ctx.filter que congela Canvas)
+        if (flashRed) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(255, 60, 60, 0.70)';
+            ctx.fillRect(dx, dy, destW, destH);
+            ctx.restore();
+        }
 
         ctx.restore();
     }
 
-    /**
-     * Dibuja un icono de 24x24 desde la hoja de iconos
-     */
     drawIcon(ctx, iconIndex, dx, dy, size = 24) {
         const sheet = this.sheets.icons;
         if (!sheet) return;

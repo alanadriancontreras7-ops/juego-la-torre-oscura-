@@ -1,6 +1,5 @@
 /**
  * ENTIDADES DE JUEGO: JUGADOR, ENEMIGOS, JEFES, PROYECTILES Y BOTÍN EN EL SUELO
- * Gestiona físicas, IA, animaciones en 4 direcciones, combate, partículas y recogida de botín.
  */
 
 class Particle {
@@ -60,15 +59,22 @@ class FloatingText {
     }
 }
 
+const PROJECTILE_LOOKS = [
+    { a: '#ff7722', b: '#ffe066' },
+    { a: '#b04aff', b: '#f0c0ff' },
+    { a: '#7fdcff', b: '#ffffff' }
+];
+
 class Projectile {
-    constructor(x, y, vx, vy, type, damage, owner) {
+    constructor(x, y, vx, vy, type, damage, owner, look = 0) {
         this.x = x;
         this.y = y;
         this.vx = vx;
         this.vy = vy;
         this.type = type; // 'arrow', 'fireball', 'acid', 'void'
         this.damage = damage;
-        this.owner = owner; // 'player' o 'enemy'
+        this.owner = owner;
+        this.look = look;
         this.life = 120;
         this.radius = type === 'fireball' || type === 'acid' ? 7 : (type === 'void' ? 9 : 4);
         this.pierce = type === 'void' ? 2 : 1;
@@ -80,17 +86,18 @@ class Projectile {
         this.y += this.vy;
         this.life--;
 
-        // Rastro de partículas
+        const fx = PROJECTILE_LOOKS[this.look] || PROJECTILE_LOOKS[0];
         if (this.type === 'fireball') {
-            particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, '#ff7722', 4, 15));
-            particles.push(new Particle(this.x, this.y, 0, 0, '#ffe066', 2, 10));
+            particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, fx.a, 4, 15));
+            particles.push(new Particle(this.x, this.y, 0, 0, fx.b, 2, 10));
+        } else if (this.type === 'arrow' && this.look > 0) {
+            particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, this.look === 1 ? '#ff3a5c' : fx.a, 3, 12));
         } else if (this.type === 'acid') {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, '#77ff22', 4, 18));
         } else if (this.type === 'void') {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, '#aa22ff', 5, 20));
         }
 
-        // Colisión con muros
         if (world.isWallAt(this.x, this.y)) {
             this.life = 0;
             if (this.type === 'acid') {
@@ -105,20 +112,27 @@ class Projectile {
             const angle = Math.atan2(this.vy, this.vx);
             ctx.translate(this.x, this.y);
             ctx.rotate(angle);
-            ctx.fillStyle = '#ffffff';
+            const lk = this.look || 0;
+            if (lk > 0) {
+                ctx.globalAlpha = 0.35;
+                ctx.fillStyle = lk === 1 ? '#ff3a5c' : '#9fe8ff';
+                ctx.fillRect(-10, -3.5, 22, 7);
+                ctx.globalAlpha = 1;
+            }
+            ctx.fillStyle = ['#ffffff', '#3a2a50', '#ffe9a0'][lk];
             ctx.fillRect(-8, -1.5, 16, 3);
-            ctx.fillStyle = '#b0b0b0';
+            ctx.fillStyle = ['#b0b0b0', '#ff6a28', '#bff3ff'][lk];
             ctx.beginPath();
             ctx.moveTo(8, -3);
             ctx.lineTo(12, 0);
             ctx.lineTo(8, 3);
             ctx.fill();
         } else if (this.type === 'fireball') {
-            ctx.fillStyle = '#ff4411';
+            ctx.fillStyle = ['#ff4411', '#7a22d8', '#3fb4ff'][this.look || 0];
             ctx.beginPath();
             ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#ffff66';
+            ctx.fillStyle = ['#ffff66', '#f0b0ff', '#ffffff'][this.look || 0];
             ctx.beginPath();
             ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
             ctx.fill();
@@ -145,7 +159,7 @@ class Projectile {
 }
 
 // ==============================================================================
-// CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
+// CLASE GROUNDITEM (BOTÍN EN EL SUELO CON FÍSICAS Y HAZ DE LUZ)
 // ==============================================================================
 
 class GroundItem {
@@ -156,7 +170,6 @@ class GroundItem {
         this.isGold = isGold;
         this.goldAmount = goldAmount;
 
-        // Físicas de dispersión suave al caer
         const spreadAngle = Math.random() * Math.PI * 2;
         const spreadSpeed = 1.0 + Math.random() * 2.2;
         this.vx = Math.cos(spreadAngle) * spreadSpeed;
@@ -193,7 +206,6 @@ class GroundItem {
             this.y -= this.vy * 1.5;
         }
 
-        // Partículas periódicas para rarezas altas
         if (!this.isGold && this.item) {
             if (this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
                 particles.push(new Particle(
@@ -202,34 +214,26 @@ class GroundItem {
                     (Math.random() - 0.5) * 0.4, -0.6,
                     '#fdcb6e', 3.5, 20
                 ));
-            } else if (this.rarity === 'EPIC' && Math.random() < 0.18) {
+            } else if (this.rarity === 'RARE' && Math.random() < 0.12) {
                 particles.push(new Particle(
                     this.x + (Math.random() - 0.5) * 12,
                     this.y + (Math.random() - 0.5) * 8,
                     (Math.random() - 0.5) * 0.3, -0.5,
-                    '#a29bfe', 3, 18
-                ));
-            } else if (this.rarity === 'RARE' && Math.random() < 0.10) {
-                particles.push(new Particle(
-                    this.x + (Math.random() - 0.5) * 10,
-                    this.y + (Math.random() - 0.5) * 8,
-                    0, -0.4,
-                    '#0984e3', 2, 15
+                    '#9b59b6', 3, 18
                 ));
             }
         }
 
         if (this.life < this.pickupDelay) return;
 
-        // Atracción magnética si el jugador está a corta distancia
+        // Atracción magnética si el jugador está cerca
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
-        if (dist < 46) {
+        if (dist < 50) {
             const pullAngle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.x += Math.cos(pullAngle) * 3.5;
-            this.y += Math.sin(pullAngle) * 3.5;
+            this.x += Math.cos(pullAngle) * 3.8;
+            this.y += Math.sin(pullAngle) * 3.8;
         }
 
-        // Detección de recogida por contacto
         if (dist < 26) {
             this.tryPickup(player);
         }
@@ -238,7 +242,6 @@ class GroundItem {
     tryPickup(player) {
         if (this.pickedUp) return;
 
-        // 1. Recogida de Oro
         if (this.isGold) {
             player.gold += this.goldAmount;
             window.soundEngine.playItemPickup();
@@ -249,7 +252,6 @@ class GroundItem {
             return;
         }
 
-        // 2. Recogida de Ítems
         if (!this.item) return;
 
         if (this.item.type === 'consumable' || this.item.type === 'material') {
@@ -356,44 +358,39 @@ class GroundItem {
 }
 
 // ==============================================================================
-// CLASE DEL JUGADOR
+// CLASE DEL JUGADOR (CON SOPORTE DE SPRITES DE ARMADURAS DINÁMICAS)
 // ==============================================================================
 
 class Player {
     constructor(characterClass = 'warrior', name = 'Aventurero') {
         this.name = name;
-        this.characterClass = characterClass; // 'warrior', 'archer', 'mage'
+        this.characterClass = characterClass;
         this.x = 200;
         this.y = 200;
         this.width = 24;
         this.height = 30;
         this.speed = 2.8;
 
-        // Físicas y Retroceso (Knockback)
         this.vx = 0;
         this.vy = 0;
         this.knockbackX = 0;
         this.knockbackY = 0;
 
-        // Animación en 4 Direcciones (0: Abajo, 1: Izq, 2: Der, 3: Arriba)
         this.direction = 0;
         this.animFrame = 0;
         this.animTimer = 0;
         this.isMoving = false;
 
-        // Combate y Armas Visibles
         this.isAttacking = false;
         this.attackFrame = 0;
         this.attackTimer = 0;
         this.attackCooldown = 0;
         this.slashArcAngle = 0;
 
-        // Feedback de daño
         this.flashRedTimer = 0;
         this.invulnerableTimer = 0;
         this.invFullWarningTimer = 0;
 
-        // Estadísticas y Progresión
         this.level = 1;
         this.exp = 0;
         this.nextExp = 100;
@@ -402,7 +399,6 @@ class Player {
 
         this.applyClassBaseStats();
 
-        // Inventario (30 slots) y Equipamiento
         this.inventory = new Array(30).fill(null);
         this.equipment = {
             weapon: null,
@@ -475,14 +471,14 @@ class Player {
 
     giveInitialEquipment() {
         if (this.characterClass === 'warrior') {
-            this.equipment.weapon = window.ITEM_DATABASE.sword_short;
-            this.equipment.armor = window.ITEM_DATABASE.armor_leather;
+            this.equipment.weapon = window.ITEM_DATABASE.sword_common;
+            this.equipment.armor = window.ITEM_DATABASE.armor_warrior_common;
         } else if (this.characterClass === 'archer') {
-            this.equipment.weapon = window.ITEM_DATABASE.bow_short;
-            this.equipment.armor = window.ITEM_DATABASE.armor_leather;
+            this.equipment.weapon = window.ITEM_DATABASE.bow_common;
+            this.equipment.armor = window.ITEM_DATABASE.armor_archer_common;
         } else if (this.characterClass === 'mage') {
-            this.equipment.weapon = window.ITEM_DATABASE.staff_apprentice;
-            this.equipment.armor = window.ITEM_DATABASE.armor_leather;
+            this.equipment.weapon = window.ITEM_DATABASE.staff_common;
+            this.equipment.armor = window.ITEM_DATABASE.armor_mage_common;
         }
         this.inventory[0] = { ...window.ITEM_DATABASE.potion_health, qty: 3 };
         this.inventory[1] = { ...window.ITEM_DATABASE.potion_mana, qty: 2 };
@@ -517,6 +513,28 @@ class Player {
             def: bonusDef + Math.floor(totalCon * 0.8),
             critChance: Math.min(50, 5 + totalDex * 1.2)
         };
+    }
+
+    getWeaponLook() {
+        const w = this.equipment && this.equipment.weapon;
+        if (!w) return 0;
+        if (w.look !== undefined) return w.look;
+        if (w.rarity === 'LEGENDARY') return 2;
+        if (w.rarity === 'RARE' || w.rarity === 'EPIC') return 1;
+        return 0;
+    }
+
+    getArmorLook() {
+        const a = this.equipment && this.equipment.armor;
+        if (!a) return 0;
+        if (a.look !== undefined) return a.look;
+        if (a.rarity === 'LEGENDARY') return 2;
+        if (a.rarity === 'RARE' || a.rarity === 'EPIC') return 1;
+        return 0;
+    }
+
+    getSpriteKey() {
+        return `player_${this.characterClass}_w${this.getWeaponLook()}_a${this.getArmorLook()}`;
     }
 
     update(keys, world, projectiles, particles) {
@@ -621,17 +639,20 @@ class Player {
             this.direction = (targetY > this.y) ? 0 : 3;
         }
 
+        const weaponLook = this.getWeaponLook();
+
         if (this.characterClass === 'warrior') {
             window.soundEngine.playSwordSlash();
             const slashDist = 28;
             const sx = this.x + Math.cos(angle) * slashDist;
             const sy = this.y + Math.sin(angle) * slashDist;
+            const particleCol = ['#b0e0ff', '#ff6a3a', '#fff3b0'][weaponLook];
             for (let i = 0; i < 8; i++) {
                 particles.push(new Particle(
                     sx, sy,
                     Math.cos(angle + (Math.random() - 0.5)) * 3,
                     Math.sin(angle + (Math.random() - 0.5)) * 3,
-                    '#b0e0ff', 4, 15
+                    particleCol, 4, 15
                 ));
             }
             this.slashHitbox = {
@@ -650,7 +671,8 @@ class Player {
                 Math.sin(angle) * arrowSpeed,
                 'arrow',
                 stats.atk,
-                'player'
+                'player',
+                weaponLook
             ));
         } else if (this.characterClass === 'mage') {
             if (this.mp >= 8) {
@@ -663,7 +685,8 @@ class Player {
                     Math.sin(angle) * magicSpeed,
                     'fireball',
                     stats.atk + 8,
-                    'player'
+                    'player',
+                    weaponLook
                 ));
             } else {
                 window.soundEngine.playTone(150, 'sine', 0.1, 0.2);
@@ -732,7 +755,7 @@ class Player {
         const flash = this.flashRedTimer > 0;
         window.spriteManager.draw(
             ctx,
-            this.characterClass,
+            this.getSpriteKey(),
             col, row,
             frameW, frameH,
             dx, dy, destW, destH,
@@ -743,7 +766,7 @@ class Player {
 }
 
 // ==============================================================================
-// CLASE DE ENEMIGOS BASE
+// CLASES DE ENEMIGOS Y JEFES
 // ==============================================================================
 
 class Enemy {
@@ -935,10 +958,6 @@ class Enemy {
     }
 }
 
-// ==============================================================================
-// SUB-JEFE ABRACADABRA (Piso 8) - 72x72
-// ==============================================================================
-
 class BossAbracadabra {
     constructor(x, y) {
         this.name = 'Sub-Jefe Abracadabra';
@@ -1085,10 +1104,6 @@ class BossAbracadabra {
     }
 }
 
-// ==============================================================================
-// JEFE FINAL HONG DEVORADOR DE HOMBRES (Piso 10) - 96x96
-// ==============================================================================
-
 class BossHong {
     constructor(x, y) {
         this.name = 'Hong Devorador de Hombres';
@@ -1207,7 +1222,6 @@ class BossHong {
     }
 }
 
-// Registro global
 window.Player = Player;
 window.Enemy = Enemy;
 window.BossAbracadabra = BossAbracadabra;
