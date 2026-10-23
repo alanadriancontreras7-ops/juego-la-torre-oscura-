@@ -1,5 +1,3 @@
-
-
 /**
  * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES)
  * Controla el HUD, el inventario de 30 casillas, visualización del personaje,
@@ -18,7 +16,6 @@ class UIManager {
     }
 
     bindEvents() {
-        // Cierre de modales con botones de cerrar
         document.querySelectorAll('.close-modal-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const modal = e.target.closest('.game-modal');
@@ -27,7 +24,6 @@ class UIManager {
             });
         });
 
-        // Selección de clase en modal
         document.querySelectorAll('.class-card').forEach(card => {
             card.addEventListener('click', () => {
                 document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
@@ -43,12 +39,10 @@ class UIManager {
             }
         });
 
-        // Botones HUD
         document.getElementById('btn-hud-inv').addEventListener('click', () => this.toggleInventory());
         document.getElementById('btn-hud-stats').addEventListener('click', () => this.toggleStats());
         document.getElementById('btn-hud-save').addEventListener('click', () => this.showSavesModal());
 
-        // Botón Silenciar / Desactivar Música en HUD
         const muteBtn = document.getElementById('btn-toggle-mute');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
@@ -56,20 +50,17 @@ class UIManager {
                     window.soundEngine.toggleMute();
                 }
             });
-            // Inicializar estado visual según preferencia guardada
             if (window.soundEngine) {
                 window.soundEngine.updateMuteButtonUI();
             }
         }
 
-        // Cerrar menú contextual al hacer clic fuera
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.item-context-menu')) {
                 this.hideContextMenu();
             }
         });
 
-        // Atajos rápidos de pociones en HUD
         document.getElementById('quick-pot-hp').addEventListener('click', () => {
             if (window.game && window.game.player) window.game.usePotion('potion_health');
         });
@@ -77,7 +68,6 @@ class UIManager {
             if (window.game && window.game.player) window.game.usePotion('potion_mana');
         });
 
-        // Botones en Pantallas Finales
         document.getElementById('btn-restart-game').addEventListener('click', () => {
             document.getElementById('game-over-screen').style.display = 'none';
             if (window.game) window.game.returnToTitle();
@@ -91,7 +81,6 @@ class UIManager {
     updateHUD(player, world) {
         if (!player) return;
 
-        // Barras de Salud, Maná y EXP
         const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
         document.getElementById('hud-hp-fill').style.width = `${hpPct}%`;
         document.getElementById('hud-hp-text').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
@@ -104,11 +93,9 @@ class UIManager {
         document.getElementById('hud-exp-fill').style.width = `${expPct}%`;
         document.getElementById('hud-exp-text').innerText = `EXP: ${player.exp} / ${player.nextExp}`;
 
-        // Nombre y Nivel
         document.getElementById('hud-player-name').innerText = `${player.name} (Nv. ${player.level})`;
-
-        // Indicador de Piso y Bioma
         document.getElementById('hud-floor-num').innerText = `PISO ${world.floor} / 10`;
+
         const floorNames = [
             "El Umbral Olvidado", "Catacumbas del Despertar", "El Sepulcro de las Mil Telas",
             "La Guardia Profanada", "Las Fauces de Azufre", "Altar de los Condenados",
@@ -117,7 +104,6 @@ class UIManager {
         ];
         document.getElementById('hud-floor-name').innerText = floorNames[world.floor - 1] || "Torre Oscura";
 
-        // Contador de Pociones en Quickbar
         let hpPots = 0;
         let mpPots = 0;
         player.inventory.forEach(item => {
@@ -127,7 +113,6 @@ class UIManager {
         document.getElementById('hp-pot-count').innerText = hpPots;
         document.getElementById('mp-pot-count').innerText = mpPots;
 
-        // Barra de Jefe si está activo
         const bossCard = document.getElementById('boss-health-card');
         if (window.game && window.game.activeBoss) {
             const boss = window.game.activeBoss;
@@ -149,7 +134,6 @@ class UIManager {
         const scaleX = canvas.width / world.cols;
         const scaleY = canvas.height / world.rows;
 
-        // Dibujar muros y suelo
         for (let r = 0; r < world.rows; r++) {
             for (let c = 0; c < world.cols; c++) {
                 if (world.grid[r][c] === 0) {
@@ -159,19 +143,16 @@ class UIManager {
             }
         }
 
-        // Escaleras
         if (world.stairs) {
             ctx.fillStyle = world.stairsUnlocked ? '#38ef7d' : '#888888';
             ctx.fillRect((world.stairs.x / world.tileSize) * scaleX, (world.stairs.y / world.tileSize) * scaleY, scaleX * 1.5, scaleY * 1.5);
         }
 
-        // Pergamino de Lore
         if (world.loreScroll) {
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect((world.loreScroll.x / world.tileSize) * scaleX, (world.loreScroll.y / world.tileSize) * scaleY, scaleX, scaleY);
         }
 
-        // Enemigos
         if (window.game && window.game.enemies) {
             ctx.fillStyle = '#e74c3c';
             window.game.enemies.forEach(e => {
@@ -179,21 +160,16 @@ class UIManager {
             });
         }
 
-        // Jefe
         if (window.game && window.game.activeBoss) {
             ctx.fillStyle = '#ff0055';
             const b = window.game.activeBoss;
             ctx.fillRect((b.x / world.tileSize) * scaleX - 1, (b.y / world.tileSize) * scaleY - 1, scaleX * 2, scaleY * 2);
         }
 
-        // Jugador
         ctx.fillStyle = '#00d2d3';
         ctx.fillRect((player.x / world.tileSize) * scaleX - 1, (player.y / world.tileSize) * scaleY - 1, scaleX * 2, scaleY * 2);
     }
 
-    // =========================================================================
-    // MODAL DE INVENTARIO (30 CASILLAS)
-    // =========================================================================
     toggleInventory() {
         const modal = document.getElementById('inventory-modal');
         this.hideContextMenu();
@@ -212,7 +188,6 @@ class UIManager {
         const player = window.game.player;
         if (!player) return;
 
-        // Renderizar Cuadrícula de 30 espacios
         const grid = document.getElementById('inventory-grid-container');
         grid.innerHTML = '';
 
@@ -224,7 +199,6 @@ class UIManager {
                 const rarityInfo = window.ITEM_RARITIES[item.rarity] || window.ITEM_RARITIES.COMMON;
                 slot.classList.add(rarityInfo.class);
 
-                // Dibujar canvas de icono 24x24
                 const cvs = document.createElement('canvas');
                 cvs.width = 24;
                 cvs.height = 24;
@@ -239,7 +213,6 @@ class UIManager {
                     slot.appendChild(qtyLabel);
                 }
 
-                // Eventos de Tooltip, Clic Izquierdo y Clic Derecho (Menú Contextual)
                 slot.addEventListener('mouseenter', (e) => this.showTooltip(item, e));
                 slot.addEventListener('mousemove', (e) => this.updateTooltipPos(e));
                 slot.addEventListener('mouseleave', () => this.hideTooltip());
@@ -257,15 +230,11 @@ class UIManager {
             grid.appendChild(slot);
         });
 
-        // Renderizar Equipamiento
         this.renderEquipSlot('equip-slot-weapon', player.equipment.weapon, 'weapon');
         this.renderEquipSlot('equip-slot-armor', player.equipment.armor, 'armor');
         this.renderEquipSlot('equip-slot-acc', player.equipment.accessory, 'accessory');
 
-        // Oro
         document.getElementById('inv-gold-count').innerText = `${player.gold} G`;
-
-        // Vista previa del personaje
         this.renderPaperdoll(player);
     }
 
@@ -283,7 +252,6 @@ class UIManager {
             el.appendChild(cvs);
 
             el.onclick = () => {
-                // Desequipar
                 const player = window.game.player;
                 const emptyIdx = player.inventory.findIndex(s => s === null);
                 if (emptyIdx !== -1) {
@@ -308,7 +276,6 @@ class UIManager {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Dibuja el sprite del jugador a tamaño 2x en el vestidor
         window.spriteManager.draw(
             ctx,
             player.characterClass,
@@ -324,7 +291,6 @@ class UIManager {
         if (!item) return;
 
         if (item.type === 'consumable') {
-            // Usar consumible
             if (item.heal_hp) player.hp = Math.min(player.maxHp, player.hp + item.heal_hp);
             if (item.heal_mp) player.mp = Math.min(player.maxMp, player.mp + item.heal_mp);
             window.soundEngine.playPotion();
@@ -334,7 +300,6 @@ class UIManager {
             this.hideTooltip();
             this.renderInventory();
         } else if (item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory') {
-            // Equipar ítem
             const currentEquipped = player.equipment[item.type];
             player.equipment[item.type] = item;
             player.inventory[index] = currentEquipped;
@@ -348,6 +313,11 @@ class UIManager {
         const player = window.game.player;
         if (!player || !player.inventory[index]) return;
         const item = player.inventory[index];
+
+        // Tirar al suelo físicamente junto al jugador
+        if (window.game && window.game.lootDrops) {
+            window.game.lootDrops.push(new GroundItem(player.x, player.y, { ...item, qty: 1 }));
+        }
 
         if (item.qty && item.qty > 1) {
             item.qty--;
@@ -393,13 +363,11 @@ class UIManager {
 
         menu.style.display = 'flex';
 
-        // Ajuste de coordenadas dentro del contenedor
         const container = document.getElementById('game-container') || document.body;
         const rect = container.getBoundingClientRect();
         let x = event.clientX - rect.left + 5;
         let y = event.clientY - rect.top + 5;
 
-        // Evitar desborde derecho e inferior
         const menuW = 160;
         const menuH = 100;
         if (x + menuW > rect.width) x = rect.width - menuW - 10;
@@ -454,12 +422,9 @@ class UIManager {
         let posX = event.clientX - rect.left + 16;
         let posY = event.clientY - rect.top + 16;
 
-        // Si se sale por la derecha, voltear hacia la izquierda del cursor
         if (posX + ttWidth > rect.width - 10) {
             posX = event.clientX - rect.left - ttWidth - 12;
         }
-
-        // Si se sale por abajo, voltear hacia arriba del cursor
         if (posY + ttHeight > rect.height - 10) {
             posY = event.clientY - rect.top - ttHeight - 12;
         }
@@ -472,9 +437,6 @@ class UIManager {
         if (this.tooltip) this.tooltip.style.display = 'none';
     }
 
-    // =========================================================================
-    // MODAL DE ATRIBUTOS Y PROGRESIÓN (ESTADÍSTICAS)
-    // =========================================================================
     toggleStats() {
         const modal = document.getElementById('stats-modal');
         if (modal.style.display === 'flex') {
@@ -504,7 +466,6 @@ class UIManager {
         document.getElementById('stat-def-total').innerText = total.def;
         document.getElementById('stat-crit-total').innerText = `${total.critChance}%`;
 
-        // Habilitar o deshabilitar botones '+'
         const hasPoints = player.attributePoints > 0;
         ['str', 'dex', 'mag', 'con'].forEach(attr => {
             const btn = document.getElementById(`btn-add-${attr}`);
@@ -532,9 +493,6 @@ class UIManager {
         });
     }
 
-    // =========================================================================
-    // MODAL DE LORE EN PERGAMINO ANTIGUO (Pausa la acción)
-    // =========================================================================
     showLoreModal(loreData) {
         const modal = document.getElementById('lore-modal');
         document.getElementById('parchment-title').innerText = loreData.title;
@@ -551,9 +509,6 @@ class UIManager {
         if (window.game) window.game.resumeFromModal();
     }
 
-    // =========================================================================
-    // MODAL DEL SALÓN DE LA FAMA
-    // =========================================================================
     async showHallOfFame() {
         const modal = document.getElementById('hall-of-fame-modal');
         modal.style.display = 'flex';
@@ -583,9 +538,6 @@ class UIManager {
         }
     }
 
-    // =========================================================================
-    // MODAL DE GUARDADO Y CARGA
-    // =========================================================================
     async showSavesModal() {
         const modal = document.getElementById('saves-modal');
         modal.style.display = 'flex';

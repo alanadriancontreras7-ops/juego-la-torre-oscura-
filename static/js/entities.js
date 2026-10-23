@@ -1,6 +1,6 @@
 /**
- * ENTIDADES DE JUEGO: JUGADOR, ENEMIGOS, JEFES Y PROYECTILES
- * Gestiona físicas, IA, animaciones en 4 direcciones, combate y partículas.
+ * ENTIDADES DE JUEGO: JUGADOR, ENEMIGOS, JEFES, PROYECTILES Y BOTÍN EN EL SUELO
+ * Gestiona físicas, IA, animaciones en 4 direcciones, combate, partículas y recogida de botín.
  */
 
 class Particle {
@@ -93,7 +93,6 @@ class Projectile {
         // Colisión con muros
         if (world.isWallAt(this.x, this.y)) {
             this.life = 0;
-            // Charco de ácido al impactar si es proyectil de Abracadabra
             if (this.type === 'acid') {
                 world.addAcidPool(this.x, this.y);
             }
@@ -146,6 +145,217 @@ class Projectile {
 }
 
 // ==============================================================================
+// CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
+// ==============================================================================
+
+class GroundItem {
+    constructor(x, y, item, isGold = false, goldAmount = 0) {
+        this.x = x;
+        this.y = y;
+        this.item = item;
+        this.isGold = isGold;
+        this.goldAmount = goldAmount;
+
+        // Físicas de dispersión suave al caer
+        const spreadAngle = Math.random() * Math.PI * 2;
+        const spreadSpeed = 1.0 + Math.random() * 2.2;
+        this.vx = Math.cos(spreadAngle) * spreadSpeed;
+        this.vy = Math.sin(spreadAngle) * spreadSpeed;
+
+        this.bobTimer = Math.random() * Math.PI * 2;
+        this.life = 0;
+        this.pickupDelay = 12;
+        this.pickedUp = false;
+
+        if (this.isGold) {
+            this.color = '#f1c40f';
+            this.name = `${this.goldAmount} Oro`;
+            this.rarity = 'COMMON';
+        } else if (this.item) {
+            const rInfo = window.ITEM_RARITIES[this.item.rarity] || window.ITEM_RARITIES.COMMON;
+            this.color = rInfo.color;
+            this.name = this.item.name;
+            this.rarity = this.item.rarity;
+        }
+    }
+
+    update(player, particles, world) {
+        this.life++;
+        this.bobTimer += 0.08;
+
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vx *= 0.85;
+        this.vy *= 0.85;
+
+        if (world && world.isWallAt(this.x, this.y)) {
+            this.x -= this.vx * 1.5;
+            this.y -= this.vy * 1.5;
+        }
+
+        // Partículas periódicas para rarezas altas
+        if (!this.isGold && this.item) {
+            if (this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
+                particles.push(new Particle(
+                    this.x + (Math.random() - 0.5) * 14,
+                    this.y + (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 0.4, -0.6,
+                    '#fdcb6e', 3.5, 20
+                ));
+            } else if (this.rarity === 'EPIC' && Math.random() < 0.18) {
+                particles.push(new Particle(
+                    this.x + (Math.random() - 0.5) * 12,
+                    this.y + (Math.random() - 0.5) * 8,
+                    (Math.random() - 0.5) * 0.3, -0.5,
+                    '#a29bfe', 3, 18
+                ));
+            } else if (this.rarity === 'RARE' && Math.random() < 0.10) {
+                particles.push(new Particle(
+                    this.x + (Math.random() - 0.5) * 10,
+                    this.y + (Math.random() - 0.5) * 8,
+                    0, -0.4,
+                    '#0984e3', 2, 15
+                ));
+            }
+        }
+
+        if (this.life < this.pickupDelay) return;
+
+        // Atracción magnética si el jugador está a corta distancia
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+        if (dist < 46) {
+            const pullAngle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.x += Math.cos(pullAngle) * 3.5;
+            this.y += Math.sin(pullAngle) * 3.5;
+        }
+
+        // Detección de recogida por contacto
+        if (dist < 26) {
+            this.tryPickup(player);
+        }
+    }
+
+    tryPickup(player) {
+        if (this.pickedUp) return;
+
+        // 1. Recogida de Oro
+        if (this.isGold) {
+            player.gold += this.goldAmount;
+            window.soundEngine.playItemPickup();
+            if (window.game && window.game.floatingTexts) {
+                window.game.floatingTexts.push(new FloatingText(this.x, this.y - 12, `+${this.goldAmount} G`, '#f1c40f'));
+            }
+            this.pickedUp = true;
+            return;
+        }
+
+        // 2. Recogida de Ítems
+        if (!this.item) return;
+
+        if (this.item.type === 'consumable' || this.item.type === 'material') {
+            const existingIdx = player.inventory.findIndex(s => s && s.id === this.item.id);
+            if (existingIdx !== -1) {
+                player.inventory[existingIdx].qty = (player.inventory[existingIdx].qty || 1) + (this.item.qty || 1);
+                this.onSuccessfulPickup(player);
+                return;
+            }
+        }
+
+        const emptyIdx = player.inventory.findIndex(s => s === null);
+        if (emptyIdx !== -1) {
+            player.inventory[emptyIdx] = { ...this.item, qty: this.item.qty || 1 };
+            this.onSuccessfulPickup(player);
+        } else {
+            if (!player.invFullWarningTimer || player.invFullWarningTimer <= 0) {
+                player.invFullWarningTimer = 60;
+                if (window.game && window.game.floatingTexts) {
+                    window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡INVENTARIO LLENO!', '#ff3333', true));
+                }
+                window.soundEngine.playTone(160, 'sawtooth', 0.15, 0.25);
+            }
+        }
+    }
+
+    onSuccessfulPickup(player) {
+        this.pickedUp = true;
+        if (this.item.type === 'consumable') {
+            window.soundEngine.playPotion();
+        } else {
+            window.soundEngine.playItemPickup();
+        }
+
+        if (window.game && window.game.floatingTexts) {
+            const rInfo = window.ITEM_RARITIES[this.item.rarity] || window.ITEM_RARITIES.COMMON;
+            const isSpecial = this.item.rarity === 'EPIC' || this.item.rarity === 'LEGENDARY';
+            window.game.floatingTexts.push(new FloatingText(this.x, this.y - 18, `+ ${this.item.name}`, rInfo.color, isSpecial));
+        }
+
+        if (window.game && window.game.particles) {
+            for (let i = 0; i < 7; i++) {
+                window.game.particles.push(new Particle(
+                    this.x, this.y,
+                    (Math.random() - 0.5) * 3,
+                    (Math.random() - 0.5) * 3,
+                    this.color, 3, 16
+                ));
+            }
+        }
+
+        if (window.uiManager && document.getElementById('inventory-modal').style.display === 'flex') {
+            window.uiManager.renderInventory();
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+
+        const floatY = Math.sin(this.bobTimer) * 3;
+        const drawX = Math.floor(this.x);
+        const drawY = Math.floor(this.y + floatY);
+
+        ctx.fillStyle = 'rgba(10, 10, 18, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(drawX, Math.floor(this.y + 9), 10, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.25 + Math.sin(this.bobTimer * 1.5) * 0.12;
+        ctx.beginPath();
+        ctx.arc(drawX, drawY, 13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+
+        if (this.rarity === 'EPIC' || this.rarity === 'LEGENDARY') {
+            const beamHeight = this.rarity === 'LEGENDARY' ? 38 : 24;
+            const beamGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY - beamHeight);
+            beamGrad.addColorStop(0, this.color);
+            beamGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = beamGrad;
+            ctx.globalAlpha = 0.4 + Math.sin(this.bobTimer * 2) * 0.2;
+            ctx.fillRect(drawX - 2, drawY - beamHeight, 4, beamHeight);
+            ctx.globalAlpha = 1.0;
+        }
+
+        const iconSize = 20;
+        const iconIdx = this.isGold ? 9 : (this.item ? (this.item.icon || 0) : 0);
+        window.spriteManager.drawIcon(ctx, iconIdx, drawX - iconSize / 2, drawY - iconSize / 2, iconSize);
+
+        const distToPlayer = Math.hypot(window.game.player.x - this.x, window.game.player.y - this.y);
+        if (distToPlayer < 75 || this.rarity === 'LEGENDARY') {
+            ctx.font = '8px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.strokeText(this.name, drawX, drawY - 14);
+            ctx.fillStyle = this.color;
+            ctx.fillText(this.name, drawX, drawY - 14);
+        }
+
+        ctx.restore();
+    }
+}
+
+// ==============================================================================
 // CLASE DEL JUGADOR
 // ==============================================================================
 
@@ -181,6 +391,7 @@ class Player {
         // Feedback de daño
         this.flashRedTimer = 0;
         this.invulnerableTimer = 0;
+        this.invFullWarningTimer = 0;
 
         // Estadísticas y Progresión
         this.level = 1;
@@ -214,7 +425,7 @@ class Player {
         this.vy = 0;
         this.knockbackX = 0;
         this.knockbackY = 0;
-        this.direction = 0; // Frente
+        this.direction = 0;
         this.animFrame = 0;
         this.animTimer = 0;
         this.isMoving = false;
@@ -267,13 +478,12 @@ class Player {
             this.equipment.weapon = window.ITEM_DATABASE.sword_short;
             this.equipment.armor = window.ITEM_DATABASE.armor_leather;
         } else if (this.characterClass === 'archer') {
-            this.equipment.weapon = window.ITEM_DATABASE.bow_hunter;
+            this.equipment.weapon = window.ITEM_DATABASE.bow_short;
             this.equipment.armor = window.ITEM_DATABASE.armor_leather;
         } else if (this.characterClass === 'mage') {
             this.equipment.weapon = window.ITEM_DATABASE.staff_apprentice;
-            this.equipment.armor = window.ITEM_DATABASE.armor_robe;
+            this.equipment.armor = window.ITEM_DATABASE.armor_leather;
         }
-        // Pociones iniciales en slots 0 y 1
         this.inventory[0] = { ...window.ITEM_DATABASE.potion_health, qty: 3 };
         this.inventory[1] = { ...window.ITEM_DATABASE.potion_mana, qty: 2 };
     }
@@ -286,7 +496,6 @@ class Player {
         let bonusAtk = 0;
         let bonusDef = 0;
 
-        // Bonificaciones de equipamiento
         ['weapon', 'armor', 'accessory'].forEach(slot => {
             const item = this.equipment[slot];
             if (item) {
@@ -311,12 +520,11 @@ class Player {
     }
 
     update(keys, world, projectiles, particles) {
-        // Reducir temporizadores
         if (this.flashRedTimer > 0) this.flashRedTimer--;
         if (this.invulnerableTimer > 0) this.invulnerableTimer--;
         if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.invFullWarningTimer > 0) this.invFullWarningTimer--;
 
-        // Movimiento por teclado
         let dx = 0;
         let dy = 0;
 
@@ -328,34 +536,28 @@ class Player {
         this.isMoving = (dx !== 0 || dy !== 0);
 
         if (this.isMoving) {
-            // Normalizar dirección
             const length = Math.hypot(dx, dy) || 1;
             dx /= length;
             dy /= length;
 
-            // Determinar dirección del sprite
             if (Math.abs(dx) > Math.abs(dy)) {
-                this.direction = dx > 0 ? 2 : 1; // 2: Derecha, 1: Izquierda
+                this.direction = dx > 0 ? 2 : 1;
             } else {
-                this.direction = dy > 0 ? 0 : 3; // 0: Abajo, 3: Arriba
+                this.direction = dy > 0 ? 0 : 3;
             }
 
-            // Aplicar velocidad con colisión con el mapa y deslizamiento suave en paredes (Wall-Slide Resolver)
             const moveSpeed = this.speed;
 
-            // 1. Evaluar movimiento en el eje X primero
             let nextX = this.x + dx * moveSpeed + this.knockbackX;
             if (!world.isSolid(nextX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                 this.x = nextX;
             }
 
-            // 2. Evaluar movimiento en el eje Y de forma 100% independiente
             let nextY = this.y + dy * moveSpeed + this.knockbackY;
             if (!world.isSolid(this.x - this.width / 2, nextY - this.height / 2, this.width, this.height)) {
                 this.y = nextY;
             }
 
-            // Ciclo de animación de caminata (4 frames): Se mantiene activo siempre que se presionen teclas de dirección
             this.animTimer++;
             if (this.animTimer >= 7) {
                 this.animFrame = (this.animFrame + 1) % 4;
@@ -364,7 +566,6 @@ class Player {
         } else {
             this.animFrame = 0;
             this.animTimer = 0;
-            // Mantener física de knockback incluso quieto con AABB centrada
             if (Math.abs(this.knockbackX) > 0.1 || Math.abs(this.knockbackY) > 0.1) {
                 let nextKbX = this.x + this.knockbackX;
                 if (!world.isSolid(nextKbX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
@@ -377,11 +578,9 @@ class Player {
             }
         }
 
-        // Amortiguación del knockback suave
         this.knockbackX *= 0.82;
         this.knockbackY *= 0.82;
 
-        // Animación de ataque
         if (this.isAttacking) {
             this.attackTimer++;
             if (this.attackTimer % 5 === 0) {
@@ -393,12 +592,10 @@ class Player {
             }
         }
 
-        // Regeneración pasiva lenta de maná
         if (this.mp < this.maxMp && Math.random() < 0.05) {
             this.mp = Math.min(this.maxMp, this.mp + 1);
         }
 
-        // Daño por charco de ácido en piso 8
         if (world.isInAcid(this.x, this.y)) {
             if (this.invulnerableTimer === 0) {
                 this.takeDamage(6, 0, 0);
@@ -418,7 +615,6 @@ class Player {
         const stats = this.getTotalStats();
         const angle = Math.atan2(targetY - this.y, targetX - this.x);
 
-        // Orientar sprite hacia el objetivo del ataque
         if (Math.abs(targetX - this.x) > Math.abs(targetY - this.y)) {
             this.direction = (targetX > this.x) ? 2 : 1;
         } else {
@@ -427,7 +623,6 @@ class Player {
 
         if (this.characterClass === 'warrior') {
             window.soundEngine.playSwordSlash();
-            // Partículas de corte metálico brillante
             const slashDist = 28;
             const sx = this.x + Math.cos(angle) * slashDist;
             const sy = this.y + Math.sin(angle) * slashDist;
@@ -439,7 +634,6 @@ class Player {
                     '#b0e0ff', 4, 15
                 ));
             }
-            // Área de golpe cuerpo a cuerpo
             this.slashHitbox = {
                 x: sx,
                 y: sy,
@@ -472,7 +666,7 @@ class Player {
                     'player'
                 ));
             } else {
-                window.soundEngine.playTone(150, 'sine', 0.1, 0.2); // Sin maná
+                window.soundEngine.playTone(150, 'sine', 0.1, 0.2);
             }
         }
     }
@@ -488,7 +682,6 @@ class Player {
         this.invulnerableTimer = 25;
         window.soundEngine.playHit();
 
-        // Retroceso (Knockback) físico direccional suave
         if (sourceX !== 0 || sourceY !== 0) {
             const kbAngle = Math.atan2(this.y - sourceY, this.x - sourceX);
             this.knockbackX = Math.cos(kbAngle) * 5.0;
@@ -513,7 +706,6 @@ class Player {
         this.nextExp = Math.floor(this.nextExp * 1.5);
         this.attributePoints += 3;
 
-        // Aumentar HP/MP al subir de nivel
         this.maxHp += 15;
         this.hp = this.maxHp;
         this.maxMp += 10;
@@ -556,7 +748,7 @@ class Player {
 
 class Enemy {
     constructor(type, x, y, floor = 1) {
-        this.type = type; // 'bandit', 'skeleton', 'spider', 'werewolf', 'demon'
+        this.type = type;
         this.x = x;
         this.y = y;
         this.floor = floor;
@@ -646,25 +838,21 @@ class Enemy {
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
-        // IA de Persecución si el jugador está en rango de visión (260px)
         if (dist < 260) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
-            // Dirección del sprite
             if (Math.abs(player.x - this.x) > Math.abs(player.y - this.y)) {
                 this.direction = player.x > this.x ? 2 : 1;
             } else {
                 this.direction = player.y > this.y ? 0 : 3;
             }
 
-            // Distancia de ataque
             const attackDist = this.type === 'demon' ? 140 : (this.type === 'spider' ? 100 : 26);
 
             if (dist > attackDist) {
                 const nx = this.x + Math.cos(angle) * this.speed + this.knockbackX;
                 const ny = this.y + Math.sin(angle) * this.speed + this.knockbackY;
 
-                // Deslizamiento independiente en X e Y con caja delimitadora completa centrada
                 if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                     this.x = nx;
                 }
@@ -678,14 +866,12 @@ class Enemy {
                     this.animTimer = 0;
                 }
             } else {
-                // Ejecutar ataque si el cooldown está listo
                 if (this.attackCooldown <= 0) {
                     this.executeAttack(player, angle, projectiles, particles);
                 }
             }
         }
 
-        // Amortiguación de knockback
         this.knockbackX *= 0.82;
         this.knockbackY *= 0.82;
     }
@@ -694,15 +880,11 @@ class Enemy {
         this.attackCooldown = 45;
 
         if (this.type === 'spider') {
-            // Escupitajo de veneno
             projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.5, Math.sin(angle) * 4.5, 'acid', this.atk, 'enemy'));
         } else if (this.type === 'demon') {
-            // Orbe de vacío
             projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 'void', this.atk, 'enemy'));
         } else {
-            // Golpe cuerpo a cuerpo
             player.takeDamage(this.atk, this.x, this.y);
-            // Partículas de impacto
             for (let i = 0; i < 5; i++) {
                 particles.push(new Particle(player.x, player.y, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, '#ff3333', 3, 12));
             }
@@ -714,7 +896,6 @@ class Enemy {
         this.flashRedTimer = 8;
         window.soundEngine.playHit();
 
-        // Retroceso directional suave
         const angle = Math.atan2(this.y - sourceY, this.x - sourceX);
         this.knockbackX = Math.cos(angle) * 4.5;
         this.knockbackY = Math.sin(angle) * 4.5;
@@ -740,7 +921,6 @@ class Enemy {
             this.flashRedTimer > 0
         );
 
-        // Barra de vida pequeña sobre enemigo herido
         if (this.hp < this.maxHp) {
             const barW = 28;
             const barH = 4;
@@ -770,7 +950,7 @@ class BossAbracadabra {
         this.width = 44;
         this.height = 46;
 
-        this.state = 'walk'; // 'walk', 'swell', 'vomit', 'charge', 'exhausted'
+        this.state = 'walk';
         this.stateTimer = 0;
         this.animFrame = 0;
         this.direction = 0;
@@ -790,7 +970,6 @@ class BossAbracadabra {
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
         if (this.state === 'walk') {
-            // Caminar hacia el jugador lentamente
             const speed = 1.3;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
@@ -799,7 +978,6 @@ class BossAbracadabra {
                 this.animFrame = (this.animFrame + 1) % 4;
             }
 
-            // Cambiar a hinchado de tórax cada 160 frames (~2.6 segundos)
             if (this.stateTimer > 160) {
                 this.state = 'swell';
                 this.stateTimer = 0;
@@ -807,18 +985,15 @@ class BossAbracadabra {
                 window.soundEngine.playBossRoar();
             }
         } else if (this.state === 'swell') {
-            // Hinchando el tórax visiblemente
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 15));
 
-            // Partículas neón de advertencia alrededor de sus pústulas
             particles.push(new Particle(
                 this.x + (Math.random() - 0.5) * 30,
                 this.y - 10 + (Math.random() - 0.5) * 20,
                 0, -1, '#b4ff1e', 4, 15
             ));
 
-            if (this.stateTimer > 60) { // 1 segundo hinchando
-                // Decidir entre vómito ácido o embestida
+            if (this.stateTimer > 60) {
                 if (Math.random() < 0.5) {
                     this.state = 'vomit';
                     this.stateTimer = 0;
@@ -833,33 +1008,27 @@ class BossAbracadabra {
             }
         } else if (this.state === 'vomit') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 10));
-            // Dejar charcos de ácido cerca
             if (this.stateTimer > 40) {
                 this.state = 'exhausted';
                 this.stateTimer = 0;
             }
         } else if (this.state === 'charge') {
-            // Embestida pesada a gran velocidad
             const nx = this.x + this.chargeVx;
             const ny = this.y + this.chargeVy;
 
-            // Rastro de polvo y lodo
             particles.push(new Particle(this.x, this.y + 16, -this.chargeVx * 0.2, -0.5, '#6b5438', 5, 20));
 
             if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 35) {
-                // Impacto o fin de embestida -> Agotado
                 this.state = 'exhausted';
                 this.stateTimer = 0;
             } else {
                 this.x = nx;
                 this.y = ny;
-                // Daño por contacto durante la embestida
                 if (dist < 38) {
                     player.takeDamage(this.atk + 10, this.x, this.y);
                 }
             }
         } else if (this.state === 'exhausted') {
-            // Queda exhausto 2 segundos (120 frames), vulnerable a contraataques
             this.animFrame = 0;
             if (this.stateTimer > 110) {
                 this.state = 'walk';
@@ -870,7 +1039,6 @@ class BossAbracadabra {
 
     spewAcid(centerAngle, projectiles, particles) {
         window.soundEngine.playAcidSpit();
-        // Disparar abanico de 5 proyectiles de ácido
         const spread = [-0.4, -0.2, 0, 0.2, 0.4];
         spread.forEach(offset => {
             const a = centerAngle + offset;
@@ -885,7 +1053,6 @@ class BossAbracadabra {
     }
 
     takeDamage(damage, sourceX, sourceY) {
-        // Recibe 30% más de daño cuando está agotado
         const mul = (this.state === 'exhausted') ? 1.3 : 1.0;
         const actual = Math.floor(damage * mul);
         this.hp = Math.max(0, this.hp - actual);
@@ -900,7 +1067,7 @@ class BossAbracadabra {
         const dx = Math.floor(this.x - destW / 2);
         const dy = Math.floor(this.y - destH / 2 - 8);
 
-        let row = 0; // walk
+        let row = 0;
         if (this.state === 'swell') row = 1;
         else if (this.state === 'vomit') row = 2;
         else if (this.state === 'charge') row = 3;
@@ -933,7 +1100,7 @@ class BossHong {
         this.width = 60;
         this.height = 64;
 
-        this.state = 'idle'; // 'idle', 'barrage', 'cleave', 'devour'
+        this.state = 'idle';
         this.stateTimer = 0;
         this.animFrame = 0;
         this.flashRedTimer = 0;
@@ -946,12 +1113,10 @@ class BossHong {
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
-        // Fauces abriéndose cíclicamente en el torso
         if (this.stateTimer % 10 === 0) {
             this.animFrame = (this.animFrame + 1) % 4;
         }
 
-        // Rastro de miasma de vacío continuo
         particles.push(new Particle(
             this.x + (Math.random() - 0.5) * 50,
             this.y + (Math.random() - 0.5) * 40,
@@ -960,7 +1125,6 @@ class BossHong {
         ));
 
         if (this.state === 'idle') {
-            // Moverse amenazadoramente hacia el jugador
             const speed = 1.4;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
@@ -969,14 +1133,13 @@ class BossHong {
                 this.stateTimer = 0;
                 const rand = Math.random();
                 if (rand < 0.45) {
-                    this.state = 'barrage'; // Erupción de proyectiles de vacío
+                    this.state = 'barrage';
                     window.soundEngine.playBossRoar();
                 } else {
-                    this.state = 'cleave'; // Zarpazo demoledor
+                    this.state = 'cleave';
                 }
             }
         } else if (this.state === 'barrage') {
-            // Disparar anillo de 8 orbes de vacío desde las fauces del torso
             if (this.stateTimer === 30) {
                 for (let i = 0; i < 8; i++) {
                     const a = (i * Math.PI * 2) / 8;
@@ -994,13 +1157,11 @@ class BossHong {
                 this.stateTimer = 0;
             }
         } else if (this.state === 'cleave') {
-            // Cargar y asestar zarpazo gigante
             if (this.stateTimer === 25) {
                 window.soundEngine.playSwordSlash();
                 if (dist < 80) {
                     player.takeDamage(this.atk + 12, this.x, this.y);
                 }
-                // Arco de zarpazo visible
                 for (let i = 0; i < 15; i++) {
                     particles.push(new Particle(
                         this.x + Math.cos(angle) * 45,
@@ -1046,6 +1207,7 @@ class BossHong {
     }
 }
 
+// Registro global
 window.Player = Player;
 window.Enemy = Enemy;
 window.BossAbracadabra = BossAbracadabra;
@@ -1053,3 +1215,4 @@ window.BossHong = BossHong;
 window.Projectile = Projectile;
 window.Particle = Particle;
 window.FloatingText = FloatingText;
+window.GroundItem = GroundItem;

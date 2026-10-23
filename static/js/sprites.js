@@ -28,7 +28,7 @@ class SpriteManager {
             tiles_acid: '/static/assets/sprites/tileset_acid.png?v=3',
             tiles_apex: '/static/assets/sprites/tileset_apex.png?v=3',
             props: '/static/assets/sprites/props.png?v=2',
-            icons: '/static/assets/sprites/icons.png?v=2'
+            icons: '/static/assets/sprites/icons.png?v=3'
         };
     }
 
