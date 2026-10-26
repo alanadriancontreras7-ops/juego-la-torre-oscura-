@@ -307,7 +307,24 @@ class DarkTowerGame {
         const table = window.DROP_TABLES[tableKey] || window.DROP_TABLES[sourceType];
         if (!table) return;
 
+        const playerClass = (this.player && this.player.characterClass) ? this.player.characterClass : null;
+
+        // Tabla de equivalencias de equipo por tier (0: común, 1: oscuro, 2: legendario)
+        const EQUIVALENTS = {
+            weapon: {
+                0: { warrior: 'sword_short', archer: 'bow_short', mage: 'staff_apprentice' },
+                1: { warrior: 'blade_demonic', archer: 'bow_dark', mage: 'staff_dark' },
+                2: { warrior: 'sword_legend', archer: 'bow_legend', mage: 'staff_legend' }
+            },
+            armor: {
+                0: { warrior: 'armor_plate', archer: 'armor_leather', mage: 'armor_robe' },
+                1: { warrior: 'armor_plate_dark', archer: 'armor_leather_dark', mage: 'armor_robe_dark' },
+                2: { warrior: 'armor_plate_legend', archer: 'armor_leather_legend', mage: 'armor_robe_legend' }
+            }
+        };
+
         table.forEach(entry => {
+            // 1. Oro
             if (entry.goldMin !== undefined) {
                 const goldAmt = Math.floor(Math.random() * (entry.goldMax - entry.goldMin + 1)) + entry.goldMin;
                 if (goldAmt > 0) {
@@ -319,19 +336,55 @@ class DarkTowerGame {
                         goldAmt
                     ));
                 }
-            } else if (Math.random() <= entry.chance) {
-                const itemData = window.ITEM_DATABASE[entry.id];
-                if (itemData) {
-                    this.lootDrops.push(new GroundItem(
-                        x + (Math.random() - 0.5) * 16,
-                        y + (Math.random() - 0.5) * 16,
-                        { ...itemData, qty: entry.qty || 1 }
-                    ));
+                return;
+            }
+
+            // 2. Ítems
+            let effectiveChance = entry.chance;
+            let itemData = window.ITEM_DATABASE[entry.id];
+            if (!itemData) return;
+
+            if (playerClass) {
+                // A) Si es arma o armadura de clase
+                if (itemData.classReq) {
+                    if (itemData.classReq === playerClass) {
+                        // Si ya es de tu clase: aumenta mucho la probabilidad
+                        effectiveChance = Math.min(0.95, effectiveChance * 2.6);
+                    } else {
+                        // Si es de OTRA clase: 75% de probabilidad de transmutarlo a tu clase
+                        if (Math.random() < 0.75) {
+                            const itemType = itemData.type; // 'weapon' o 'armor'
+                            const lookTier = itemData.look !== undefined ? itemData.look : 0;
+                            const equivId = EQUIVALENTS[itemType] && EQUIVALENTS[itemType][lookTier] ? EQUIVALENTS[itemType][lookTier][playerClass] : null;
+                            if (equivId && window.ITEM_DATABASE[equivId]) {
+                                itemData = window.ITEM_DATABASE[equivId]; // ¡Se convierte en bastón o túnica!
+                                effectiveChance = Math.min(0.95, effectiveChance * 2.2);
+                            }
+                        } else {
+                            effectiveChance = effectiveChance * 0.25; // Si no se transmutó, cae poco
+                        }
+                    }
                 }
+                // B) Si es poción
+                else if (itemData.type === 'consumable') {
+                    if (playerClass === 'mage' && itemData.id === 'potion_mana') {
+                        effectiveChance = Math.min(0.90, effectiveChance * 1.8);
+                    } else if (playerClass === 'warrior' && itemData.id === 'potion_health') {
+                        effectiveChance = Math.min(0.90, effectiveChance * 1.5);
+                    }
+                }
+            }
+
+            // Tirada de drop
+            if (Math.random() <= effectiveChance) {
+                this.lootDrops.push(new GroundItem(
+                    x + (Math.random() - 0.5) * 16,
+                    y + (Math.random() - 0.5) * 16,
+                    { ...itemData, qty: entry.qty || 1 }
+                ));
             }
         });
     }
-
     triggerGameOver() {
         this.state = this.STATE_GAMEOVER;
         window.soundEngine.stopBgm();

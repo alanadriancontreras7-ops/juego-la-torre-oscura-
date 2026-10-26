@@ -158,9 +158,7 @@ class Projectile {
     }
 }
 
-// ==============================================================================
-// CLASE GROUNDITEM (BOTÍN EN EL SUELO CON FÍSICAS Y HAZ DE LUZ)
-// ==============================================================================
+
 
 // ==============================================================================
 // CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
@@ -724,9 +722,11 @@ class Player {
                 'player',
                 weaponLook
             ));
+
+            //daño de mago
         } else if (this.characterClass === 'mage') {
-            if (this.mp >= 8) {
-                this.mp -= 8;
+            if (this.mp >= 4) {
+                this.mp -= 4;
                 window.soundEngine.playMagicCast();
                 const magicSpeed = 5.5;
                 projectiles.push(new Projectile(
