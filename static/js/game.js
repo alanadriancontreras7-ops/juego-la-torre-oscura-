@@ -64,7 +64,7 @@ class DarkTowerGame {
 
         this.canvas.addEventListener('mousedown', (e) => {
             if (this.state === this.STATE_PLAYING && this.player) {
-                if (e.button === 0) {
+                if (e.button === 0) { // Clic izquierdo: ataque
                     this.player.attack(this.mousePos.x, this.mousePos.y, this.projectiles, this.particles);
                 }
             }
@@ -91,6 +91,7 @@ class DarkTowerGame {
             document.getElementById('how-to-play-modal').style.display = 'flex';
         });
 
+        // Cargar todos los sprites y arrancar el loop principal
         window.spriteManager.loadAll(() => {
             console.log("Sprites cargados con éxito.");
             window.uiManager.init();
@@ -162,12 +163,15 @@ class DarkTowerGame {
         this.floatingTexts = [];
         this.lootDrops = [];
 
+        // Posición de spawn garantizada
         const spawnPos = this.world.getStartingPosition();
         this.player.spawnPlayer(spawnPos.x, spawnPos.y);
 
+        // Centrado de cámara
         this.camera.x = Math.max(0, Math.min(this.world.cols * this.world.tileSize - this.camera.width, this.player.x - this.camera.width / 2));
         this.camera.y = Math.max(0, Math.min(this.world.rows * this.world.tileSize - this.camera.height, this.player.y - (this.camera.height / 2 + 35)));
 
+        // Generar enemigos o jefes
         if (floorNumber === 8) {
             const cx = Math.floor(this.world.cols / 2) * this.world.tileSize;
             const cy = Math.floor(this.world.rows / 2) * this.world.tileSize;
@@ -220,6 +224,7 @@ class DarkTowerGame {
         const p = this.player;
         const w = this.world;
 
+        // 1. Pergamino de Lore
         if (w.loreScroll && !w.loreScroll.collected) {
             const dist = Math.hypot(p.x - w.loreScroll.x, p.y - w.loreScroll.y);
             if (dist < 48) {
@@ -229,12 +234,13 @@ class DarkTowerGame {
             }
         }
 
+        // 2. Escaleras
         if (w.stairs && w.stairsUnlocked) {
             const dist = Math.hypot(p.x - (w.stairs.x + 16), p.y - (w.stairs.y + 16));
             if (dist < 48) {
                 if (w.floor < 10) {
                     this.loadFloor(w.floor + 1);
-                    this.saveGame(1, true);
+                    this.saveGame(1, true); // Autoguardado
                 } else {
                     this.triggerVictory();
                 }
@@ -242,6 +248,7 @@ class DarkTowerGame {
             }
         }
 
+        // 3. Abrir cofres: quedan abiertos y sueltan botín físico al suelo
         w.chests.forEach(chest => {
             if (!chest.opened) {
                 const dist = Math.hypot(p.x - (chest.x + 16), p.y - (chest.y + 16));
@@ -324,6 +331,7 @@ class DarkTowerGame {
             }
         });
     }
+
     triggerGameOver() {
         this.state = this.STATE_GAMEOVER;
         window.soundEngine.stopBgm();
@@ -466,8 +474,26 @@ class DarkTowerGame {
             this.player.constitution = data.constitution;
             this.player.attribute_points = data.attribute_points;
             this.player.gold = data.gold;
-            this.player.inventory = data.inventory || new Array(30).fill(null);
-            this.player.equipment = data.equipment || {};
+
+            // Actualizar ítems guardados con las nuevas estadísticas, aspecto (look) e iconos
+            const refresh = window.refreshItem || (it => it);
+            this.player.inventory = (data.inventory || new Array(30).fill(null)).map(refresh);
+            this.player.equipment = Object.fromEntries(
+                Object.entries(data.equipment || {}).map(([s, it]) => [s, refresh(it)])
+            );
+
+            // SANEAMIENTO: Si una partida previa tenía un arma o armadura de otra clase puesta, desequiparla
+            ['weapon', 'armor', 'accessory'].forEach(slotName => {
+                const eq = this.player.equipment[slotName];
+                if (eq && eq.classReq && eq.classReq !== this.player.characterClass) {
+                    const emptyIdx = this.player.inventory.findIndex(s => s === null);
+                    if (emptyIdx !== -1) {
+                        this.player.inventory[emptyIdx] = eq;
+                    }
+                    this.player.equipment[slotName] = null;
+                }
+            });
+
             this.player.loreUnlocked = data.lore_unlocked || [];
             this.player.enemiesKilled = data.enemies_killed || 0;
             this.player.playtimeSeconds = data.playtime_seconds || 0;
@@ -507,7 +533,7 @@ class DarkTowerGame {
             return;
         }
 
-        // 2. Comprobar ataque cuerpo a cuerpo de Guerrera
+        // 2. Ataque cuerpo a cuerpo del Guerrero
         if (this.player.slashHitbox) {
             const hb = this.player.slashHitbox;
             this.enemies.forEach((enemy, idx) => {
@@ -590,7 +616,7 @@ class DarkTowerGame {
             }
         }
 
-        // 6. Actualizar Objetos en el Suelo (Loot Drops) de forma INDEPENDIENTE
+        // 6. Actualizar Objetos en el Suelo (Botín físico con atracción magnética)
         for (let i = this.lootDrops.length - 1; i >= 0; i--) {
             const drop = this.lootDrops[i];
             drop.update(this.player, this.particles, this.world);
@@ -599,7 +625,7 @@ class DarkTowerGame {
             }
         }
 
-        // 7. Actualizar Partículas y Textos Flotantes
+        // 7. Partículas y Textos Flotantes
         for (let i = this.particles.length - 1; i >= 0; i--) {
             this.particles[i].update();
             if (this.particles[i].life <= 0) this.particles.splice(i, 1);
@@ -617,7 +643,7 @@ class DarkTowerGame {
             this.world.stairsUnlocked = true;
         }
 
-        // 9. Cámara
+        // 9. Cámara suave siguiendo al jugador
         this.camera.x = Math.max(0, Math.min(this.world.cols * this.world.tileSize - this.camera.width, this.player.x - this.camera.width / 2));
         this.camera.y = Math.max(0, Math.min(this.world.rows * this.world.tileSize - this.camera.height, this.player.y - (this.camera.height / 2 + 35)));
 
@@ -676,7 +702,7 @@ class DarkTowerGame {
         // 1. Terreno
         this.world.draw(this.ctx, this.camera);
 
-        // 2. Objetos en el Suelo (Loot Drops)
+        // 2. Objetos en el Suelo
         this.lootDrops.forEach(drop => drop.draw(this.ctx));
 
         // 3. Enemigos

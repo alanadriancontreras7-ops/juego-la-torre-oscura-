@@ -162,6 +162,10 @@ class Projectile {
 // CLASE GROUNDITEM (BOTÍN EN EL SUELO CON FÍSICAS Y HAZ DE LUZ)
 // ==============================================================================
 
+// ==============================================================================
+// CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
+// ==============================================================================
+
 class GroundItem {
     constructor(x, y, item, isGold = false, goldAmount = 0) {
         this.x = x;
@@ -170,6 +174,7 @@ class GroundItem {
         this.isGold = isGold;
         this.goldAmount = goldAmount;
 
+        // Físicas de dispersión suave al caer
         const spreadAngle = Math.random() * Math.PI * 2;
         const spreadSpeed = 1.0 + Math.random() * 2.2;
         this.vx = Math.cos(spreadAngle) * spreadSpeed;
@@ -192,6 +197,24 @@ class GroundItem {
         }
     }
 
+    /**
+     * Comprueba si el jugador tiene capacidad real para recoger este ítem
+     */
+    canPlayerPickup(player) {
+        if (!player) return false;
+        if (this.isGold) return true; // El oro siempre se puede recoger
+        if (!this.item) return false;
+
+        // Si es poción o material y ya existe en la mochila, se puede apilar
+        if (this.item.type === 'consumable' || this.item.type === 'material') {
+            const existing = player.inventory.find(s => s && s.id === this.item.id);
+            if (existing) return true;
+        }
+
+        // Si hay al menos un espacio libre en los 30 slots
+        return player.inventory.some(s => s === null);
+    }
+
     update(player, particles, world) {
         this.life++;
         this.bobTimer += 0.08;
@@ -206,6 +229,7 @@ class GroundItem {
             this.y -= this.vy * 1.5;
         }
 
+        // Partículas periódicas para rarezas altas
         if (!this.isGold && this.item) {
             if (this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
                 particles.push(new Particle(
@@ -219,29 +243,49 @@ class GroundItem {
                     this.x + (Math.random() - 0.5) * 12,
                     this.y + (Math.random() - 0.5) * 8,
                     (Math.random() - 0.5) * 0.3, -0.5,
-                    '#9b59b6', 3, 18
+                    '#3498db', 3, 18
                 ));
             }
         }
 
         if (this.life < this.pickupDelay) return;
 
-        // Atracción magnética si el jugador está cerca
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
-        if (dist < 50) {
+        const canPickup = this.canPlayerPickup(player);
+
+        // SOLO succionar con imán si el jugador PUEDE recogerlo
+        if (dist < 50 && canPickup) {
             const pullAngle = Math.atan2(player.y - this.y, player.x - this.x);
             this.x += Math.cos(pullAngle) * 3.8;
             this.y += Math.sin(pullAngle) * 3.8;
         }
 
+        // Detección de contacto cuerpo a cuerpo
         if (dist < 26) {
-            this.tryPickup(player);
+            if (canPickup) {
+                this.tryPickup(player);
+            } else {
+                // Mochila llena: mostrar alerta (con temporizador para no saturar)
+                if (!player.invFullWarningTimer || player.invFullWarningTimer <= 0) {
+                    player.invFullWarningTimer = 60;
+                    if (window.game && window.game.floatingTexts) {
+                        window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡INVENTARIO LLENO!', '#ff3333', true));
+                    }
+                    if (window.soundEngine) window.soundEngine.playTone(160, 'sawtooth', 0.15, 0.25);
+                }
+
+                // EMPUJAR SUAVEMENTE EL OBJETO HACIA AFUERA para que no se quede pegado al personaje
+                const pushAngle = (dist > 2) ? Math.atan2(this.y - player.y, this.x - player.x) : Math.random() * Math.PI * 2;
+                this.vx = Math.cos(pushAngle) * 2.2;
+                this.vy = Math.sin(pushAngle) * 2.2;
+            }
         }
     }
 
     tryPickup(player) {
         if (this.pickedUp) return;
 
+        // 1. Recogida de Oro
         if (this.isGold) {
             player.gold += this.goldAmount;
             window.soundEngine.playItemPickup();
@@ -252,8 +296,10 @@ class GroundItem {
             return;
         }
 
+        // 2. Recogida de Ítems
         if (!this.item) return;
 
+        // Apilado de pociones / materiales
         if (this.item.type === 'consumable' || this.item.type === 'material') {
             const existingIdx = player.inventory.findIndex(s => s && s.id === this.item.id);
             if (existingIdx !== -1) {
@@ -263,18 +309,11 @@ class GroundItem {
             }
         }
 
+        // Slot vacío
         const emptyIdx = player.inventory.findIndex(s => s === null);
         if (emptyIdx !== -1) {
             player.inventory[emptyIdx] = { ...this.item, qty: this.item.qty || 1 };
             this.onSuccessfulPickup(player);
-        } else {
-            if (!player.invFullWarningTimer || player.invFullWarningTimer <= 0) {
-                player.invFullWarningTimer = 60;
-                if (window.game && window.game.floatingTexts) {
-                    window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡INVENTARIO LLENO!', '#ff3333', true));
-                }
-                window.soundEngine.playTone(160, 'sawtooth', 0.15, 0.25);
-            }
         }
     }
 
@@ -342,8 +381,9 @@ class GroundItem {
         const iconIdx = this.isGold ? 9 : (this.item ? (this.item.icon || 0) : 0);
         window.spriteManager.drawIcon(ctx, iconIdx, drawX - iconSize / 2, drawY - iconSize / 2, iconSize);
 
+        // Mostrar nombre solo si estás cerca
         const distToPlayer = Math.hypot(window.game.player.x - this.x, window.game.player.y - this.y);
-        if (distToPlayer < 75 || this.rarity === 'LEGENDARY') {
+        if (distToPlayer < 65 || this.rarity === 'LEGENDARY') {
             ctx.font = '8px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.strokeStyle = '#000000';
@@ -356,7 +396,6 @@ class GroundItem {
         ctx.restore();
     }
 }
-
 // ==============================================================================
 // CLASE DEL JUGADOR (CON SOPORTE DE SPRITES DE ARMADURAS DINÁMICAS)
 // ==============================================================================
@@ -469,20 +508,7 @@ class Player {
         }
     }
 
-    giveInitialEquipment() {
-        if (this.characterClass === 'warrior') {
-            this.equipment.weapon = window.ITEM_DATABASE.sword_common;
-            this.equipment.armor = window.ITEM_DATABASE.armor_warrior_common;
-        } else if (this.characterClass === 'archer') {
-            this.equipment.weapon = window.ITEM_DATABASE.bow_common;
-            this.equipment.armor = window.ITEM_DATABASE.armor_archer_common;
-        } else if (this.characterClass === 'mage') {
-            this.equipment.weapon = window.ITEM_DATABASE.staff_common;
-            this.equipment.armor = window.ITEM_DATABASE.armor_mage_common;
-        }
-        this.inventory[0] = { ...window.ITEM_DATABASE.potion_health, qty: 3 };
-        this.inventory[1] = { ...window.ITEM_DATABASE.potion_mana, qty: 2 };
-    }
+
 
     getTotalStats() {
         let totalStr = this.strength;
@@ -515,27 +541,51 @@ class Player {
         };
     }
 
-    getWeaponLook() {
-        const w = this.equipment && this.equipment.weapon;
-        if (!w) return 0;
-        if (w.look !== undefined) return w.look;
-        if (w.rarity === 'LEGENDARY') return 2;
-        if (w.rarity === 'RARE' || w.rarity === 'EPIC') return 1;
-        return 0;
+    giveInitialEquipment() {
+        if (this.characterClass === 'warrior') {
+            this.equipment.weapon = window.ITEM_DATABASE.sword_short;
+            this.equipment.armor = window.ITEM_DATABASE.armor_plate; // ¡Peto de hierro inicial!
+        } else if (this.characterClass === 'archer') {
+            this.equipment.weapon = window.ITEM_DATABASE.bow_short;
+            this.equipment.armor = window.ITEM_DATABASE.armor_leather; // Jubón de cuero
+        } else if (this.characterClass === 'mage') {
+            this.equipment.weapon = window.ITEM_DATABASE.staff_apprentice;
+            this.equipment.armor = window.ITEM_DATABASE.armor_robe; // Túnica mística
+        }
+        this.inventory[0] = { ...window.ITEM_DATABASE.potion_health, qty: 3 };
+        this.inventory[1] = { ...window.ITEM_DATABASE.potion_mana, qty: 2 };
     }
 
+    /**
+     * Devuelve el nivel visual del arma (0 común, 1 oscura/demoníaca, 2 legendaria).
+     * Solo si coincide con la clase del héroe (guerrero: espada, arquero: arco, mago: bastón).
+     */
+    getWeaponLook() {
+        const nativeWeapon = { warrior: 'sword', archer: 'bow', mage: 'staff' }[this.characterClass];
+        const w = this.equipment && this.equipment.weapon;
+        if (!w) return 0;
+        const itemDef = window.ITEM_DATABASE[w.id] || w;
+        if (itemDef.weaponType && itemDef.weaponType !== nativeWeapon) return 0;
+        return (itemDef.look !== undefined) ? itemDef.look : 0;
+    }
+
+    /**
+     * Devuelve el nivel visual de la armadura (0 hierro/común, 1 oscura, 2 legendaria).
+     */
     getArmorLook() {
+        const nativeArmor = { warrior: 'plate', archer: 'leather', mage: 'robe' }[this.characterClass];
         const a = this.equipment && this.equipment.armor;
         if (!a) return 0;
-        if (a.look !== undefined) return a.look;
-        if (a.rarity === 'LEGENDARY') return 2;
-        if (a.rarity === 'RARE' || a.rarity === 'EPIC') return 1;
-        return 0;
+        const itemDef = window.ITEM_DATABASE[a.id] || a;
+        if (itemDef.armorType && itemDef.armorType !== nativeArmor) return 0;
+        return (itemDef.look !== undefined) ? itemDef.look : 0;
     }
 
     getSpriteKey() {
         return `player_${this.characterClass}_w${this.getWeaponLook()}_a${this.getArmorLook()}`;
     }
+
+
 
     update(keys, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;

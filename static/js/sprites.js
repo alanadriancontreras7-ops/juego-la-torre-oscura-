@@ -31,11 +31,12 @@ class SpriteManager {
         };
 
         // Registrar dinámicamente las 9 variantes visuales (arma x armadura) de cada héroe
+
         ['warrior', 'archer', 'mage'].forEach(cls => {
             for (let w = 0; w < 3; w++) {
                 for (let a = 0; a < 3; a++) {
                     const key = `player_${cls}_w${w}_a${a}`;
-                    this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=4`;
+                    this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=5`;
                 }
             }
         });
@@ -107,14 +108,11 @@ class SpriteManager {
         }
     }
 
+
     /**
-     * Dibuja el sprite con soporte de tinte de daño seguro (sin ctx.filter que crashea).
-     */
-    /**
-         * Dibuja un sprite individual con soporte de parpadeo rojo seguro
-         */
+       * Dibuja un sprite individual con soporte de parpadeo rojo seguro
+       */
     draw(ctx, sheetKey, col, row, frameW, frameH, dx, dy, destW, destH, flipX = false, flashRed = false) {
-        // Si falta la variante específica (ej: warrior_w1_a2), se usa la base de la clase
         let sheet = this.sheets[sheetKey];
         if (!sheet) {
             const baseClass = String(sheetKey).replace('player_', '').split('_')[0];
@@ -123,7 +121,6 @@ class SpriteManager {
         if (!sheet) return;
 
         ctx.save();
-
         if (flipX) {
             ctx.translate(dx + destW, dy);
             ctx.scale(-1, 1);
@@ -131,20 +128,7 @@ class SpriteManager {
             dy = 0;
         }
 
-        const sx = col * frameW;
-        const sy = row * frameH;
-
-        ctx.drawImage(sheet, sx, sy, frameW, frameH, dx, dy, destW, destH);
-
-        // Feedback de daño seguro (sin ctx.filter que congela Canvas)
-        if (flashRed) {
-            ctx.save();
-            ctx.globalCompositeOperation = 'source-atop';
-            ctx.fillStyle = 'rgba(255, 60, 60, 0.70)';
-            ctx.fillRect(dx, dy, destW, destH);
-            ctx.restore();
-        }
-
+        ctx.drawImage(sheet, col * frameW, row * frameH, frameW, frameH, dx, dy, destW, destH);
         ctx.restore();
     }
 

@@ -1,15 +1,10 @@
-
 """
 Generador de Sprites Pixel Art 16-Bit para 'La Torre Oscura'
-Crea spritesheets en formato PNG con fondo transparente, contornos oscuros
-y proporciones legibles al estilo Pokémon / RPGs de 16-bit (GBA / SNES).
-Incorpora variantes de armas y armaduras (Común, Oscura/Demoníaca, Legendaria)
-para Guerrero, Arquero y Mago.
+Héroes con variantes de armas/armaduras y monstruos/jefes con sombreado de alta calidad.
 """
 
 import os
 import math
-# pyrefly: ignore[missing-import]
 from PIL import Image, ImageDraw, ImageOps
 
 ASSETS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'assets', 'sprites')
@@ -27,12 +22,17 @@ def rect(draw, x, y, w, h, fill, outline=None):
 def ellipse(draw, x, y, w, h, fill, outline=None):
     draw.ellipse([x, y, x + w - 1, y + h - 1], fill=fill, outline=outline)
 
+def _shade(c, f):
+    a = c[3] if len(c) > 3 else 255
+    return (max(0, min(255, int(c[0] * f))),
+            max(0, min(255, int(c[1] * f))),
+            max(0, min(255, int(c[2] * f))), a)
+
 # ==============================================================================
-# PALETAS Y UTILIDADES BASE
+# PALETAS DE COLOR (5 TONOS POR RAMPA)
 # ==============================================================================
 HI, LT, MD, DK, DP = range(5)
 
-# Paletas generales y de héroes base
 P_SKIN      = [(255, 232, 204), (246, 204, 164), (224, 164, 124), (178, 116, 96), (122, 76, 76)]
 P_STEEL     = [(252, 253, 255), (208, 220, 240), (152, 170, 200), (100, 114, 152), (60, 68, 106)]
 P_GOLD      = [(255, 244, 160), (255, 214, 88), (224, 162, 50), (164, 102, 42), (104, 62, 38)]
@@ -47,7 +47,7 @@ P_HAIR      = [(196, 126, 84), (154, 92, 60), (112, 66, 48), (78, 46, 40), (50, 
 P_PANTS     = [(168, 156, 134), (136, 122, 106), (102, 90, 82), (72, 62, 66), (48, 42, 52)]
 P_ORB       = [(255, 255, 232), (255, 232, 124), (255, 172, 52), (222, 102, 32), (152, 52, 30)]
 
-# Paletas especializadas para variantes de Armas y Armaduras
+# Paletas de Armas y Armaduras
 P_OBSID        = [(150, 138, 176), (104, 92, 132), (66, 56, 92), (42, 34, 64), (26, 20, 42)]
 P_LAVA         = [(255, 240, 170), (255, 190, 80), (255, 110, 40), (214, 52, 36), (140, 28, 40)]
 P_CRIMSON      = [(255, 150, 130), (230, 70, 70), (176, 36, 52), (118, 24, 44), (76, 16, 36)]
@@ -88,7 +88,6 @@ P_PUTRID    = [(178, 195, 150), (135, 158, 110), (96, 122, 78), (65, 88, 52), (4
 P_TITAN_CH  = [(130, 36, 48), (96, 22, 34), (68, 14, 24), (44, 8, 16), (26, 4, 10)]
 P_TITAN_DK  = [(60, 48, 68), (44, 32, 52), (30, 20, 38), (20, 12, 26), (12, 6, 16)]
 
-# Configuración de tiers de armadura por clase (0=común, 1=oscura, 2=legendaria)
 WARRIOR_ARMOR = [
     dict(S=P_STEEL,   G=P_GOLD,    C=P_BLUE,       R=P_RED,    eye=EYE_N),
     dict(S=P_OBSID,   G=P_CRIMSON, C=P_BLOODCAPE,  R=P_PURPLE, eye=EYE_RED),
@@ -109,7 +108,6 @@ def _dn(R):
     return [R[1], R[2], R[3], R[4], R[4]]
 
 class _L:
-    """Capa con helpers de dibujo pixel-art. Soporta cualquier tamaño cuadrangular."""
     def __init__(s, noline=False, w=48, h=48, size=None):
         if size is not None:
             w, h = size, size
@@ -212,12 +210,23 @@ def _hand(L, x, y, skin=P_SKIN):
 def _mir(pts):
     return [(47 - x, y) for x, y in pts]
 
+def _dagger(L, hand, tip, R=P_STEEL):
+    hx, hy = hand
+    tx, ty = tip
+    L.line([(hx, hy), (tx, ty)], R[MD], 2)
+    L.line([(hx, hy - 1), (tx, ty - 1)], R[HI], 1)
+    L.px(hx, hy + 1, P_WOOD[DK])
+    L.px(tx, ty, R[HI])
+
+def _draw_shadow(canvas_draw, cx, cy, rx, ry):
+    canvas_draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=(10, 10, 18, 110))
+    canvas_draw.ellipse([cx - rx + 2, cy - ry + 1, cx + rx - 2, cy + ry - 1], fill=(10, 10, 18, 70))
+
 # ==============================================================================
-# FUNCIONES DE ARMAS Y ARMADURAS DINÁMICAS (DE CLAUDE)
+# SISTEMA DE ARMAS Y ARMADURAS DINÁMICAS
 # ==============================================================================
 
 def _blade(L, hand, tip, R=P_STEEL, look=0):
-    """Espada. look 0 = común (acero), 1 = demoníaca (obsidiana/lava), 2 = legendaria (luz/oro)."""
     hx, hy = hand
     tx, ty = tip
     ln = math.hypot(tx - hx, ty - hy) or 1
@@ -227,7 +236,7 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
     sx, sy = hx + ux * 3, hy + uy * 3
     pmx, pmy = int(hx - ux * 3), int(hy - uy * 3)
 
-    if look == 1:
+    if look == 1: # Demoniaca
         O, F = P_OBSID, P_LAVA
         L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], O[DK], 2)
         L.ell(pmx - 1, pmy - 1, pmx + 1, pmy + 1, F[MD])
@@ -243,7 +252,7 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
         L.px(int(tx), int(ty), F[HI])
         return
 
-    if look == 2:
+    if look == 2: # Legendaria
         H, Gd = P_HOLY, P_GOLD
         L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], Gd[DK], 2)
         L.ell(pmx - 1, pmy - 1, pmx + 1, pmy + 1, Gd[HI])
@@ -258,7 +267,7 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
         L.px(int(gx), int(gy), P_AQUA[MD])
         return
 
-    # Común
+    # Comun
     L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], P_WOOD[DK], 2)
     L.px(pmx, pmy, P_GOLD[MD])
     L.line([(gx - nx * 3, gy - ny * 3), (gx + nx * 3, gy + ny * 3)], P_GOLD[MD], 2)
@@ -269,7 +278,6 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
     L.px(int(tx), int(ty), R[HI])
 
 def _blade_fx(hand, tip, look, size=48):
-    """Aura del arma: llamas rojas (oscura) o brillo celeste-dorado (legendaria)."""
     fx = _L(noline=True, size=size)
     if look == 0:
         return fx
@@ -284,7 +292,6 @@ def _blade_fx(hand, tip, look, size=48):
     return fx
 
 def _bow(L, dr, ai, look=0, fx=None):
-    """Arco. look 0 = normal (madera), 1 = oscuro (obsidiana/cuerda roja), 2 = legendario (oro/luz)."""
     W = [P_WOOD, P_OBSID, P_GOLD][look]
     string = [(236, 230, 204, 255), (255, 96, 120, 255), (190, 246, 255, 255)][look]
     tipc = [None, P_LAVA[HI], P_WHITE[HI]][look]
@@ -340,7 +347,6 @@ def _bow(L, dr, ai, look=0, fx=None):
                 fx.px(24, y1 + sg * 2, glow + (200,))
         return
 
-    # Perfil lateral
     if ai is None:
         box = (8, 14, 18, 40)
         L.arc(box, 90, 270, W[MD], 2)
@@ -371,7 +377,7 @@ def _warrior_extra(dr, b, ak):
     if ak == 0:
         return None, None
     behind, front = _L(), _L()
-    if ak == 2:   # Alas en casco + gema
+    if ak == 2:
         wl_ = [(17, 13 + b), (10, 9 + b), (8, 12 + b), (11, 13 + b), (9, 16 + b), (13, 16 + b), (17, 17 + b)]
         ws_ = [(26, 13 + b), (33, 9 + b), (35, 12 + b), (32, 13 + b), (34, 16 + b), (30, 16 + b), (26, 17 + b)]
         for w in ([ws_] if dr == 1 else [wl_, _mir(wl_)]):
@@ -382,7 +388,7 @@ def _warrior_extra(dr, b, ak):
         if dr == 0:
             front.rect(23, 24 + b, 24, 25 + b, P_AQUA[MD])
             front.px(23, 24 + b, P_AQUA[HI])
-    else:         # Cuernos y púas en hombros
+    else:
         hl = [(18, 11 + b), (14, 9 + b), (13, 3 + b), (16, 7 + b), (19, 9 + b)]
         hs = [(25, 10 + b), (25, 3 + b), (29, 7 + b), (28, 10 + b)]
         sl = [(15, 21 + b), (13, 16 + b), (18, 20 + b)]
@@ -432,7 +438,6 @@ def _mage_extra(dr, b, ak):
                 L.px(x, y, P_GOLD[HI])
     return L
 
-# Poses de armas
 SWORD = {
     0: {'idle': ((32, 29), (32, 13)), 0: ((33, 24), (40, 8)),  1: ((31, 30), (31, 46)), 2: ((30, 31), (22, 45))},
     1: {'idle': ((16, 29), (14, 13)), 0: ((24, 22), (30, 7)),  1: ((15, 27), (0, 27)),  2: ((14, 30), (4, 42))},
@@ -797,7 +802,7 @@ def _mage_layers(dr, p, ai, anim, wl=0, ak=0):
         if wl == 0:
             L2.line([(hx, hy), (tx, ty)], Wd[MD], 2)
             L2.line([(hx - 1, hy), (tx - 1, ty)], Wd[LT], 1)
-            L2.px(tx + 1, ty + 2, P_GOLD[MD]); L2.px(tx - 1, ty + 2, P_GOLD[MD])
+            L2.px(tx + 1, ty + 2, P_GOLD[MD]); L2.px(tx - 1, ty + 3, P_GOLD[MD])
             _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_ORB)
         elif wl == 1:
             O = P_OBSID
@@ -961,21 +966,10 @@ def draw_mage_frame(direction, anim_frame, is_attack=False, wl=0, ak=0):
     return _render_hero('mage', direction, anim_frame, is_attack, wl, ak)
 
 # ==============================================================================
-# ENEMIGOS Y MONSTRUOS (TU CÓDIGO DETALLADO ORIGINAL)
+# ENEMIGOS 16-BIT SHADED ART
 # ==============================================================================
 
-def _dagger(L, hand, tip, R=P_STEEL):
-    hx, hy = hand
-    tx, ty = tip
-    L.line([(hx, hy), (tx, ty)], R[MD], 2)
-    L.line([(hx, hy - 1), (tx, ty - 1)], R[HI], 1)
-    L.px(hx, hy + 1, P_WOOD[DK])
-    L.px(tx, ty, R[HI])
-
-def _draw_shadow(canvas_draw, cx, cy, rx, ry):
-    canvas_draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=(10, 10, 18, 110))
-    canvas_draw.ellipse([cx - rx + 2, cy - ry + 1, cx + rx - 2, cy + ry - 1], fill=(10, 10, 18, 70))
-
+# 1. BANDIDO (enemy_bandit.png - 48x48)
 def draw_bandit_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1092,6 +1086,7 @@ def draw_bandit_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
+# 2. ESQUELETO (enemy_skeleton.png - 48x48)
 def draw_skeleton_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1200,6 +1195,7 @@ def draw_skeleton_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
+# 3. ARAÑA GIGANTE (enemy_spider.png - 48x48)
 def draw_spider_frame(direction, anim_frame):
     dr = 1 if direction == 2 else direction
     cy_shift = 1 if anim_frame in (1, 3) else 0
@@ -1279,6 +1275,7 @@ def draw_spider_frame(direction, anim_frame):
         img = ImageOps.mirror(img)
     return img
 
+# 4. RATA GIGANTE (enemy_rat.png - 48x48)
 def draw_rat_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1352,6 +1349,7 @@ def draw_rat_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
+# 5. HOMBRE LOBO (enemy_werewolf.png - 56x56)
 def draw_werewolf_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1466,6 +1464,7 @@ def draw_werewolf_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
+# 6. DEMONIO MENOR (enemy_demon.png - 56x56)
 def draw_demon_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1567,6 +1566,7 @@ def draw_demon_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
+# 7. ABRACADABRA (boss_abracadabra.png - 72x72)
 def draw_abracadabra_frame(state, frame_idx):
     layers = []
     Pt, Pust, Tox = P_PUTRID, P_PUSTULE, P_TOXIC
@@ -1639,6 +1639,7 @@ def draw_abracadabra_frame(state, frame_idx):
         img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
     return img
 
+# 8. HONG (boss_hong.png - 96x96)
 def draw_hong_frame(frame_idx, is_cleave=False):
     layers = []
     Ch, Dk, Vd, Gld = P_TITAN_CH, P_TITAN_DK, P_VOID, P_GOLD
@@ -1709,24 +1710,14 @@ def draw_hong_frame(frame_idx, is_cleave=False):
     return img
 
 # ==============================================================================
-# TILES, PROPS E ICONOS
+# TILESETS Y PROPS (INCLUYE COFRE ABIERTO)
 # ==============================================================================
 
-def _shade(c, f):
-    a = c[3] if len(c) > 3 else 255
-    return (max(0, min(255, int(c[0] * f))),
-            max(0, min(255, int(c[1] * f))),
-            max(0, min(255, int(c[2] * f))), a)
-
 TILE_STYLES = {
-    'crypt': dict(floor=(108, 99, 92), brick=(62, 54, 76), cap=(112, 100, 130),
-                  top=(36, 31, 46), void=(17, 14, 24), crack=(34, 30, 34)),
-    'demon': dict(floor=(84, 58, 62), brick=(104, 38, 48), cap=(176, 82, 94),
-                  top=(50, 22, 30), void=(21, 9, 14), crack=(30, 16, 20)),
-    'acid':  dict(floor=(92, 106, 86), brick=(48, 66, 46), cap=(124, 154, 112),
-                  top=(26, 36, 26), void=(11, 17, 11), crack=(30, 40, 28)),
-    'apex':  dict(floor=(72, 70, 96), brick=(48, 44, 78), cap=(112, 106, 164),
-                  top=(28, 26, 48), void=(12, 11, 22), crack=(22, 20, 40)),
+    'crypt': dict(floor=(108, 99, 92), brick=(62, 54, 76), cap=(112, 100, 130), top=(36, 31, 46), void=(17, 14, 24), crack=(34, 30, 34)),
+    'demon': dict(floor=(84, 58, 62), brick=(104, 38, 48), cap=(176, 82, 94), top=(50, 22, 30), void=(21, 9, 14), crack=(30, 16, 20)),
+    'acid':  dict(floor=(92, 106, 86), brick=(48, 66, 46), cap=(124, 154, 112), top=(26, 36, 26), void=(11, 17, 11), crack=(30, 40, 28)),
+    'apex':  dict(floor=(72, 70, 96), brick=(48, 44, 78), cap=(112, 106, 164), top=(28, 26, 48), void=(12, 11, 22), crack=(22, 20, 40)),
 }
 
 FLOOR_LAYOUTS = [
@@ -1908,7 +1899,6 @@ def generate_tiles():
         print(f"Creado: tileset_{kind}.png")
 
 def generate_props():
-    # 320x32 px: 10 casillas de 32x32 px (incluye cofre abierto en ox=288)
     props = create_canvas(320, 32)
     d = ImageDraw.Draw(props)
     
@@ -1924,7 +1914,7 @@ def generate_props():
     BONE_COLOR = (235, 230, 210, 255)
     BONE_SHADOW = (150, 140, 120, 255)
     
-    # 0. Antorcha
+    # 0: antorcha
     ox = 0
     rect(d, ox + 13, 14, 6, 12, IRON_DARK, OUTLINE)
     d.point((ox + 15, 16), fill=IRON_LIGHT)
@@ -1935,7 +1925,7 @@ def generate_props():
     ellipse(d, ox + 13, 6, 6, 6, (255, 245, 120, 255))
     d.point((ox + 15, 7), fill=(255, 255, 240, 255))
     
-    # 1. Barril reforzado
+    # 1: barril
     ox = 32
     ellipse(d, ox + 5, 24, 22, 7, (10, 10, 16, 120))
     ellipse(d, ox + 5, 3, 22, 26, WOOD_MID, OUTLINE)
@@ -1952,7 +1942,7 @@ def generate_props():
     d.point((ox + 10, 21), fill=(200, 205, 215, 255))
     d.point((ox + 21, 21), fill=(200, 205, 215, 255))
     
-    # 2. Cofre cerrado
+    # 2: cofre cerrado
     ox = 64
     ellipse(d, ox + 4, 23, 24, 7, (10, 10, 16, 120))
     rect(d, ox + 4, 11, 24, 15, WOOD_MID, OUTLINE)
@@ -1967,7 +1957,7 @@ def generate_props():
     rect(d, ox + 15, 16, 2, 3, OUTLINE)
     d.point((ox + 14, 14), fill=GOLD_LIGHT)
     
-    # 3. Pergamino de lore
+    # 3: lore
     ox = 96
     ellipse(d, ox + 3, 3, 26, 26, None, (255, 225, 75, 170))
     ellipse(d, ox + 6, 6, 20, 20, None, (255, 245, 150, 120))
@@ -1981,7 +1971,7 @@ def generate_props():
     ellipse(d, ox + 13, 13, 6, 6, (220, 35, 45, 255), OUTLINE)
     d.point((ox + 15, 14), fill=(255, 180, 180, 255))
     
-    # 4. Escaleras
+    # 4: escaleras
     ox = 128
     rect(d, ox + 2, 2, 28, 28, (20, 18, 26, 255), OUTLINE)
     for st in range(5):
@@ -1989,7 +1979,7 @@ def generate_props():
         rect(d, ox + 4 + st, sy, 24 - st * 2, 4, (65 + st * 14, 70 + st * 14, 82 + st * 14, 255), OUTLINE)
         d.line([(ox + 5 + st, sy), (ox + 26 - st, sy)], fill=(110 + st * 14, 120 + st * 14, 135 + st * 14, 255))
         
-    # 5. Cajas
+    # 5: cajas
     ox = 160
     ellipse(d, ox + 5, 24, 22, 7, (10, 10, 16, 120))
     rect(d, ox + 5, 5, 22, 22, WOOD_MID, OUTLINE)
@@ -2002,7 +1992,7 @@ def generate_props():
     d.point((ox + 7, 24), fill=IRON_LIGHT)
     d.point((ox + 24, 24), fill=IRON_LIGHT)
     
-    # 6. Estandarte
+    # 6: estandarte
     ox = 192
     rect(d, ox + 6, 3, 20, 3, GOLD_TRIM, OUTLINE)
     ellipse(d, ox + 4, 2, 4, 5, GOLD_LIGHT)
@@ -2014,7 +2004,7 @@ def generate_props():
     d.line([(ox + 13, 12), (ox + 17, 12)], fill=GOLD_LIGHT)
     d.polygon([(ox + 8, 24), (ox + 12, 28), (ox + 15, 23), (ox + 19, 28), (ox + 23, 24)], fill=BANNER_RED, outline=OUTLINE)
     
-    # 7. Esqueleto en el suelo
+    # 7: esqueleto
     ox = 224
     ellipse(d, ox + 3, 18, 26, 10, (10, 10, 16, 110))
     rect(d, ox + 5, 12, 7, 6, BONE_COLOR, OUTLINE)
@@ -2027,7 +2017,7 @@ def generate_props():
     d.line([(ox + 7, 24), (ox + 24, 10)], fill=IRON_LIGHT, width=2)
     rect(d, ox + 6, 23, 3, 3, GOLD_TRIM, OUTLINE)
     
-    # 8. Puerta
+    # 8: puerta
     ox = 256
     rect(d, ox + 3, 2, 26, 28, (65, 72, 85, 255), OUTLINE)
     d.line([(ox + 4, 3), (ox + 27, 3)], fill=(95, 105, 122, 255))
@@ -2041,7 +2031,7 @@ def generate_props():
     ellipse(d, ox + 11, 15, 4, 4, None, IRON_LIGHT)
     ellipse(d, ox + 17, 15, 4, 4, None, IRON_LIGHT)
 
-    # 9. Cofre Abierto (ox = 288)
+    # 9: cofre abierto (ox = 288)
     ox = 288
     ellipse(d, ox + 4, 23, 24, 7, (10, 10, 16, 120))
     rect(d, ox + 4, 13, 24, 13, WOOD_MID, OUTLINE)
@@ -2058,10 +2048,10 @@ def generate_props():
     rect(d, ox + 22, 6, 3, 6, IRON_DARK)
     
     props.save(os.path.join(ASSETS_DIR, 'props.png'))
-    print("Creado: props.png (con cofre abierto)")
+    print("Creado: props.png con cofre abierto")
 
 # ==============================================================================
-# HOJA DE ICONOS DINÁMICOS (ARMAS Y ARMADURAS COMPLETAS)
+# HOJA DE ICONOS (24 ICONOS)
 # ==============================================================================
 
 def _icon_sword(look):
@@ -2202,7 +2192,6 @@ def generate_icons():
             cell.alpha_composite(L.im if L.noline else _outline(L.im))
         icons.alpha_composite(cell, (i * 24, 0))
 
-    # Pociones, material y monedas de oro (índices 6 a 9)
     ox = 144
     rect(d, ox + 10, 3, 4, 4, (180, 180, 190, 255), OUTLINE)
     ellipse(d, ox + 6, 7, 12, 14, (235, 40, 50, 255), OUTLINE)
@@ -2224,10 +2213,14 @@ def generate_icons():
     icons.save(os.path.join(ASSETS_DIR, 'icons.png'))
     print(f"Creado: icons.png ({n} iconos 24x24)")
 
+# ==============================================================================
+# BUCLE PRINCIPAL DE CONSTRUCCIÓN
+# ==============================================================================
+
 def build_all_spritesheets():
     print("Generando spritesheets...")
     
-    # 1. Jugadores: 9 combinaciones por clase (wl: 0-2 x ak: 0-2)
+    # 1. Jugadores: 9 combinaciones por clase (3 armas x 3 armaduras)
     classes = [
         ('warrior', draw_warrior_frame),
         ('archer', draw_archer_frame),
@@ -2247,9 +2240,9 @@ def build_all_spritesheets():
                 sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}_w{wl}_a{ak}.png'))
                 if wl == 0 and ak == 0:
                     sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}.png'))
-        print(f"Creado: player_{cls}_w*_a*.png (9 variantes)")
+        print(f"Creado: player_{cls}_w*_a*.png (9 combinaciones)")
 
-    # 2. Enemigos Base 48x48
+    # 2. Enemigos 48x48
     enemies_48 = [
         ('enemy_bandit.png', draw_bandit_frame),
         ('enemy_skeleton.png', draw_skeleton_frame),
@@ -2317,7 +2310,7 @@ def build_all_spritesheets():
     generate_tiles()
     generate_props()
     generate_icons()
-    print("Tiles, Props e Iconos generados con éxito.")
+    print("Generación completada con éxito.")
 
 if __name__ == '__main__':
     build_all_spritesheets()

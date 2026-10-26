@@ -616,9 +616,10 @@ class World {
             }
         });
 
-        // 8. Cofres de madera y oro (col 2, sx=64)
+        // 8. Cofres de madera y oro 
         this.chests.forEach(c => {
-            ctx.drawImage(propsSheet, 64, 0, 32, 32, c.x, c.y, 32, 32);
+            const sx = c.opened ? 288 : 64; // sx = 288 es el cofre abierto generado en props.png
+            ctx.drawImage(propsSheet, sx, 0, 32, 32, c.x, c.y, 32, 32);
         });
 
         // 9. Antorchas con animación de llama y halo de luz cálida (col 0, sx=0)

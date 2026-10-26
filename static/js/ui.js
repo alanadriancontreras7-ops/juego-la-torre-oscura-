@@ -270,26 +270,14 @@ class UIManager {
         }
     }
 
-    renderPaperdoll(player) {
-        const canvas = document.getElementById('dollCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        window.spriteManager.draw(
-            ctx,
-            player.characterClass,
-            0, 0,
-            48, 48,
-            0, 0, 96, 96
-        );
-    }
 
     handleSlotClick(index) {
         const player = window.game.player;
         const item = player.inventory[index];
         if (!item) return;
 
+        // 1. Pociones y consumibles
         if (item.type === 'consumable') {
             if (item.heal_hp) player.hp = Math.min(player.maxHp, player.hp + item.heal_hp);
             if (item.heal_mp) player.mp = Math.min(player.maxMp, player.mp + item.heal_mp);
@@ -299,26 +287,68 @@ class UIManager {
             if (item.qty <= 0) player.inventory[index] = null;
             this.hideTooltip();
             this.renderInventory();
-        } else if (item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory') {
-            const currentEquipped = player.equipment[item.type];
-            player.equipment[item.type] = item;
+            return;
+        }
+
+        // 2. Equipamiento de Armas y Armaduras
+        if (item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory') {
+            // =========================================================
+            // RESTRICCIÓN DE CLASE
+            // =========================================================
+            if (item.classReq && item.classReq !== player.characterClass) {
+                const classNames = { warrior: 'Guerrero', archer: 'Arquero', mage: 'Mago' };
+                const reqName = classNames[item.classReq] || item.classReq;
+                if (window.soundEngine) {
+                    window.soundEngine.playTone(140, 'sawtooth', 0.2, 0.3);
+                }
+                if (window.game && window.game.floatingTexts) {
+                    window.game.floatingTexts.push(new FloatingText(
+                        player.x, player.y - 25,
+                        `¡Solo ${reqName}!`,
+                        '#ff4444',
+                        true
+                    ));
+                }
+                return; // Bloquea equipar
+            }
+
+            // Cada ítem va estrictamente a su ranura: weapon -> weapon, armor -> armor
+            const targetSlot = item.type;
+            const currentEquipped = player.equipment[targetSlot];
+
+            player.equipment[targetSlot] = item;
             player.inventory[index] = currentEquipped;
+
             window.soundEngine.playItemPickup();
             this.hideTooltip();
             this.renderInventory();
         }
     }
 
+    renderPaperdoll(player) {
+        const canvas = document.getElementById('dollCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Obtiene la clave de sprite exacta según el arma y armadura puestas (ej: player_warrior_w0_a0)
+        const sheetKey = player.getSpriteKey ? player.getSpriteKey() : `player_${player.characterClass}`;
+
+        window.spriteManager.draw(
+            ctx,
+            sheetKey,
+            0, 0,
+            48, 48,
+            0, 0, 96, 96
+        );
+    }
     discardItem(index) {
         const player = window.game.player;
         if (!player || !player.inventory[index]) return;
         const item = player.inventory[index];
+        const itemName = item.name;
 
-        // Tirar al suelo físicamente junto al jugador
-        if (window.game && window.game.lootDrops) {
-            window.game.lootDrops.push(new GroundItem(player.x, player.y, { ...item, qty: 1 }));
-        }
-
+        // Se elimina directamente de la mochila SIN crear nada en el suelo
         if (item.qty && item.qty > 1) {
             item.qty--;
             if (item.qty <= 0) player.inventory[index] = null;
@@ -326,7 +356,28 @@ class UIManager {
             player.inventory[index] = null;
         }
 
-        window.soundEngine.playTone(180, 'square', 0.15, 0.2);
+        // Sonido de destrucción
+        if (window.soundEngine) {
+            window.soundEngine.playTone(130, 'square', 0.15, 0.2);
+        }
+
+        // Aviso visual discreto de que el objeto fue destruido
+        if (window.game && window.game.floatingTexts) {
+            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 20, `-${itemName}`, '#a4b0be'));
+        }
+
+        // Pequeño efecto de ceniza/humo
+        if (window.game && window.game.particles) {
+            for (let i = 0; i < 6; i++) {
+                window.game.particles.push(new Particle(
+                    player.x, player.y,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    '#747d8c', 3, 15
+                ));
+            }
+        }
+
         this.hideContextMenu();
         this.hideTooltip();
         this.renderInventory();
@@ -346,7 +397,7 @@ class UIManager {
                 <span>${actionText}</span>
             </button>
             <button class="item-context-btn danger" id="ctx-discard-btn">
-                <span>🗑️ Tirar / Descartar</span>
+                <span>🗑️ Destruir / Eliminar</span>
             </button>
         `;
 
@@ -386,10 +437,27 @@ class UIManager {
         const tt = this.tooltip;
         if (!tt) return;
         const rarity = window.ITEM_RARITIES[item.rarity] || window.ITEM_RARITIES.COMMON;
+        const player = window.game ? window.game.player : null;
+
+        const classLabels = {
+            warrior: '⚔️ Solo Guerrero',
+            archer: '🏹 Solo Arquero',
+            mage: '🔮 Solo Mago'
+        };
+
+        let reqHtml = '';
+        if (item.classReq) {
+            const isCompatible = player && player.characterClass === item.classReq;
+            const labelColor = isCompatible ? '#2ecc71' : '#e74c3c';
+            reqHtml = `<div style="color:${labelColor}; font-size:11px; margin-bottom:4px; font-weight:bold;">
+                ${classLabels[item.classReq] || item.classReq}
+            </div>`;
+        }
 
         tt.innerHTML = `
             <div class="tooltip-title" style="color:${rarity.color}">${item.name}</div>
             <div class="tooltip-type">${rarity.name} - ${item.type.toUpperCase()}</div>
+            ${reqHtml}
             <div class="tooltip-stats">
                 ${item.atk ? `<div>+${item.atk} Daño de Ataque</div>` : ''}
                 ${item.def ? `<div>+${item.def} Defensa Física</div>` : ''}
@@ -403,7 +471,7 @@ class UIManager {
             <div class="tooltip-lore">${item.desc || ''}</div>
             <div style="font-size:13px;color:#f1c40f;margin-top:6px;display:flex;justify-content:space-between;">
                 <span>Valor: ${item.value || 0} G</span>
-                <span style="font-size:10px;color:#ff7675;">[Clic Der: Opciones]</span>
+                <span style="font-size:10px;color:#ff7675;">[Clic: Equipar / Usar]</span>
             </div>
         `;
         tt.style.display = 'block';
