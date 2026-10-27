@@ -17,7 +17,6 @@ class DarkTowerGame {
             this.titleEyeCtx.imageSmoothingEnabled = false;
         }
 
-        // Estados del Juego
         this.STATE_TITLE = 'TITLE';
         this.STATE_PLAYING = 'PLAYING';
         this.STATE_PAUSED = 'PAUSED';
@@ -25,7 +24,6 @@ class DarkTowerGame {
         this.STATE_VICTORY = 'VICTORY';
         this.state = this.STATE_TITLE;
 
-        // Entidades y Mundo
         this.player = null;
         this.world = null;
         this.enemies = [];
@@ -35,12 +33,10 @@ class DarkTowerGame {
         this.floatingTexts = [];
         this.lootDrops = [];
 
-        // Entrada de Teclado y Ratón
         this.keys = {};
         this.mousePos = { x: 0, y: 0 };
         this.camera = { x: 0, y: 0, width: 1024, height: 720 };
 
-        // Ojo de la Cúspide
         this.eyeAngle = 0;
         this.eyePulse = 0;
 
@@ -51,11 +47,9 @@ class DarkTowerGame {
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
-        // Eventos de teclado
         window.addEventListener('keydown', (e) => this.handleKeyDown(e));
         window.addEventListener('keyup', (e) => this.handleKeyUp(e));
 
-        // Eventos de ratón
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mousePos.x = e.clientX - rect.left + this.camera.x;
@@ -64,13 +58,12 @@ class DarkTowerGame {
 
         this.canvas.addEventListener('mousedown', (e) => {
             if (this.state === this.STATE_PLAYING && this.player) {
-                if (e.button === 0) { // Clic izquierdo: ataque
+                if (e.button === 0) {
                     this.player.attack(this.mousePos.x, this.mousePos.y, this.projectiles, this.particles);
                 }
             }
         });
 
-        // Botones del Menú Principal
         document.getElementById('btn-new-game').addEventListener('click', () => {
             window.soundEngine.init();
             document.getElementById('class-select-modal').style.display = 'flex';
@@ -91,7 +84,6 @@ class DarkTowerGame {
             document.getElementById('how-to-play-modal').style.display = 'flex';
         });
 
-        // Cargar todos los sprites y arrancar el loop principal
         window.spriteManager.loadAll(() => {
             console.log("Sprites cargados con éxito.");
             window.uiManager.init();
@@ -163,25 +155,30 @@ class DarkTowerGame {
         this.floatingTexts = [];
         this.lootDrops = [];
 
-        // Posición de spawn garantizada
         const spawnPos = this.world.getStartingPosition();
         this.player.spawnPlayer(spawnPos.x, spawnPos.y);
 
-        // Centrado de cámara
         this.camera.x = Math.max(0, Math.min(this.world.cols * this.world.tileSize - this.camera.width, this.player.x - this.camera.width / 2));
         this.camera.y = Math.max(0, Math.min(this.world.rows * this.world.tileSize - this.camera.height, this.player.y - (this.camera.height / 2 + 35)));
 
-        // Generar enemigos o jefes
-        if (floorNumber === 8) {
-            const cx = Math.floor(this.world.cols / 2) * this.world.tileSize;
-            const cy = Math.floor(this.world.rows / 2) * this.world.tileSize;
-            this.activeBoss = new BossAbracadabra(cx, cy);
-            window.soundEngine.startBgm(true);
+        const cx = Math.floor(this.world.cols / 2) * this.world.tileSize;
+
+        // Generar jefes y salas previas centradas
+        if (floorNumber === 5) {
+            // Lucian espera en su cueva norte
+            this.activeBoss = new BossLucian(cx, 11 * this.world.tileSize);
+            this.spawnAnteRoomEnemies(5);
+            window.soundEngine.startBgm(false);
+        } else if (floorNumber === 8) {
+            // Abracadabra espera en la rotonda norte
+            this.activeBoss = new BossAbracadabra(cx, 13 * this.world.tileSize);
+            this.spawnAnteRoomEnemies(8);
+            window.soundEngine.startBgm(false);
         } else if (floorNumber === 10) {
-            const cx = Math.floor(this.world.cols / 2) * this.world.tileSize;
-            const cy = Math.floor(this.world.rows / 2) * this.world.tileSize;
-            this.activeBoss = new BossHong(cx, cy);
-            window.soundEngine.startBgm(true);
+            // Hong espera en su gran salón norte
+            this.activeBoss = new BossHong(cx, 11 * this.world.tileSize);
+            this.spawnAnteRoomEnemies(10);
+            window.soundEngine.startBgm(false);
         } else {
             this.spawnFloorEnemies(floorNumber);
             window.soundEngine.startBgm(false);
@@ -190,6 +187,66 @@ class DarkTowerGame {
         this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, `PISO ${floorNumber}`, '#ffcc00', true));
     }
 
+    spawnFloorEnemies(floor) {
+        // Aumentado proporcionalmente al nuevo tamaño del piso (de 10 a 24 enemigos por piso)
+        const count = 8 + floor * 2;
+        const types = [];
+
+        if (floor <= 2) types.push('bandit', 'skeleton', 'rat');
+        else if (floor <= 4) types.push('bandit', 'skeleton', 'spider', 'rat');
+        else if (floor <= 6) types.push('spider', 'werewolf', 'rat');
+        else if (floor <= 7) types.push('werewolf', 'demon');
+        else if (floor === 9) types.push('demon', 'werewolf');
+
+        for (let i = 0; i < count; i++) {
+            let placed = false;
+            let tries = 0;
+            while (!placed && tries < 60) {
+                tries++;
+                const r = Math.floor(Math.random() * (this.world.rows - 6)) + 3;
+                const c = Math.floor(Math.random() * (this.world.cols - 6)) + 3;
+                if (this.world.grid[r][c] === 0) {
+                    const ex = c * this.world.tileSize + 16;
+                    const ey = r * this.world.tileSize + 16;
+                    if (Math.hypot(ex - this.player.x, ey - this.player.y) > 180) {
+                        const randomType = types[Math.floor(Math.random() * types.length)];
+                        this.enemies.push(new Enemy(randomType, ex, ey, floor));
+                        placed = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Genera guardianes dentro de la antecámara sur de los pisos 5, 8 y 10
+     */
+    spawnAnteRoomEnemies(floor) {
+        let types = ['spider', 'rat', 'bandit'];
+        if (floor === 5) types = ['werewolf', 'skeleton', 'rat'];
+        else if (floor === 10) types = ['demon', 'werewolf'];
+
+        const cx = Math.floor(this.world.cols / 2); // 30
+
+        for (let i = 0; i < 4; i++) {
+            let placed = false;
+            let tries = 0;
+            while (!placed && tries < 40) {
+                tries++;
+                const r = Math.floor(Math.random() * 6) + 33; // Filas de la antecámara sur
+                const c = Math.floor(Math.random() * 16) + (cx - 8);
+                if (this.world.grid[r][c] === 0) {
+                    const ex = c * this.world.tileSize + 16;
+                    const ey = r * this.world.tileSize + 16;
+                    if (Math.hypot(ex - this.player.x, ey - this.player.y) > 60) {
+                        const randomType = types[Math.floor(Math.random() * types.length)];
+                        this.enemies.push(new Enemy(randomType, ex, ey, floor));
+                        placed = true;
+                    }
+                }
+            }
+        }
+    }
     spawnFloorEnemies(floor) {
         const count = 4 + floor * 2;
         const types = [];
@@ -234,13 +291,13 @@ class DarkTowerGame {
             }
         }
 
-        // 2. Escaleras
+        // 2. Escaleras o Portal de Victoria
         if (w.stairs && w.stairsUnlocked) {
             const dist = Math.hypot(p.x - (w.stairs.x + 16), p.y - (w.stairs.y + 16));
             if (dist < 48) {
                 if (w.floor < 10) {
                     this.loadFloor(w.floor + 1);
-                    this.saveGame(1, true); // Autoguardado
+                    this.saveGame(1, true);
                 } else {
                     this.triggerVictory();
                 }
@@ -248,7 +305,7 @@ class DarkTowerGame {
             }
         }
 
-        // 3. Abrir cofres: quedan abiertos y sueltan botín físico al suelo
+        // 3. Abrir cofres
         w.chests.forEach(chest => {
             if (!chest.opened) {
                 const dist = Math.hypot(p.x - (chest.x + 16), p.y - (chest.y + 16));
@@ -296,6 +353,17 @@ class DarkTowerGame {
     }
 
     dropLoot(sourceType, x, y) {
+        // Filtro de probabilidad de aparición
+        if (sourceType === 'barrel') {
+            if (Math.random() > 0.30) return;
+        } else if (sourceType === 'rat') {
+            if (Math.random() > 0.25) return;
+        } else if (sourceType === 'bandit' || sourceType === 'skeleton' || sourceType === 'spider') {
+            if (Math.random() > 0.40) return;
+        } else if (sourceType === 'werewolf' || sourceType === 'demon') {
+            if (Math.random() > 0.60) return;
+        }
+
         let tableKey = sourceType;
         if (sourceType === 'chest') {
             const floor = (this.world && this.world.floor) ? this.world.floor : 1;
@@ -309,7 +377,10 @@ class DarkTowerGame {
 
         const playerClass = (this.player && this.player.characterClass) ? this.player.characterClass : null;
 
-        // Tabla de equivalencias de equipo por tier (0: común, 1: oscuro, 2: legendario)
+        const isBoss = (sourceType === 'abracadabra' || sourceType === 'hong' || sourceType === 'lucian');
+        const maxEquipment = isBoss ? 3 : 1;
+        let equipmentDropped = 0;
+
         const EQUIVALENTS = {
             weapon: {
                 0: { warrior: 'sword_short', archer: 'bow_short', mage: 'staff_apprentice' },
@@ -324,7 +395,7 @@ class DarkTowerGame {
         };
 
         table.forEach(entry => {
-            // 1. Oro
+            // Oro
             if (entry.goldMin !== undefined) {
                 const goldAmt = Math.floor(Math.random() * (entry.goldMax - entry.goldMin + 1)) + entry.goldMin;
                 if (goldAmt > 0) {
@@ -339,52 +410,61 @@ class DarkTowerGame {
                 return;
             }
 
-            // 2. Ítems
-            let effectiveChance = entry.chance;
             let itemData = window.ITEM_DATABASE[entry.id];
             if (!itemData) return;
 
-            if (playerClass) {
-                // A) Si es arma o armadura de clase
-                if (itemData.classReq) {
+            const isEquipment = (itemData.type === 'weapon' || itemData.type === 'armor');
+
+            if (isEquipment && equipmentDropped >= maxEquipment) {
+                return;
+            }
+
+            let effectiveChance = entry.chance;
+
+            if (isEquipment) {
+                if (!isBoss && sourceType !== 'chest') {
+                    effectiveChance *= 0.40;
+                }
+
+                if (playerClass && itemData.classReq) {
                     if (itemData.classReq === playerClass) {
-                        // Si ya es de tu clase: aumenta mucho la probabilidad
-                        effectiveChance = Math.min(0.95, effectiveChance * 2.6);
+                        effectiveChance = Math.min(0.35, effectiveChance * 1.5);
                     } else {
-                        // Si es de OTRA clase: 75% de probabilidad de transmutarlo a tu clase
-                        if (Math.random() < 0.75) {
-                            const itemType = itemData.type; // 'weapon' o 'armor'
+                        if (Math.random() < 0.60) {
+                            const itemType = itemData.type;
                             const lookTier = itemData.look !== undefined ? itemData.look : 0;
                             const equivId = EQUIVALENTS[itemType] && EQUIVALENTS[itemType][lookTier] ? EQUIVALENTS[itemType][lookTier][playerClass] : null;
                             if (equivId && window.ITEM_DATABASE[equivId]) {
-                                itemData = window.ITEM_DATABASE[equivId]; // ¡Se convierte en bastón o túnica!
-                                effectiveChance = Math.min(0.95, effectiveChance * 2.2);
+                                itemData = window.ITEM_DATABASE[equivId];
+                                effectiveChance = Math.min(0.25, effectiveChance * 1.2);
                             }
                         } else {
-                            effectiveChance = effectiveChance * 0.25; // Si no se transmutó, cae poco
+                            effectiveChance *= 0.15;
                         }
                     }
                 }
-                // B) Si es poción
-                else if (itemData.type === 'consumable') {
-                    if (playerClass === 'mage' && itemData.id === 'potion_mana') {
-                        effectiveChance = Math.min(0.90, effectiveChance * 1.8);
-                    } else if (playerClass === 'warrior' && itemData.id === 'potion_health') {
-                        effectiveChance = Math.min(0.90, effectiveChance * 1.5);
-                    }
+            } else if (itemData.type === 'consumable') {
+                if (playerClass === 'mage' && itemData.id === 'potion_mana') {
+                    effectiveChance = Math.min(0.60, effectiveChance * 1.3);
+                } else if (playerClass === 'warrior' && itemData.id === 'potion_health') {
+                    effectiveChance = Math.min(0.60, effectiveChance * 1.3);
                 }
             }
 
-            // Tirada de drop
             if (Math.random() <= effectiveChance) {
                 this.lootDrops.push(new GroundItem(
                     x + (Math.random() - 0.5) * 16,
                     y + (Math.random() - 0.5) * 16,
                     { ...itemData, qty: entry.qty || 1 }
                 ));
+
+                if (isEquipment) {
+                    equipmentDropped++;
+                }
             }
         });
     }
+
     triggerGameOver() {
         this.state = this.STATE_GAMEOVER;
         window.soundEngine.stopBgm();
@@ -528,14 +608,13 @@ class DarkTowerGame {
             this.player.attribute_points = data.attribute_points;
             this.player.gold = data.gold;
 
-            // Actualizar ítems guardados con las nuevas estadísticas, aspecto (look) e iconos
             const refresh = window.refreshItem || (it => it);
             this.player.inventory = (data.inventory || new Array(30).fill(null)).map(refresh);
             this.player.equipment = Object.fromEntries(
                 Object.entries(data.equipment || {}).map(([s, it]) => [s, refresh(it)])
             );
 
-            // SANEAMIENTO: Si una partida previa tenía un arma o armadura de otra clase puesta, desequiparla
+            // Desequipar armas o armaduras que no pertenezcan a la clase
             ['weapon', 'armor', 'accessory'].forEach(slotName => {
                 const eq = this.player.equipment[slotName];
                 if (eq && eq.classReq && eq.classReq !== this.player.characterClass) {
@@ -553,7 +632,7 @@ class DarkTowerGame {
 
             this.loadFloor(data.floor_reached || 1);
             this.state = this.STATE_PLAYING;
-            window.soundEngine.startBgm(data.floor_reached === 8 || data.floor_reached === 10);
+            window.soundEngine.startBgm(data.floor_reached === 5 || data.floor_reached === 8 || data.floor_reached === 10);
         } catch (e) {
             console.error(e);
         }
@@ -578,7 +657,6 @@ class DarkTowerGame {
 
         this.player.playtimeSeconds += dt;
 
-        // 1. Actualizar Jugador
         this.player.update(this.keys, this.world, this.projectiles, this.particles);
 
         if (this.player.hp <= 0) {
@@ -586,7 +664,7 @@ class DarkTowerGame {
             return;
         }
 
-        // 2. Ataque cuerpo a cuerpo del Guerrero
+        // Ataque cuerpo a cuerpo
         if (this.player.slashHitbox) {
             const hb = this.player.slashHitbox;
             this.enemies.forEach((enemy, idx) => {
@@ -623,17 +701,14 @@ class DarkTowerGame {
             this.player.slashHitbox = null;
         }
 
-        // 3. Actualizar Enemigos
         this.enemies.forEach(enemy => {
             enemy.update(this.player, this.world, this.projectiles, this.particles);
         });
 
-        // 4. Actualizar Jefe Activo
         if (this.activeBoss) {
             this.activeBoss.update(this.player, this.world, this.projectiles, this.particles);
         }
 
-        // 5. Actualizar Proyectiles y Colisiones
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             p.update(this.world, this.particles);
@@ -669,7 +744,6 @@ class DarkTowerGame {
             }
         }
 
-        // 6. Actualizar Objetos en el Suelo (Botín físico con atracción magnética)
         for (let i = this.lootDrops.length - 1; i >= 0; i--) {
             const drop = this.lootDrops[i];
             drop.update(this.player, this.particles, this.world);
@@ -678,7 +752,6 @@ class DarkTowerGame {
             }
         }
 
-        // 7. Partículas y Textos Flotantes
         for (let i = this.particles.length - 1; i >= 0; i--) {
             this.particles[i].update();
             if (this.particles[i].life <= 0) this.particles.splice(i, 1);
@@ -689,18 +762,15 @@ class DarkTowerGame {
             if (this.floatingTexts[i].life <= 0) this.floatingTexts.splice(i, 1);
         }
 
-        // 8. Actualizar Mundo
         this.world.update(this.particles);
 
         if (this.enemies.length === 0 && !this.activeBoss) {
             this.world.stairsUnlocked = true;
         }
 
-        // 9. Cámara suave siguiendo al jugador
         this.camera.x = Math.max(0, Math.min(this.world.cols * this.world.tileSize - this.camera.width, this.player.x - this.camera.width / 2));
         this.camera.y = Math.max(0, Math.min(this.world.rows * this.world.tileSize - this.camera.height, this.player.y - (this.camera.height / 2 + 35)));
 
-        // 10. HUD y Minimapa
         window.uiManager.updateHUD(this.player, this.world);
         window.uiManager.renderMinimap(this.player, this.world);
     }
@@ -726,23 +796,47 @@ class DarkTowerGame {
     killBoss() {
         const boss = this.activeBoss;
         this.player.enemiesKilled++;
-        this.player.gainExp(boss.name.includes('Abracadabra') ? 500 : 2000, this.floatingTexts);
-        this.dropLoot(boss.name.includes('Abracadabra') ? 'abracadabra' : 'hong', boss.x, boss.y);
+
+        let expReward = 500;
+        let lootTable = 'abracadabra';
+
+        if (boss.name.includes('Hong')) {
+            expReward = 2000;
+            lootTable = 'hong';
+        } else if (boss.name.includes('Lucian')) {
+            expReward = 850;
+            lootTable = 'lucian';
+        }
+
+        this.player.gainExp(expReward, this.floatingTexts);
+        this.dropLoot(lootTable, boss.x, boss.y);
 
         for (let i = 0; i < 40; i++) {
             this.particles.push(new Particle(
                 boss.x, boss.y,
                 (Math.random() - 0.5) * 6,
                 (Math.random() - 0.5) * 6,
-                '#ffcc00', 6, 40
+                '#9fe8ff', 6, 40
             ));
         }
 
         this.activeBoss = null;
         window.soundEngine.startBgm(false);
 
+        // Desbloquear escaleras del piso 5 y 8
+        if (this.world.floor === 5 || this.world.floor === 8) {
+            this.world.stairsUnlocked = true;
+            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡ESCALERAS DESBLOQUEADAS!', '#ffd700', true));
+        }
+
+        // Piso 10: Abrir Portal de Victoria en el trono
         if (this.world.floor === 10) {
-            setTimeout(() => this.triggerVictory(), 1500);
+            this.world.stairs = {
+                x: 20 * this.world.tileSize,
+                y: 6 * this.world.tileSize
+            };
+            this.world.stairsUnlocked = true;
+            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡PORTAL DE VICTORIA DESBLOQUEADO!', '#ffd700', true));
         }
     }
 
@@ -752,28 +846,13 @@ class DarkTowerGame {
         this.ctx.save();
         this.ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
-        // 1. Terreno
         this.world.draw(this.ctx, this.camera);
-
-        // 2. Objetos en el Suelo
         this.lootDrops.forEach(drop => drop.draw(this.ctx));
-
-        // 3. Enemigos
         this.enemies.forEach(e => e.draw(this.ctx));
-
-        // 4. Jefe
         if (this.activeBoss) this.activeBoss.draw(this.ctx);
-
-        // 5. Jugador
         this.player.draw(this.ctx);
-
-        // 6. Proyectiles
         this.projectiles.forEach(p => p.draw(this.ctx));
-
-        // 7. Partículas
         this.particles.forEach(pt => pt.draw(this.ctx));
-
-        // 8. Textos Flotantes
         this.floatingTexts.forEach(ft => ft.draw(this.ctx));
 
         this.ctx.restore();

@@ -1,9 +1,9 @@
 /**
  * GENERACIÓN Y GESTIÓN DE PISOS (1 A 10)
- * Genera mazmorras, salas de jefe, coloca antorchas, cofres, barriles y pergaminos de lore.
+ * Mazmorras al doble de tamaño (60x45), salas de biblioteca desordenada con escritorio
+ * y notas situadas siempre sobre la mesa.
  */
 
-// Colores de borde (rim) y de sombra de contacto por bioma
 const BIOME_STYLE = {
     crypt: { rim: 'rgba(150,135,175,0.55)', shade: '6,4,10' },
     demon: { rim: 'rgba(200,95,105,0.50)', shade: '14,2,4' },
@@ -15,13 +15,13 @@ class World {
     constructor(floor = 1) {
         this.floor = floor;
         this.tileSize = 32;
-        this.cols = 40;
-        this.rows = 30;
+        // Dimensiones aumentadas a más del doble (2.700 baldosas)
+        this.cols = 60;
+        this.rows = 45;
 
-        // 0: Suelo, 1: Muro, 2: Lava/Vacío
         this.grid = [];
-        this.floorVariations = []; // 0: estándar, 2: charco/huesos
-        this.wallVariations = [];  // 1: muro estándar, 3: rejilla alcantarilla/grieta
+        this.floorVariations = [];
+        this.wallVariations = [];
         this.torches = [];
         this.barrels = [];
         this.crates = [];
@@ -30,6 +30,12 @@ class World {
         this.skeletons = [];
         this.doors = [];
         this.acidPools = [];
+
+        // Elementos de la biblioteca
+        this.bookshelves = [];
+        this.floorBooks = [];
+        this.tables = [];
+
         this.loreScroll = null;
         this.stairs = null;
         this.stairsUnlocked = false;
@@ -37,7 +43,6 @@ class World {
         this.flameTimer = 0;
         this.flameFrame = 0;
 
-        // Mapa pre-renderizado (se hornea una sola vez por piso)
         this.baked = null;
         this.bakedSheet = null;
 
@@ -52,7 +57,6 @@ class World {
     }
 
     generateFloor() {
-        // Inicializar cuadrícula llena de muros (1)
         this.grid = Array.from({ length: this.rows }, () => new Array(this.cols).fill(1));
         this.floorVariations = Array.from({ length: this.rows }, () => new Array(this.cols).fill(0));
         this.wallVariations = Array.from({ length: this.rows }, () => new Array(this.cols).fill(1));
@@ -64,8 +68,13 @@ class World {
         this.skeletons = [];
         this.doors = [];
         this.acidPools = [];
+        this.bookshelves = [];
+        this.floorBooks = [];
+        this.tables = [];
 
-        if (this.floor === 8) {
+        if (this.floor === 5) {
+            this.generateArenaLucian();
+        } else if (this.floor === 8) {
             this.generateArenaRotunda();
         } else if (this.floor === 10) {
             this.generateArenaApex();
@@ -73,9 +82,6 @@ class World {
             this.generateDungeonRooms();
         }
 
-        // Variaciones decorativas
-        // floorVariations: 0-3 = losas base, 4 = grieta, 5 = acento A, 6 = acento B, 7 = escombros
-        // wallVariations:  1 = ladrillo A, 2 = ladrillo B, 3 = ladrillo con acento
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 if (this.grid[r][c] === 0) {
@@ -99,44 +105,35 @@ class World {
         }
         this.baked = null;
 
-        // Colocar antorchas decorativas en los muros interiores
         this.placeTorches();
-
-        // Colocar estandartes rojos en paredes
         this.placeBanners();
-
-        // Colocar pergamino de lore
         this.placeLoreScroll();
-
-        // Colocar escaleras / portal de salida
         this.placeStairs();
     }
 
     generateDungeonRooms() {
         const rooms = [];
-        const numRooms = 6;
+        // Más salas para explorar en el mapa grande (10 habitaciones)
+        const numRooms = 10;
 
         for (let i = 0; i < numRooms; i++) {
-            const w = Math.floor(Math.random() * 5) + 6;
-            const h = Math.floor(Math.random() * 4) + 5;
+            const w = Math.floor(Math.random() * 5) + 7; // ancho 7 a 11
+            const h = Math.floor(Math.random() * 4) + 6; // alto 6 a 9
             let x, y;
             if (i === 0) {
-                // Habitación inicial: garantiza margen superior de al menos 4 casillas
-                x = Math.floor(Math.random() * 4) + 3;
-                y = Math.floor(Math.random() * 3) + 4;
+                x = Math.floor(Math.random() * 4) + 4;
+                y = Math.floor(Math.random() * 3) + 5;
             } else {
-                x = Math.floor(Math.random() * (this.cols - w - 4)) + 2;
+                x = Math.floor(Math.random() * (this.cols - w - 6)) + 3;
                 y = Math.floor(Math.random() * (this.rows - h - 6)) + 4;
             }
 
-            // Esculpir habitación
             for (let r = y; r < y + h; r++) {
                 for (let c = x; c < x + w; c++) {
                     this.grid[r][c] = 0;
                 }
             }
 
-            // Conectar con la sala anterior mediante pasillo y puerta
             if (rooms.length > 0) {
                 const prev = rooms[rooms.length - 1];
                 const cx1 = Math.floor(prev.x + prev.w / 2);
@@ -144,7 +141,6 @@ class World {
                 const cx2 = Math.floor(x + w / 2);
                 const cy2 = Math.floor(y + h / 2);
 
-                // Pasillo horizontal
                 const startX = Math.min(cx1, cx2);
                 const endX = Math.max(cx1, cx2);
                 for (let c = startX; c <= endX; c++) {
@@ -152,19 +148,12 @@ class World {
                     if (cy1 + 1 < this.rows - 1) this.grid[cy1 + 1][c] = 0;
                 }
 
-                // Pasillo vertical
                 const startY = Math.min(cy1, cy2);
                 const endY = Math.max(cy1, cy2);
                 for (let r = startY; r <= endY; r++) {
                     this.grid[r][cx2] = 0;
                     if (cx2 + 1 < this.cols - 1) this.grid[r][cx2 + 1] = 0;
                 }
-
-                // Colocar puerta de arco de piedra en la entrada de la habitación
-                this.doors.push({
-                    x: x * this.tileSize,
-                    y: y * this.tileSize
-                });
             }
 
             rooms.push({ x, y, w, h });
@@ -172,45 +161,150 @@ class World {
 
         this.rooms = rooms;
 
-        // Colocar utilería (barriles, cajas reforzadas, cofres y esqueletos) en las salas
-        rooms.forEach((room, idx) => {
-            if (idx > 0 && Math.random() < 0.75) {
-                this.chests.push({
-                    x: (room.x + 1) * this.tileSize,
-                    y: (room.y + 1) * this.tileSize,
-                    opened: false
+        // =====================================================================
+        // CONSTRUCCIÓN DE LA SALA DE BIBLIOTECA DESORDENADA
+        // =====================================================================
+        // Elegimos una sala intermedia (ej: sala 3) para ser la biblioteca oficial
+        const libRoomIdx = Math.min(3, rooms.length - 2);
+        const libRoom = rooms[libRoomIdx];
+
+        if (libRoom) {
+            // 1. Estantes de libros a lo largo de la pared norte de la sala
+            for (let c = libRoom.x + 1; c < libRoom.x + libRoom.w - 1; c += 2) {
+                this.bookshelves.push({
+                    x: c * this.tileSize,
+                    y: (libRoom.y + 1) * this.tileSize
                 });
             }
-            // Barriles reforzados
+
+            // 2. Estantes en esquinas
+            this.bookshelves.push({
+                x: (libRoom.x + 1) * this.tileSize,
+                y: (libRoom.y + 2) * this.tileSize
+            });
+            this.bookshelves.push({
+                x: (libRoom.x + libRoom.w - 2) * this.tileSize,
+                y: (libRoom.y + 2) * this.tileSize
+            });
+
+            // 3. Libros tirados y hojas caídas por el suelo alrededor
+            this.floorBooks.push({
+                x: (libRoom.x + 2) * this.tileSize,
+                y: (libRoom.y + 3) * this.tileSize
+            });
+            this.floorBooks.push({
+                x: (libRoom.x + libRoom.w - 3) * this.tileSize,
+                y: (libRoom.y + 3) * this.tileSize
+            });
+            this.floorBooks.push({
+                x: Math.floor(libRoom.x + libRoom.w / 2 - 1) * this.tileSize,
+                y: (libRoom.y + Math.floor(libRoom.h / 2) + 1) * this.tileSize
+            });
+
+            // 4. Mesa / Escritorio en el centro de la biblioteca
+            const deskX = Math.floor(libRoom.x + libRoom.w / 2) * this.tileSize;
+            const deskY = Math.floor(libRoom.y + libRoom.h / 2) * this.tileSize;
+            this.tables.push({ x: deskX, y: deskY });
+
+            // 5. La nota estará SIEMPRE encima de esta mesa
+            this.loreScroll = {
+                x: deskX,
+                y: deskY - 4, // Colocada sobre el tablero
+                collected: false
+            };
+        }
+
+        // =====================================================================
+        // UTILERÍA EN LAS OTRAS SALAS
+        // =====================================================================
+        rooms.forEach((room, idx) => {
+            if (idx === libRoomIdx) return; // No saturar la biblioteca
+
             this.barrels.push({
                 x: (room.x + room.w - 2) * this.tileSize,
                 y: (room.y + 1) * this.tileSize,
                 broken: false
             });
-            // Cajas de madera (Crates)
             this.crates.push({
                 x: (room.x + room.w - 2) * this.tileSize,
                 y: (room.y + 2) * this.tileSize,
                 broken: false
             });
-            // Esqueletos caídos decorativos en el suelo
-            if (idx > 0 && Math.random() < 0.6) {
+            if (idx > 0 && Math.random() < 0.5) {
                 this.skeletons.push({
                     x: (room.x + Math.floor(room.w / 2)) * this.tileSize,
                     y: (room.y + Math.floor(room.h / 2)) * this.tileSize
                 });
             }
         });
+
+        // Máximo 2 cofres en salas aleatorias
+        const eligibleRooms = rooms.filter((_, idx) => idx !== 0 && idx !== libRoomIdx).sort(() => Math.random() - 0.5);
+        const numChests = Math.min(2, Math.floor(Math.random() * 2) + 1);
+        for (let i = 0; i < numChests && i < eligibleRooms.length; i++) {
+            const room = eligibleRooms[i];
+            this.chests.push({
+                x: (room.x + 1) * this.tileSize,
+                y: (room.y + 1) * this.tileSize,
+                opened: false
+            });
+        }
+    }
+
+    generateArenaLucian() {
+        // PISO 5: ANTESALA CON RINCÓN DE ESTUDIO + GUARIDA DE LUCIAN
+        const cx = Math.floor(this.cols / 2); // 30
+
+        // 1. Antesala sur
+        for (let r = 32; r <= 40; r++) {
+            for (let c = cx - 10; c <= cx + 10; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+        // Pasillo
+        for (let r = 22; r <= 32; r++) {
+            for (let c = cx - 2; c <= cx + 2; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+        // Guarida norte de Lucian
+        for (let r = 5; r <= 22; r++) {
+            for (let c = cx - 14; c <= cx + 14; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+
+        // Estudio / Mesa con nota en la antesala sur
+        const deskX = (cx - 6) * this.tileSize;
+        const deskY = 36 * this.tileSize;
+        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
+        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
+        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
     }
 
     generateArenaRotunda() {
-        // Rotonda circular gigante para el combate contra Abracadabra
-        const cx = Math.floor(this.cols / 2);
-        const cy = Math.floor(this.rows / 2);
-        const radius = 11;
+        // PISO 8: ANTECÁMARA CON MESA + ROTONDA DE ABRACADABRA
+        const cx = Math.floor(this.cols / 2); // 30
 
-        for (let r = 0; r < this.rows; r++) {
-            for (let c = 0; c < this.cols; c++) {
+        // Antesala sur
+        for (let r = 32; r <= 40; r++) {
+            for (let c = cx - 10; c <= cx + 10; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+        // Pasillo
+        for (let r = 24; r <= 32; r++) {
+            for (let c = cx - 2; c <= cx + 2; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+        // Rotonda norte
+        const cy = 13;
+        const radius = 10;
+        for (let r = 3; r <= 24; r++) {
+            for (let c = cx - 12; c <= cx + 12; c++) {
                 const dist = Math.hypot(c - cx, r - cy);
                 if (dist <= radius) {
                     this.grid[r][c] = 0;
@@ -218,34 +312,118 @@ class World {
             }
         }
 
-        // Charcos permanentes de ácido en el suelo
+        // Charcos de ácido en la rotonda norte
         for (let i = 0; i < 4; i++) {
             const angle = (i * Math.PI) / 2;
             const px = (cx + Math.cos(angle) * 6) * this.tileSize;
             const py = (cy + Math.sin(angle) * 6) * this.tileSize;
             this.addAcidPool(px, py, 99999);
         }
+
+        // Mesa de estudio en la antesala
+        const deskX = (cx - 6) * this.tileSize;
+        const deskY = 36 * this.tileSize;
+        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
+        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
+        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
     }
 
     generateArenaApex() {
-        // Cúspide de la torre sobre el abismo para Hong Devorador de Hombres
-        const startX = 6;
-        const endX = this.cols - 6;
-        const startY = 4;
-        const endY = this.rows - 4;
+        // PISO 10: ANTESALA CON MESA + TRONO DE HONG
+        const cx = Math.floor(this.cols / 2); // 30
 
-        for (let r = startY; r < endY; r++) {
-            for (let c = startX; c < endX; c++) {
+        // Antesala sur
+        for (let r = 32; r <= 40; r++) {
+            for (let c = cx - 10; c <= cx + 10; c++) {
                 this.grid[r][c] = 0;
             }
         }
+        // Puente sobre el vacío
+        for (let r = 21; r <= 32; r++) {
+            for (let c = cx - 2; c <= cx + 2; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+        // Gran Salón del Trono (Norte)
+        for (let r = 4; r <= 21; r++) {
+            for (let c = cx - 15; c <= cx + 15; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+
+        // Mesa de estudio en la antesala
+        const deskX = (cx - 6) * this.tileSize;
+        const deskY = 36 * this.tileSize;
+        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
+        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
+        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
+    }
+
+    getStartingPosition() {
+        const cx = Math.floor(this.cols / 2);
+        if (this.floor === 5 || this.floor === 8 || this.floor === 10) {
+            // Spawn al sur de la antesala
+            return { x: cx * this.tileSize + 16, y: 37 * this.tileSize + 16 };
+        }
+
+        if (this.rooms && this.rooms.length > 0) {
+            const startRoom = this.rooms[0];
+            const centerTileX = Math.floor(startRoom.x + startRoom.w / 2);
+            const centerTileY = Math.max(startRoom.y + 2, Math.floor(startRoom.y + startRoom.h / 2));
+            return { x: centerTileX * this.tileSize + 16, y: centerTileY * this.tileSize + 16 };
+        }
+
+        return { x: 5 * this.tileSize + 16, y: 5 * this.tileSize + 16 };
+    }
+
+    placeLoreScroll() {
+        // En todos los pisos la nota ya se colocó automáticamente sobre la mesa (en la biblioteca o antesala)
+        if (this.loreScroll) return;
+
+        // Fallback por si acaso
+        this.loreScroll = {
+            x: 10 * this.tileSize,
+            y: 10 * this.tileSize,
+            collected: false
+        };
+    }
+
+    placeStairs() {
+        const cx = Math.floor(this.cols / 2);
+        if (this.floor === 5 || this.floor === 8) {
+            // Escaleras al fondo norte detrás del sub-jefe
+            this.stairs = {
+                x: cx * this.tileSize,
+                y: 5 * this.tileSize
+            };
+            return;
+        } else if (this.floor === 10) {
+            this.stairs = null; // Aparece como portal al morir Hong
+            return;
+        }
+
+        // Pisos normales: en la última sala
+        if (this.rooms && this.rooms.length > 0) {
+            const lastRoom = this.rooms[this.rooms.length - 1];
+            this.stairs = {
+                x: (lastRoom.x + Math.floor(lastRoom.w / 2)) * this.tileSize,
+                y: (lastRoom.y + Math.floor(lastRoom.h / 2)) * this.tileSize
+            };
+            return;
+        }
+
+        this.stairs = { x: (this.cols - 5) * this.tileSize, y: (this.rows - 5) * this.tileSize };
     }
 
     placeTorches() {
         for (let r = 1; r < this.rows - 1; r++) {
             for (let c = 1; c < this.cols - 1; c++) {
                 if (this.grid[r][c] === 1 && this.grid[r + 1][c] === 0) {
-                    if (Math.random() < 0.20) {
+                    if (Math.random() < 0.16) {
                         this.torches.push({
                             x: c * this.tileSize,
                             y: r * this.tileSize
@@ -257,12 +435,11 @@ class World {
     }
 
     placeBanners() {
-        // Coloca estandartes heráldicos rojos en muros con suelo transitable al sur
         for (let r = 1; r < this.rows - 1; r++) {
             for (let c = 1; c < this.cols - 1; c++) {
                 if (this.grid[r][c] === 1 && this.grid[r + 1][c] === 0) {
                     const hasTorch = this.torches.some(t => t.x === c * this.tileSize && t.y === r * this.tileSize);
-                    if (!hasTorch && Math.random() < 0.14) {
+                    if (!hasTorch && Math.random() < 0.10) {
                         this.banners.push({
                             x: c * this.tileSize,
                             y: r * this.tileSize
@@ -271,90 +448,6 @@ class World {
                 }
             }
         }
-    }
-
-    placeLoreScroll() {
-        // Colocar pergamino en una posición transitable y accesible
-        let placed = false;
-        let attempts = 0;
-        while (!placed && attempts < 100) {
-            attempts++;
-            const r = Math.floor(Math.random() * (this.rows - 4)) + 2;
-            const c = Math.floor(Math.random() * (this.cols - 4)) + 2;
-            if (this.grid[r][c] === 0) {
-                this.loreScroll = {
-                    x: c * this.tileSize + 8,
-                    y: r * this.tileSize + 8,
-                    collected: false
-                };
-                placed = true;
-            }
-        }
-    }
-
-    placeStairs() {
-        // Colocar escaleras en el extremo más alejado
-        for (let r = this.rows - 3; r >= 2; r--) {
-            for (let c = this.cols - 3; c >= 2; c--) {
-                if (this.grid[r][c] === 0) {
-                    this.stairs = {
-                        x: c * this.tileSize,
-                        y: r * this.tileSize
-                    };
-                    return;
-                }
-            }
-        }
-    }
-
-    /**
-     * Calcula la posición de spawn garantizada en casilla transitable (TILE_FLOOR),
-     * asegurando margen superior de al menos 2-3 casillas para que el HUD no tape al personaje.
-     */
-    getStartingPosition() {
-        let spawnX = 0;
-        let spawnY = 0;
-
-        if (this.rooms && this.rooms.length > 0) {
-            const startRoom = this.rooms[0];
-            // Centro de la primera habitación
-            const centerTileX = Math.floor(startRoom.x + startRoom.w / 2);
-            // Asegurar mínimo 2 o 3 casillas de distancia de la pared superior
-            const centerTileY = Math.max(startRoom.y + 2, Math.floor(startRoom.y + startRoom.h / 2));
-            spawnX = centerTileX * this.tileSize + 16;
-            spawnY = centerTileY * this.tileSize + 16;
-        } else if (this.floor === 8) {
-            // Rotonda de Abracadabra: spawn en el sector sur de la arena
-            const cx = Math.floor(this.cols / 2);
-            const cy = Math.floor(this.rows / 2) + 6;
-            spawnX = cx * this.tileSize + 16;
-            spawnY = cy * this.tileSize + 16;
-        } else if (this.floor === 10) {
-            // Cúspide de Hong: spawn en el sector sur
-            const cx = Math.floor(this.cols / 2);
-            const cy = this.rows - 6;
-            spawnX = cx * this.tileSize + 16;
-            spawnY = cy * this.tileSize + 16;
-        }
-
-        // Validación estricta: asegurar que la casilla es suelo (0) y NUNCA (0, 0) ni muro
-        const checkC = Math.floor(spawnX / this.tileSize);
-        const checkR = Math.floor(spawnY / this.tileSize);
-
-        if (checkR >= 3 && checkR < this.rows - 2 && checkC >= 2 && checkC < this.cols - 2 && this.grid[checkR][checkC] === 0) {
-            return { x: spawnX, y: spawnY };
-        }
-
-        // Búsqueda de respaldo: primera casilla de suelo con margen superior >= 4 casillas
-        for (let r = 4; r < this.rows - 3; r++) {
-            for (let c = 3; c < this.cols - 3; c++) {
-                if (this.grid[r][c] === 0) {
-                    return { x: c * this.tileSize + 16, y: r * this.tileSize + 16 };
-                }
-            }
-        }
-
-        return { x: 5 * this.tileSize + 16, y: 5 * this.tileSize + 16 };
     }
 
     addAcidPool(x, y, duration = 300) {
@@ -383,7 +476,6 @@ class World {
     }
 
     isSolid(x, y, w, h) {
-        // Margen de tolerancia de 1px hacia adentro para evitar atascos por redondeo de flotantes en esquinas
         const margin = 1;
         const left = Math.floor((x + margin) / this.tileSize);
         const right = Math.floor((x + w - margin) / this.tileSize);
@@ -397,7 +489,20 @@ class World {
             }
         }
 
-        // Colisión con barriles y cajas no rotos
+        // Colisión con estanterías de libros
+        for (const bs of this.bookshelves) {
+            if (x + margin < bs.x + 28 && x + w - margin > bs.x + 4 && y + margin < bs.y + 28 && y + h - margin > bs.y + 4) {
+                return true;
+            }
+        }
+
+        // Colisión con la mesa de la biblioteca
+        for (const t of this.tables) {
+            if (x + margin < t.x + 28 && x + w - margin > t.x + 4 && y + margin < t.y + 26 && y + h - margin > t.y + 6) {
+                return true;
+            }
+        }
+
         for (const b of this.barrels) {
             if (!b.broken) {
                 if (x + margin < b.x + 24 && x + w - margin > b.x + 4 && y + margin < b.y + 24 && y + h - margin > b.y + 4) {
@@ -418,22 +523,20 @@ class World {
     }
 
     update(particles) {
-        // Animación de antorchas
         this.flameTimer++;
         if (this.flameTimer % 10 === 0) {
             this.flameFrame = (this.flameFrame + 1) % 4;
         }
 
-        // Partículas en pergamino de lore
-        if (this.loreScroll && Math.random() < 0.25) {
+        // Partículas sobre la nota en la mesa
+        if (this.loreScroll && !this.loreScroll.collected && Math.random() < 0.25) {
             particles.push(new Particle(
-                this.loreScroll.x + 8 + (Math.random() - 0.5) * 16,
-                this.loreScroll.y + 8 + (Math.random() - 0.5) * 16,
+                this.loreScroll.x + 16 + (Math.random() - 0.5) * 16,
+                this.loreScroll.y + 12 + (Math.random() - 0.5) * 10,
                 0, -0.6, '#ffd700', 3, 20
             ));
         }
 
-        // Actualizar charcos de ácido
         for (let i = this.acidPools.length - 1; i >= 0; i--) {
             this.acidPools[i].life--;
             if (this.acidPools[i].life <= 0) {
@@ -442,9 +545,6 @@ class World {
         }
     }
 
-    // ------------------------------------------------------------------
-    // RENDER DE TERRENO (pared con volumen, sombras de contacto, mapa horneado)
-    // ------------------------------------------------------------------
     _isWall(r, c) {
         if (r < 0 || r >= this.rows || c < 0 || c >= this.cols) return true;
         return this.grid[r][c] === 1;
@@ -461,7 +561,6 @@ class World {
         return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
     }
 
-    // Sombras de contacto en bandas (estilo pixel art, sin degradados suaves)
     _makeShadows(shade) {
         const mk = (fn) => {
             const cv = document.createElement('canvas');
@@ -478,12 +577,6 @@ class World {
         };
     }
 
-    /**
-     * Pre-renderiza todo el terreno en un canvas auxiliar (una sola vez por piso).
-     * Layout del tileset (4x4 tiles de 32px):
-     *   fila 0: suelo A-D | fila 1: grieta, acento A, acento B, escombros
-     *   fila 2: muro frontal A, B, con acento, cima plana | fila 3: vacío, cima plana B
-     */
     bakeMap(sheet, biome) {
         const T = this.tileSize;
         const cv = document.createElement('canvas');
@@ -502,7 +595,6 @@ class World {
                 const dy = r * T;
 
                 if (this.grid[r][c] === 0) {
-                    // SUELO + sombras de contacto contra los muros vecinos
                     const v = this.floorVariations[r][c];
                     if (v < 4) tile(v, 0, dx, dy); else tile(v - 4, 1, dx, dy);
                     if (this._isWall(r - 1, c)) g.drawImage(sh.n, dx, dy);
@@ -513,7 +605,6 @@ class World {
                 }
 
                 if (this._isFloor(r + 1, c)) {
-                    // CARA FRONTAL: el muro que mira al jugador (con ladrillos)
                     const wv = this.wallVariations[r][c];
                     tile(wv === 3 ? 2 : (wv === 2 ? 1 : 0), 2, dx, dy);
                     if (this._isFloor(r, c - 1)) g.drawImage(sh.w, dx, dy);
@@ -521,7 +612,6 @@ class World {
                     continue;
                 }
 
-                // CIMA o ROCA PROFUNDA
                 let nearFloor = false;
                 for (let dr = -1; dr <= 1 && !nearFloor; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
@@ -529,10 +619,9 @@ class World {
                     }
                 }
                 if (!nearFloor) {
-                    tile(0, 3, dx, dy);               // vacío liso (sin ruido)
+                    tile(0, 3, dx, dy);
                 } else {
                     if (this._hash(r, c) < 0.5) tile(3, 2, dx, dy); else tile(1, 3, dx, dy);
-                    // Borde claro hacia el suelo para definir la silueta de la sala
                     g.fillStyle = style.rim;
                     if (this._isFloor(r - 1, c)) g.fillRect(dx, dy, 32, 2);
                     if (this._isFloor(r, c - 1)) g.fillRect(dx, dy, 2, 32);
@@ -545,7 +634,6 @@ class World {
 
     drawTerrain(ctx, viewport, sheet, biome) {
         if (!sheet) {
-            // Respaldo si el tileset no cargó
             for (let r = 0; r < this.rows; r++) {
                 for (let c = 0; c < this.cols; c++) {
                     ctx.fillStyle = (this.grid[r][c] === 1) ? '#282430' : '#453f50';
@@ -570,7 +658,7 @@ class World {
         const tileSheetKey = `tiles_${biome}`;
         const sheet = window.spriteManager.sheets[tileSheetKey];
 
-        // 1. Terreno (suelo, muros con volumen y sombras) desde el mapa horneado
+        // 1. Terreno
         this.drawTerrain(ctx, viewport, sheet, biome);
 
         // 2. Charcos de ácido
@@ -587,46 +675,52 @@ class World {
         const propsSheet = window.spriteManager.sheets.props;
         if (!propsSheet) return;
 
-        // 3. Puertas: desactivadas (no se dibujan). Para volver a mostrarlas, descomenta:
-        // this.doors.forEach(d => {
-        //     ctx.drawImage(propsSheet, 256, 0, 32, 32, d.x, d.y, 32, 32);
-        // });
+        // 3. Libros tirados y hojas caídas en el piso de la biblioteca (col 11, sx=352)
+        this.floorBooks.forEach(fb => {
+            ctx.drawImage(propsSheet, 352, 0, 32, 32, fb.x, fb.y, 32, 32);
+        });
 
-        // 4. Esqueletos caídos en el suelo (col 7, sx=224)
+        // 4. Esqueletos
         this.skeletons.forEach(s => {
             ctx.drawImage(propsSheet, 224, 0, 32, 32, s.x, s.y, 32, 32);
         });
 
-        // 5. Estandartes heráldicos rojos en muros (col 6, sx=192)
+        // 5. Estandartes
         this.banners.forEach(ban => {
             ctx.drawImage(propsSheet, 192, 0, 32, 32, ban.x, ban.y, 32, 32);
         });
 
-        // 6. Cajas de madera reforzada (Crates) (col 5, sx=160)
+        // 6. Cajas y Barriles
         this.crates.forEach(c => {
             if (!c.broken) {
                 ctx.drawImage(propsSheet, 160, 0, 32, 32, c.x, c.y, 32, 32);
             }
         });
-
-        // 7. Barriles reforzados con aros de hierro (col 1, sx=32)
         this.barrels.forEach(b => {
             if (!b.broken) {
                 ctx.drawImage(propsSheet, 32, 0, 32, 32, b.x, b.y, 32, 32);
             }
         });
 
-        // 8. Cofres de madera y oro 
+        // 7. Cofres
         this.chests.forEach(c => {
-            const sx = c.opened ? 288 : 64; // sx = 288 es el cofre abierto generado en props.png
+            const sx = c.opened ? 288 : 64;
             ctx.drawImage(propsSheet, sx, 0, 32, 32, c.x, c.y, 32, 32);
         });
 
-        // 9. Antorchas con animación de llama y halo de luz cálida (col 0, sx=0)
+        // 8. Estanterías de libros (col 10, sx=320)
+        this.bookshelves.forEach(bs => {
+            ctx.drawImage(propsSheet, 320, 0, 32, 32, bs.x, bs.y, 32, 32);
+        });
+
+        // 9. Mesa / Escritorio de roble (col 12, sx=384)
+        this.tables.forEach(t => {
+            ctx.drawImage(propsSheet, 384, 0, 32, 32, t.x, t.y, 32, 32);
+        });
+
+        // 10. Antorchas con luz
         this.torches.forEach(t => {
             const flickerOffset = (this.flameFrame % 2 === 0) ? 0 : (this.flameFrame === 1 ? -1 : 1);
-
-            // Halo de luz cálida (mezcla aditiva + parpadeo leve), cae sobre el suelo
             const flick = 0.9 + 0.1 * Math.sin(this.flameTimer * 0.18 + t.x * 0.37);
             const lx = t.x + 16;
             const ly = t.y + 22;
@@ -642,19 +736,17 @@ class World {
             ctx.fill();
             ctx.restore();
 
-            // Dibujar antorcha
             ctx.drawImage(propsSheet, 0, 0, 32, 32, t.x, t.y + flickerOffset, 32, 32);
         });
 
-        // 10. Pergamino de Lore Brillante (col 3, sx=96)
-        if (this.loreScroll) {
+        // 11. Pergamino de Lore (col 3, sx=96) - Colocado sobre la mesa
+        if (this.loreScroll && !this.loreScroll.collected) {
             ctx.drawImage(propsSheet, 96, 0, 32, 32, this.loreScroll.x, this.loreScroll.y, 32, 32);
         }
 
-        // 11. Escaleras de Descenso con Arco de Piedra / Portal de Piso (col 4, sx=128)
+        // 12. Escaleras / Portal
         if (this.stairs) {
             ctx.drawImage(propsSheet, 128, 0, 32, 32, this.stairs.x, this.stairs.y, 32, 32);
-            // Si está desbloqueado, aura luminosa celeste
             if (this.stairsUnlocked) {
                 ctx.fillStyle = 'rgba(90, 200, 255, 0.35)';
                 ctx.beginPath();

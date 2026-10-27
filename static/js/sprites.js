@@ -20,6 +20,7 @@ class SpriteManager {
             rat: '/static/assets/sprites/enemy_rat.png?v=3',
             werewolf: '/static/assets/sprites/enemy_werewolf.png?v=3',
             demon: '/static/assets/sprites/enemy_demon.png?v=3',
+            lucian: '/static/assets/sprites/boss_lucian.png?v=1',
             abracadabra: '/static/assets/sprites/boss_abracadabra.png?v=3',
             hong: '/static/assets/sprites/boss_hong.png?v=3',
             tiles_crypt: '/static/assets/sprites/tileset_crypt.png?v=4',

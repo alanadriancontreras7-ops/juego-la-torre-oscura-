@@ -158,8 +158,6 @@ class Projectile {
     }
 }
 
-
-
 // ==============================================================================
 // CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
 // ==============================================================================
@@ -172,7 +170,6 @@ class GroundItem {
         this.isGold = isGold;
         this.goldAmount = goldAmount;
 
-        // Físicas de dispersión suave al caer
         const spreadAngle = Math.random() * Math.PI * 2;
         const spreadSpeed = 1.0 + Math.random() * 2.2;
         this.vx = Math.cos(spreadAngle) * spreadSpeed;
@@ -195,21 +192,16 @@ class GroundItem {
         }
     }
 
-    /**
-     * Comprueba si el jugador tiene capacidad real para recoger este ítem
-     */
     canPlayerPickup(player) {
         if (!player) return false;
-        if (this.isGold) return true; // El oro siempre se puede recoger
+        if (this.isGold) return true;
         if (!this.item) return false;
 
-        // Si es poción o material y ya existe en la mochila, se puede apilar
         if (this.item.type === 'consumable' || this.item.type === 'material') {
             const existing = player.inventory.find(s => s && s.id === this.item.id);
             if (existing) return true;
         }
 
-        // Si hay al menos un espacio libre en los 30 slots
         return player.inventory.some(s => s === null);
     }
 
@@ -227,7 +219,6 @@ class GroundItem {
             this.y -= this.vy * 1.5;
         }
 
-        // Partículas periódicas para rarezas altas
         if (!this.isGold && this.item) {
             if (this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
                 particles.push(new Particle(
@@ -251,19 +242,16 @@ class GroundItem {
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
         const canPickup = this.canPlayerPickup(player);
 
-        // SOLO succionar con imán si el jugador PUEDE recogerlo
         if (dist < 50 && canPickup) {
             const pullAngle = Math.atan2(player.y - this.y, player.x - this.x);
             this.x += Math.cos(pullAngle) * 3.8;
             this.y += Math.sin(pullAngle) * 3.8;
         }
 
-        // Detección de contacto cuerpo a cuerpo
         if (dist < 26) {
             if (canPickup) {
                 this.tryPickup(player);
             } else {
-                // Mochila llena: mostrar alerta (con temporizador para no saturar)
                 if (!player.invFullWarningTimer || player.invFullWarningTimer <= 0) {
                     player.invFullWarningTimer = 60;
                     if (window.game && window.game.floatingTexts) {
@@ -272,7 +260,6 @@ class GroundItem {
                     if (window.soundEngine) window.soundEngine.playTone(160, 'sawtooth', 0.15, 0.25);
                 }
 
-                // EMPUJAR SUAVEMENTE EL OBJETO HACIA AFUERA para que no se quede pegado al personaje
                 const pushAngle = (dist > 2) ? Math.atan2(this.y - player.y, this.x - player.x) : Math.random() * Math.PI * 2;
                 this.vx = Math.cos(pushAngle) * 2.2;
                 this.vy = Math.sin(pushAngle) * 2.2;
@@ -283,7 +270,6 @@ class GroundItem {
     tryPickup(player) {
         if (this.pickedUp) return;
 
-        // 1. Recogida de Oro
         if (this.isGold) {
             player.gold += this.goldAmount;
             window.soundEngine.playItemPickup();
@@ -294,10 +280,8 @@ class GroundItem {
             return;
         }
 
-        // 2. Recogida de Ítems
         if (!this.item) return;
 
-        // Apilado de pociones / materiales
         if (this.item.type === 'consumable' || this.item.type === 'material') {
             const existingIdx = player.inventory.findIndex(s => s && s.id === this.item.id);
             if (existingIdx !== -1) {
@@ -307,7 +291,6 @@ class GroundItem {
             }
         }
 
-        // Slot vacío
         const emptyIdx = player.inventory.findIndex(s => s === null);
         if (emptyIdx !== -1) {
             player.inventory[emptyIdx] = { ...this.item, qty: this.item.qty || 1 };
@@ -379,7 +362,6 @@ class GroundItem {
         const iconIdx = this.isGold ? 9 : (this.item ? (this.item.icon || 0) : 0);
         window.spriteManager.drawIcon(ctx, iconIdx, drawX - iconSize / 2, drawY - iconSize / 2, iconSize);
 
-        // Mostrar nombre solo si estás cerca
         const distToPlayer = Math.hypot(window.game.player.x - this.x, window.game.player.y - this.y);
         if (distToPlayer < 65 || this.rarity === 'LEGENDARY') {
             ctx.font = '8px "Press Start 2P"';
@@ -394,8 +376,9 @@ class GroundItem {
         ctx.restore();
     }
 }
+
 // ==============================================================================
-// CLASE DEL JUGADOR (CON SOPORTE DE SPRITES DE ARMADURAS DINÁMICAS)
+// CLASE DEL JUGADOR
 // ==============================================================================
 
 class Player {
@@ -506,8 +489,6 @@ class Player {
         }
     }
 
-
-
     getTotalStats() {
         let totalStr = this.strength;
         let totalDex = this.dexterity;
@@ -542,22 +523,18 @@ class Player {
     giveInitialEquipment() {
         if (this.characterClass === 'warrior') {
             this.equipment.weapon = window.ITEM_DATABASE.sword_short;
-            this.equipment.armor = window.ITEM_DATABASE.armor_plate; // ¡Peto de hierro inicial!
+            this.equipment.armor = window.ITEM_DATABASE.armor_plate;
         } else if (this.characterClass === 'archer') {
             this.equipment.weapon = window.ITEM_DATABASE.bow_short;
-            this.equipment.armor = window.ITEM_DATABASE.armor_leather; // Jubón de cuero
+            this.equipment.armor = window.ITEM_DATABASE.armor_leather;
         } else if (this.characterClass === 'mage') {
             this.equipment.weapon = window.ITEM_DATABASE.staff_apprentice;
-            this.equipment.armor = window.ITEM_DATABASE.armor_robe; // Túnica mística
+            this.equipment.armor = window.ITEM_DATABASE.armor_robe;
         }
         this.inventory[0] = { ...window.ITEM_DATABASE.potion_health, qty: 3 };
         this.inventory[1] = { ...window.ITEM_DATABASE.potion_mana, qty: 2 };
     }
 
-    /**
-     * Devuelve el nivel visual del arma (0 común, 1 oscura/demoníaca, 2 legendaria).
-     * Solo si coincide con la clase del héroe (guerrero: espada, arquero: arco, mago: bastón).
-     */
     getWeaponLook() {
         const nativeWeapon = { warrior: 'sword', archer: 'bow', mage: 'staff' }[this.characterClass];
         const w = this.equipment && this.equipment.weapon;
@@ -567,9 +544,6 @@ class Player {
         return (itemDef.look !== undefined) ? itemDef.look : 0;
     }
 
-    /**
-     * Devuelve el nivel visual de la armadura (0 hierro/común, 1 oscura, 2 legendaria).
-     */
     getArmorLook() {
         const nativeArmor = { warrior: 'plate', archer: 'leather', mage: 'robe' }[this.characterClass];
         const a = this.equipment && this.equipment.armor;
@@ -582,8 +556,6 @@ class Player {
     getSpriteKey() {
         return `player_${this.characterClass}_w${this.getWeaponLook()}_a${this.getArmorLook()}`;
     }
-
-
 
     update(keys, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
@@ -722,8 +694,6 @@ class Player {
                 'player',
                 weaponLook
             ));
-
-            //daño de mago
         } else if (this.characterClass === 'mage') {
             if (this.mp >= 4) {
                 this.mp -= 4;
@@ -1013,9 +983,9 @@ class BossAbracadabra {
         this.name = 'Sub-Jefe Abracadabra';
         this.x = x;
         this.y = y;
-        this.maxHp = 650;
-        this.hp = 650;
-        this.atk = 26;
+        this.maxHp = 2950;
+        this.hp = 2950;
+        this.atk = 100;
         this.width = 44;
         this.height = 46;
 
@@ -1023,6 +993,7 @@ class BossAbracadabra {
         this.stateTimer = 0;
         this.animFrame = 0;
         this.direction = 0;
+        this.activated = false; // Espera hasta que entres a su sala
 
         this.chargeVx = 0;
         this.chargeVy = 0;
@@ -1034,8 +1005,20 @@ class BossAbracadabra {
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
 
-        this.stateTimer++;
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        // Despierta solo cuando el jugador entra a la rotonda norte
+        if (!this.activated) {
+            if (player.y < 16 * world.tileSize || dist < 240) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.startBgm(true);
+            } else {
+                return; // Espera en el norte
+            }
+        }
+
+        this.stateTimer++;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
         if (this.state === 'walk') {
@@ -1093,8 +1076,8 @@ class BossAbracadabra {
             } else {
                 this.x = nx;
                 this.y = ny;
-                if (dist < 38) {
-                    player.takeDamage(this.atk + 10, this.x, this.y);
+                if (dist < 40) {
+                    player.takeDamage(this.atk + 50, this.x, this.y);
                 }
             }
         } else if (this.state === 'exhausted') {
@@ -1115,7 +1098,7 @@ class BossAbracadabra {
                 this.x, this.y,
                 Math.cos(a) * 4.2, Math.sin(a) * 4.2,
                 'acid',
-                this.atk,
+                this.atk + 50,
                 'enemy'
             ));
         });
@@ -1153,15 +1136,15 @@ class BossAbracadabra {
         );
     }
 }
-
+//boss hong
 class BossHong {
     constructor(x, y) {
         this.name = 'Hong Devorador de Hombres';
         this.x = x;
         this.y = y;
-        this.maxHp = 1400;
-        this.hp = 1400;
-        this.atk = 34;
+        this.maxHp = 3400;
+        this.hp = 3400;
+        this.atk = 114;
         this.width = 60;
         this.height = 64;
 
@@ -1169,13 +1152,26 @@ class BossHong {
         this.stateTimer = 0;
         this.animFrame = 0;
         this.flashRedTimer = 0;
+        this.activated = false; // Espera hasta cruzar el puente
     }
 
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
 
-        this.stateTimer++;
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        // Despierta solo cuando el jugador cruza el puente hacia el trono
+        if (!this.activated) {
+            if (player.y < 14 * world.tileSize || dist < 260) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.startBgm(true);
+            } else {
+                return; // Espera en el trono
+            }
+        }
+
+        this.stateTimer++;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
         if (this.stateTimer % 10 === 0) {
@@ -1212,7 +1208,7 @@ class BossHong {
                         this.x, this.y,
                         Math.cos(a) * 3.8, Math.sin(a) * 3.8,
                         'void',
-                        this.atk,
+                        this.atk + 157,
                         'enemy'
                     ));
                 }
@@ -1225,7 +1221,7 @@ class BossHong {
             if (this.stateTimer === 25) {
                 window.soundEngine.playSwordSlash();
                 if (dist < 80) {
-                    player.takeDamage(this.atk + 12, this.x, this.y);
+                    player.takeDamage(this.atk + 30, this.x, this.y);
                 }
                 for (let i = 0; i < 15; i++) {
                     particles.push(new Particle(
@@ -1272,6 +1268,174 @@ class BossHong {
     }
 }
 
+
+
+// SUB-JEFE LUCIAN, EL PRIMER HOMBRE LOBO 
+
+class BossLucian {
+    constructor(x, y) {
+        this.name = 'Sub-Jefe Lucian';
+        this.x = x;
+        this.y = y;
+        this.maxHp = 1850;
+        this.hp = 1850;
+        this.atk = 28;
+        this.width = 46;
+        this.height = 48;
+
+        this.state = 'stalk'; // 'stalk', 'howl', 'pounce', 'frenzy'
+        this.stateTimer = 0;
+        this.animFrame = 0;
+        this.direction = 0;
+        this.activated = false; // Solo despierta al entrar a su guarida
+
+        this.pounceVx = 0;
+        this.pounceVy = 0;
+        this.flashRedTimer = 0;
+        this.knockbackX = 0;
+        this.knockbackY = 0;
+    }
+
+    update(player, world, projectiles, particles) {
+        if (this.flashRedTimer > 0) this.flashRedTimer--;
+
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        // Despertar solo al entrar a su cámara norte
+        if (!this.activated) {
+            if (player.y < 16 * world.tileSize || dist < 240) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.startBgm(true);
+            } else {
+                return; // Espera en el fondo de la guarida
+            }
+        }
+
+        this.stateTimer++;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+
+        // Partículas lunares gélidas continuas
+        if (Math.random() < 0.25) {
+            particles.push(new Particle(
+                this.x + (Math.random() - 0.5) * 36,
+                this.y + (Math.random() - 0.5) * 30,
+                (Math.random() - 0.5) * 0.4, -0.6,
+                '#9fe8ff', 3, 18
+            ));
+        }
+
+        if (this.state === 'stalk') {
+            // Acecho rápido hacia el jugador
+            const speed = 1.6;
+            this.x += Math.cos(angle) * speed;
+            this.y += Math.sin(angle) * speed;
+
+            if (this.stateTimer % 10 === 0) {
+                this.animFrame = (this.animFrame + 1) % 4;
+            }
+
+            if (this.stateTimer > 120) {
+                this.stateTimer = 0;
+                this.animFrame = 0;
+                // Alternar entre Aullido lunar y Embestida/Salto
+                if (Math.random() < 0.5) {
+                    this.state = 'howl';
+                    window.soundEngine.playBossRoar();
+                } else {
+                    this.state = 'pounce';
+                    this.pounceVx = Math.cos(angle) * 7.5;
+                    this.pounceVy = Math.sin(angle) * 7.5;
+                }
+            }
+        } else if (this.state === 'howl') {
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 12));
+
+            // Onda expansiva de aullido (aleja al jugador y crea partículas de choque)
+            if (this.stateTimer === 25) {
+                for (let i = 0; i < 16; i++) {
+                    const a = (i * Math.PI * 2) / 16;
+                    particles.push(new Particle(
+                        this.x, this.y,
+                        Math.cos(a) * 4.5, Math.sin(a) * 4.5,
+                        '#e8f4fc', 4, 22
+                    ));
+                }
+                if (dist < 120) {
+                    player.takeDamage(this.atk - 8, this.x, this.y);
+                }
+            }
+
+            if (this.stateTimer > 50) {
+                this.state = 'frenzy';
+                this.stateTimer = 0;
+            }
+        } else if (this.state === 'pounce') {
+            // Salto letal a gran velocidad
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 8));
+            const nx = this.x + this.pounceVx;
+            const ny = this.y + this.pounceVy;
+
+            particles.push(new Particle(this.x, this.y + 16, -this.pounceVx * 0.2, -0.5, '#7f8c8d', 4, 16));
+
+            if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 28) {
+                this.state = 'stalk';
+                this.stateTimer = 0;
+            } else {
+                this.x = nx;
+                this.y = ny;
+                if (dist < 42) {
+                    player.takeDamage(this.atk + 14, this.x, this.y);
+                    this.state = 'frenzy';
+                    this.stateTimer = 0;
+                }
+            }
+        } else if (this.state === 'frenzy') {
+            // Ráfaga cuerpo a cuerpo de zarpazos cruzados
+            this.animFrame = (Math.floor(this.stateTimer / 6)) % 4;
+
+            if (this.stateTimer % 15 === 0 && dist < 55) {
+                window.soundEngine.playSwordSlash();
+                player.takeDamage(this.atk + 6, this.x, this.y);
+            }
+
+            if (this.stateTimer > 45) {
+                this.state = 'stalk';
+                this.stateTimer = 0;
+            }
+        }
+    }
+
+    takeDamage(damage, sourceX, sourceY) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.flashRedTimer = 6;
+        window.soundEngine.playHit();
+        return this.hp <= 0;
+    }
+
+    draw(ctx) {
+        const destW = 72;
+        const destH = 72;
+        const dx = Math.floor(this.x - destW / 2);
+        const dy = Math.floor(this.y - destH / 2 - 8);
+
+        let row = 0; // stalk
+        if (this.state === 'howl') row = 1;
+        else if (this.state === 'pounce') row = 2;
+        else if (this.state === 'frenzy') row = 3;
+
+        window.spriteManager.draw(
+            ctx,
+            'lucian',
+            this.animFrame,
+            row,
+            72, 72,
+            dx, dy, destW, destH,
+            false,
+            this.flashRedTimer > 0
+        );
+    }
+}
 window.Player = Player;
 window.Enemy = Enemy;
 window.BossAbracadabra = BossAbracadabra;
@@ -1280,3 +1444,4 @@ window.Projectile = Projectile;
 window.Particle = Particle;
 window.FloatingText = FloatingText;
 window.GroundItem = GroundItem;
+window.BossLucian = BossLucian;

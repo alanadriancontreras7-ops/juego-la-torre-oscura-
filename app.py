@@ -49,13 +49,14 @@ LORE_DATA = [
         "content": "Las criptas terminan aquí. Más arriba la piedra se calienta y brotan vapores sulfurosos. Los bandidos supervivientes han sucumbido a la locura total y blanden armas empapadas en veneno.",
         "combat_tip": "Consejo: En este piso los enemigos patrullan en parejas. Atrae a uno a la vez hacia los pasillos estrechos."
     },
-    {
+   {
         "floor": 5,
-        "title": "Pergamino Abrasador - Entrada V",
-        "author": "Maga Ignis",
-        "content": "La piedra se funde bajo nuestras botas. El fuego demoníaco de la torre no es natural; huele a azufre y sangre. Escuchamos aullidos guturales que hielan la sangre a pesar del calor sofocante.",
-        "combat_tip": "Consejo: No pises las fisuras de magma ardiente. Los hombres lobo acechan en los rincones ciegos para tender emboscadas."
+        "title": "Códice de la Bestia Ancestral: Lucian",
+        "author": "Cazador Imperial Brand",
+        "content": "En las profundidades de las Fauces de Azufre no habita una manada ordinaria, sino su patriarca: Lucian, el primer hombre lobo engendrado por la Torre Oscura. Su pelaje no es cenizo sino de un blanco espectral, y su tamaño empequeñece a cualquier bestia conocida. Sus aullidos resuenan por la roca viva con una furia gélida.",
+        "combat_tip": "¡ALERTA DE SUB-JEFE!: Lucian es mucho más rápido y agresivo que cualquier enemigo normal. Cuando eche su cabeza hacia atrás para aullar, prepárate: desatará una onda de choque y luego una embestida con garras salvajes. Atácalo tras esquivar su salto mortal."
     },
+
     {
         "floor": 6,
         "title": "Piel Marcada con Garras - Entrada VI",
@@ -63,19 +64,36 @@ LORE_DATA = [
         "content": "Hombres lobo... Bestias musculosas cubiertas de pelaje cenizo y ojos amarillos hambrientos. No temen al dolor ni a las espadas comunes. Atacan con una furia desquiciada.",
         "combat_tip": "Consejo: Cuando el Hombre Lobo flexione sus patas traseras para abalanzarse, rueda hacia un lado. Sus zarpazos dejan una breve ventana de vulnerabilidad."
     },
-    {
+   {
         "floor": 7,
-        "title": "Tablilla Rúnica de Sangre - Entrada VII",
-        "author": "Sumo Sacerdote Malakor",
-        "content": "Los Demonios Menores vuelan entre los pilares de obsidiana. Tienen cuernos curvados, piel color carmín y garras que arden con magia negra. Custodian el acceso a la rotonda del boticario pestilente.",
-        "combat_tip": "Consejo: Los demonios lanzan proyectiles de sombra y retroceden al recibir daño mágico. Acércate con guardia o usa flechas veloces."
+        "title": "LOS CELOS DE HONG - PARTE I",
+        "author": "Crónicas de las Fauces",
+        "content": (
+            "Hong era una joven muchacha consumida por un amor no correspondido. "
+            "Amaba profundamente a un chico de su aldea, pero él ya estaba entregado a otra: "
+            "su propia prima. Los celos carcomieron el corazón de Hong día y noche hasta "
+            "que la envidia se transformó en odio puro. Desesperada por eliminar a su rival, "
+            "Hong buscó las artes prohibidas y pactó con el Señor Oscuro. A cambio de su alma, "
+            "recibió un poder demoníaco aberrante que la deformó por completo, convirtiéndola "
+            "en una bestia voraz lista para reclamar lo que creía suyo."
+        ),
+        "combat_tip": "Prepárate para enfrentar enemigos de gran movilidad antes de ascender a los pisos de los jefes."
     },
+    
     {
         "floor": 8,
-        "title": "Tratado Médico Macabro: Abracadabra",
-        "author": "Doctor Pestis",
-        "content": "Abracadabra fue una vez el boticario imperial. Ahora es una masa hinchada y pútrida de carne verde pálida cubierta de pústulas tóxicas que palpitan con brillo neón. Se alimenta de bilis destilada y su estómago produce un ácido capaz de disolver el hierro.",
-        "combat_tip": "¡ALERTA DE JEFE!: Observa con atención el tórax de Abracadabra. Cuando empiece a hincharse profundamente y sus pústulas brillen con fulgor neón, ¡apártate inmediatamente! Lanzará una oleada de vómito ácido y luego una embestida frontal devastadora. Tras embestir, quedará exhausto unos segundos."
+        "title": "EL TRÁGICO DESTINO DE SAMIRIA",
+        "author": "Crónicas de la Rotonda Virulenta",
+        "content": (
+            "Antes de convertirse en la abominación conocida como Abracadabra, "
+            "fue una joven llamada Samiria. Inocente y confiada, fue engañada y "
+            "utilizada por un muchacho solo para saciar sus placeres carnales. Una vez "
+            "que él satisfizo sus deseos, la desechó cruelmente sin piedad ni remordimiento. "
+            "El dolor, la vergüenza y el despecho corrompieron el espíritu de Samiria, "
+            "llevándola a buscar refugio en la magia negra de la Torre Oscura, donde su amargura "
+            "y veneno interno la mutaron en este ser purulento y vengativo."
+        ),
+        "combat_tip": "Mantén la distancia contra Abracadabra cuando empiece a hincharse y evita sus charcos de ácido a toda costa."
     },
     {
         "floor": 9,
@@ -86,20 +104,35 @@ LORE_DATA = [
     },
     {
         "floor": 10,
-        "title": "Códice Prohibido: Hong Devorador de Hombres",
-        "author": "Archimago Supremo",
-        "content": "Hong no es un demonio ordinario; duplica la altura de cualquier mortal y su pecho y vientre están hendidos por múltiples bocas repletas de dientes afilados como cuchillas de obsidiana. Cada boca devora las almas y la carne de los campeones caídos. Sus cuernos rozan el firmamento tormentoso.",
-        "combat_tip": "¡BATALLA FINAL!: Hong alterna entre dos fases letales: 1) Su barrido colosal de garras y 2) La erupción de proyectiles del vacío desde las fauces de su torso cuando chasquean sus dientes. Destruye los orbes de miasma y ataca con todo tu arsenal cuando termine su tormenta abisal."
+        "title": "LA MALDICIÓN DE HONG - PARTE II",
+        "author": "Registros de la Cúspide",
+        "content": (
+            "Empoderada por el pacto demoníaco, Hong atacó a su prima para arrebatarle la vida. "
+            "Sin embargo, el joven al que amaba intervino valientemente y se interpuso en el ataque, "
+            "logrando detener el golpe fatal. Enfurecida por el rechazo y fuera de sí, Hong "
+            "secuestró a su prima y huyó hacia lo más alto de La Torre Oscura. Ahora, recluida "
+            "en la cúspide abisal, custodia su trofeo mientras aguarda a cualquiera que ose "
+            "desafiar su insaciable sed de venganza."
+        ),
+        "combat_tip": "Atento a los barridos de gran alcance de Hong; esquiva lateralmente y ataca durante sus pausas de recuperación."
     }
+
 ]
 
 def init_db():
     with app.app_context():
         db.create_all()
-        # Inicializar notas de lore si no existen
+        # Insertar o actualizar notas de lore
         for lore in LORE_DATA:
             existing = LoreNote.query.filter_by(floor=lore['floor']).first()
-            if not existing:
+            if existing:
+                # Sobreescribir con el texto actualizado
+                existing.title = lore['title']
+                existing.author = lore['author']
+                existing.content = lore['content']
+                existing.combat_tip = lore['combat_tip']
+            else:
+                # Crear nuevo registro si no existía
                 new_lore = LoreNote(
                     floor=lore['floor'],
                     title=lore['title'],

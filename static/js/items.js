@@ -1,6 +1,7 @@
 /**
  * SISTEMA DE ÍTEMS, RAREZAS Y BOTÍN (LOOT)
- * Catálogo con restricciones estrictas de clase y aspecto visual fijo por tier (look 0, 1, 2).
+ * Catálogo con restricciones estrictas de clase, aspecto visual fijo por tier (look 0, 1, 2)
+ * y tabla de recompensas para el Sub-Jefe Lucian (Piso 5).
  */
 
 const ITEM_RARITIES = {
@@ -159,7 +160,7 @@ const ITEM_DATABASE = {
         look: 0, // Aspecto 0: Cristal solar
         rarity: 'RARE',
         icon: 3,
-        atk: 14,
+        atk: 20,
         mag: 7,
         value: 70,
         desc: 'Coronado por un cristal ígneo que arde eternamente con calor místico.'
@@ -173,7 +174,7 @@ const ITEM_DATABASE = {
         look: 1, // Aspecto 1: Hueso retorcido y orbe de vacío
         rarity: 'EPIC',
         icon: 13,
-        atk: 24,
+        atk: 28,
         mag: 11,
         value: 210,
         desc: 'Obsidiana retorcida que aprisiona un orbe del vacío entre garras huesudas.'
@@ -203,7 +204,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'plate',
         classReq: 'warrior',
-        look: 0, // ¡ASPECTO 0!: Armadura de hierro clásica con capa azul y pluma roja
+        look: 0, // Aspecto 0: Hierro clásico con capa azul y pluma roja
         rarity: 'COMMON',
         icon: 4,
         def: 8,
@@ -217,7 +218,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'plate',
         classReq: 'warrior',
-        look: 0, // ¡ASPECTO 0!: Hierro reforzado
+        look: 0, // Aspecto 0: Hierro reforzado
         rarity: 'RARE',
         icon: 4,
         def: 14,
@@ -231,7 +232,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'plate',
         classReq: 'warrior',
-        look: 1, // ¡ASPECTO 1!: Armadura oscura con cuernos y ojos rojos
+        look: 1, // Aspecto 1: Armadura oscura con cuernos y ojos rojos
         rarity: 'EPIC',
         icon: 15,
         def: 22,
@@ -246,7 +247,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'plate',
         classReq: 'warrior',
-        look: 1, // ¡ASPECTO 1!: Oscura/pústulas
+        look: 1,
         rarity: 'EPIC',
         icon: 15,
         def: 24,
@@ -261,7 +262,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'plate',
         classReq: 'warrior',
-        look: 2, // ¡ASPECTO 2!: Armadura dorada divina con alas en el casco
+        look: 2, // Aspecto 2: Oro divino con alas en el casco
         rarity: 'LEGENDARY',
         icon: 16,
         def: 34,
@@ -280,7 +281,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'leather',
         classReq: 'archer',
-        look: 0, // Aspecto 0: Cuero y capucha verde
+        look: 0, // Aspecto 0: Capucha y cuero verde
         rarity: 'COMMON',
         icon: 17,
         def: 5,
@@ -309,7 +310,7 @@ const ITEM_DATABASE = {
         type: 'armor',
         armorType: 'leather',
         classReq: 'archer',
-        look: 2, // Aspecto 2: Manto marfil con bordes dorados y pluma sagrada
+        look: 2, // Aspecto 2: Manto marfil con bordes dorados
         rarity: 'LEGENDARY',
         icon: 19,
         def: 26,
@@ -440,7 +441,7 @@ const ITEM_DATABASE = {
 };
 
 const DROP_TABLES = {
-    // 1. Ratas: pociones y materiales
+    // 1. Ratas
     rat: [
         { id: 'potion_health', chance: 0.35 },
         { id: 'potion_mana', chance: 0.35 },
@@ -448,28 +449,28 @@ const DROP_TABLES = {
         { goldMin: 4, goldMax: 12 }
     ],
 
-    // 2. Bandidos: ahora incluyen Vara de Aprendiz y Túnica
+    // 2. Bandidos
     bandit: [
         { id: 'potion_health', chance: 0.35 },
         { id: 'potion_mana', chance: 0.30 },
         { id: 'sword_short', chance: 0.22 },
         { id: 'bow_short', chance: 0.22 },
-        { id: 'staff_apprentice', chance: 0.25 }, // ¡Bastón para Magos!
+        { id: 'staff_apprentice', chance: 0.25 },
         { id: 'armor_plate', chance: 0.16 },
         { id: 'armor_leather', chance: 0.16 },
-        { id: 'armor_robe', chance: 0.18 },      // ¡Túnica para Magos!
+        { id: 'armor_robe', chance: 0.18 },
         { goldMin: 8, goldMax: 22 }
     ],
 
-    // 3. Esqueletos: ahora incluyen Bastón además de Túnica
+    // 3. Esqueletos
     skeleton: [
         { id: 'mat_bone', chance: 0.70 },
         { id: 'potion_mana', chance: 0.30 },
         { id: 'sword_short', chance: 0.20 },
-        { id: 'staff_apprentice', chance: 0.24 }, // ¡Bastón para Magos!
+        { id: 'staff_apprentice', chance: 0.24 },
         { id: 'sword_broad', chance: 0.16 },
         { id: 'armor_reinforced', chance: 0.14 },
-        { id: 'armor_robe', chance: 0.20 },      // ¡Túnica para Magos!
+        { id: 'armor_robe', chance: 0.20 },
         { goldMin: 12, goldMax: 28 }
     ],
 
@@ -478,24 +479,24 @@ const DROP_TABLES = {
         { id: 'mat_silk', chance: 0.75 },
         { id: 'potion_health', chance: 0.35 },
         { id: 'potion_mana', chance: 0.40 },
-        { id: 'staff_apprentice', chance: 0.24 }, // ¡Bastón para Magos!
+        { id: 'staff_apprentice', chance: 0.24 },
         { id: 'bow_hunter', chance: 0.20 },
-        { id: 'armor_robe', chance: 0.20 },      // ¡Túnica para Magos!
+        { id: 'armor_robe', chance: 0.20 },
         { id: 'armor_leather', chance: 0.16 },
         { goldMin: 16, goldMax: 36 }
     ],
 
-    // 5. Hombres Lobo: ahora incluyen Bastón Oscuro y Túnica Oscura
+    // 5. Hombres Lobo
     werewolf: [
         { id: 'mat_pelt', chance: 0.80 },
         { id: 'potion_health', chance: 0.40 },
         { id: 'potion_mana', chance: 0.40 },
         { id: 'blade_demonic', chance: 0.14 },
         { id: 'bow_dark', chance: 0.14 },
-        { id: 'staff_dark', chance: 0.20 },       // ¡Bastón Oscuro para Magos!
+        { id: 'staff_dark', chance: 0.20 },
         { id: 'armor_plate_dark', chance: 0.14 },
         { id: 'armor_leather_dark', chance: 0.14 },
-        { id: 'armor_robe_dark', chance: 0.20 },  // ¡Túnica Oscura para Magos!
+        { id: 'armor_robe_dark', chance: 0.20 },
         { goldMin: 32, goldMax: 70 }
     ],
 
@@ -504,18 +505,31 @@ const DROP_TABLES = {
         { id: 'mat_horn', chance: 0.75 },
         { id: 'potion_mana', chance: 0.55 },
         { id: 'potion_elixir', chance: 0.35 },
-        { id: 'staff_dark', chance: 0.24 },       // ¡Bastón para Magos!
-        { id: 'armor_robe_dark', chance: 0.22 },  // ¡Túnica para Magos!
-        { id: 'staff_legend', chance: 0.06 },     // ¡Bastón Legendario!
+        { id: 'staff_dark', chance: 0.24 },
+        { id: 'armor_robe_dark', chance: 0.22 },
+        { id: 'staff_legend', chance: 0.06 },
         { id: 'sword_legend', chance: 0.04 },
         { id: 'bow_legend', chance: 0.04 },
         { goldMin: 55, goldMax: 120 }
     ],
 
-    // 7. Sub-Jefe Abracadabra
+    // 7. Sub-Jefe Lucian, el Primer Hombre Lobo (Piso 5)
+    lucian: [
+        { id: 'mat_pelt', chance: 1.0, qty: 3 },
+        { id: 'blade_demonic', chance: 0.65 },
+        { id: 'bow_dark', chance: 0.65 },
+        { id: 'staff_dark', chance: 0.65 },
+        { id: 'armor_plate_dark', chance: 0.50 },
+        { id: 'armor_leather_dark', chance: 0.50 },
+        { id: 'armor_robe_dark', chance: 0.50 },
+        { id: 'potion_elixir', chance: 1.0, qty: 1 },
+        { goldMin: 120, goldMax: 240 }
+    ],
+
+    // 8. Sub-Jefe Abracadabra (Piso 8)
     abracadabra: [
         { id: 'armor_abracadabra', chance: 1.0 },
-        { id: 'staff_dark', chance: 0.80 },       // ¡Bastón asegurado casi siempre!
+        { id: 'staff_dark', chance: 0.80 },
         { id: 'armor_robe_dark', chance: 0.70 },
         { id: 'blade_demonic', chance: 0.50 },
         { id: 'bow_dark', chance: 0.50 },
@@ -523,19 +537,21 @@ const DROP_TABLES = {
         { goldMin: 180, goldMax: 350 }
     ],
 
-    // 8. Jefe Final Hong
+    // 9. Jefe Final Hong (Piso 10)
     hong: [
-        { id: 'staff_legend', chance: 0.90 },     // ¡Arma Legendaria para Magos!
-        { id: 'armor_robe_legend', chance: 0.90 },// ¡Armadura Legendaria para Magos!
+        { id: 'staff_legend', chance: 0.90 },
+        { id: 'armor_robe_legend', chance: 0.90 },
         { id: 'sword_legend', chance: 0.60 },
         { id: 'bow_legend', chance: 0.60 },
+        { id: 'armor_plate_legend', chance: 0.70 },
+        { id: 'armor_leather_legend', chance: 0.70 },
         { goldMin: 500, goldMax: 1000 }
     ],
 
-    // 9. Cofres Tempranos (Pisos 1-3)
+    // 10. Cofres Tempranos (Pisos 1-3)
     chest_early: [
-        { id: 'staff_apprentice', chance: 0.40 }, // ¡Bastón!
-        { id: 'armor_robe', chance: 0.35 },       // ¡Túnica!
+        { id: 'staff_apprentice', chance: 0.40 },
+        { id: 'armor_robe', chance: 0.35 },
         { id: 'sword_short', chance: 0.30 },
         { id: 'bow_short', chance: 0.30 },
         { id: 'potion_mana', chance: 0.75 },
@@ -543,21 +559,21 @@ const DROP_TABLES = {
         { goldMin: 25, goldMax: 60 }
     ],
 
-    // 10. Cofres Medios (Pisos 4-7)
+    // 11. Cofres Medios (Pisos 4-7)
     chest_mid: [
         { id: 'staff_inferno', chance: 0.35 },
-        { id: 'staff_dark', chance: 0.30 },       // ¡Bastón Oscuro!
-        { id: 'armor_robe_dark', chance: 0.30 },  // ¡Túnica Oscura!
+        { id: 'staff_dark', chance: 0.30 },
+        { id: 'armor_robe_dark', chance: 0.30 },
         { id: 'sword_broad', chance: 0.25 },
         { id: 'bow_hunter', chance: 0.25 },
         { id: 'potion_elixir', chance: 0.50 },
         { goldMin: 60, goldMax: 130 }
     ],
 
-    // 11. Cofres Avanzados (Pisos 8-10)
+    // 12. Cofres Avanzados (Pisos 8-10)
     chest_late: [
-        { id: 'staff_legend', chance: 0.35 },     // ¡Cetro Primordial!
-        { id: 'armor_robe_legend', chance: 0.35 },// ¡Vestiduras Celestiales!
+        { id: 'staff_legend', chance: 0.35 },
+        { id: 'armor_robe_legend', chance: 0.35 },
         { id: 'staff_dark', chance: 0.30 },
         { id: 'sword_legend', chance: 0.20 },
         { id: 'bow_legend', chance: 0.20 },
@@ -565,9 +581,17 @@ const DROP_TABLES = {
         { goldMin: 140, goldMax: 300 }
     ],
 
-    // 12. Barriles
+    // 13. Cofres genéricos
+    chest: [
+        { id: 'sword_short', chance: 0.35 },
+        { id: 'armor_plate', chance: 0.30 },
+        { id: 'potion_health', chance: 0.70 },
+        { goldMin: 30, goldMax: 80 }
+    ],
+
+    // 14. Barriles
     barrel: [
-        { id: 'potion_mana', chance: 0.45 },      // Más pociones de maná
+        { id: 'potion_mana', chance: 0.45 },
         { id: 'potion_health', chance: 0.35 },
         { id: 'staff_apprentice', chance: 0.15 },
         { id: 'mat_bone', chance: 0.15 },

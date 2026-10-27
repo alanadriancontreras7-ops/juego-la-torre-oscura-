@@ -1875,6 +1875,123 @@ def _void_tile(S, rng):
         img.putpixel((rng.randrange(32), rng.randrange(32)), _shade(S['void'], rng.choice([0.85, 1.2])))
     return img
 
+    # ==============================================================================
+# SUB-JEFE: LUCIAN, EL PRIMER HOMBRE LOBO (boss_lucian.png - 72x72)
+# Lobo titánico de pelaje blanco plateado, ojos cian helados y garras lunares
+# ==============================================================================
+
+P_LUCIAN_FUR  = [(255, 255, 255), (232, 238, 246), (190, 200, 218), (140, 150, 172), (90, 100, 120)]
+P_LUCIAN_MANE = [(224, 230, 242), (176, 186, 206), (130, 140, 164), (88, 98, 120), (55, 62, 80)]
+P_LUCIAN_EYE  = (65, 230, 255, 255) # Ojos cian espectrales
+
+def draw_lucian_frame(state, frame_idx):
+    layers = []
+    Fur, Mn, Cl = P_LUCIAN_FUR, P_LUCIAN_MANE, P_BONE
+    cx, cy = 36, 38
+    bob = 2 if frame_idx in (1, 3) else 0
+
+    # 1. Piernas digitígradas musculosas
+    L = _L(w=72, h=72)
+    leg_shift = 3 if frame_idx in (1, 3) else -2
+    if state == 'pounce':
+        _box(L, cx - 18, cy + 18, cx - 10, cy + 28, Fur)
+        _box(L, cx + 8, cy + 18, cx + 16, cy + 28, _dn(Fur))
+    else:
+        _box(L, cx - 15 + leg_shift, cy + 16, cx - 8 + leg_shift, cy + 28, Fur)
+        _box(L, cx + 7 - leg_shift, cy + 16, cx + 14 - leg_shift, cy + 28, _dn(Fur))
+        for c in range(3):
+            L.px(cx - 14 + leg_shift + c * 2, cy + 29, Cl[HI])
+            L.px(cx + 8 - leg_shift + c * 2, cy + 29, Cl[HI])
+    layers.append(L)
+
+    # 2. Torso colosal y joroba de pelaje blanco
+    L = _L(w=72, h=72)
+    _ball(L, cx - 16, cy - 8 + bob, cx + 16, cy + 18 + bob, Fur)
+    # Melena plateada densa
+    L.poly([(cx - 14, cy - 4 + bob), (cx, cy + 12 + bob), (cx + 14, cy - 4 + bob)], Mn[LT])
+    L.line([(cx, cy - 4 + bob), (cx, cy + 14 + bob)], Fur[HI], 2)
+    layers.append(L)
+
+    # 3. Cabeza lupina según estado (Aullido o Ataque)
+    L = _L(w=72, h=72)
+    if state == 'howl':
+        # Cabeza hacia atrás aullando al cielo
+        head_y = cy - 24 + bob
+        _ball(L, cx - 12, head_y - 4, cx + 12, head_y + 14, Mn)
+        L.poly([(cx - 10, head_y), (cx - 13, head_y - 12), (cx - 6, head_y - 2)], Mn[DK])
+        L.poly([(cx + 6, head_y - 2), (cx + 13, head_y - 12), (cx + 10, head_y)], Mn[DK])
+        # Hocico apuntando hacia arriba
+        _box(L, cx - 6, head_y - 8, cx + 6, head_y + 2, Fur)
+        L.rect(cx - 4, head_y - 6, cx + 4, head_y - 1, (20, 15, 25, 255))
+        for t in (-3, 0, 3):
+            L.px(cx + t, head_y - 6, Cl[HI])
+            L.px(cx + t, head_y - 1, Cl[HI])
+    else:
+        # Cabeza de frente agresiva
+        head_y = cy - 18 + bob
+        _ball(L, cx - 14, head_y, cx + 14, head_y + 16, Mn)
+        L.poly([(cx - 12, head_y + 2), (cx - 15, head_y - 10), (cx - 7, head_y)], Mn[DK])
+        L.poly([(cx + 7, head_y), (cx + 15, head_y - 10), (cx + 12, head_y + 2)], Mn[DK])
+        # Hocico
+        _box(L, cx - 7, head_y + 8, cx + 7, head_y + 17, Fur)
+        L.px(cx - 1, head_y + 9, (18, 14, 20, 255))
+        L.px(cx, head_y + 9, (18, 14, 20, 255))
+        # Ojos cian brillantes
+        L.px(cx - 6, head_y + 5, P_LUCIAN_EYE)
+        L.px(cx - 5, head_y + 5, (255, 255, 255, 255))
+        L.px(cx + 5, head_y + 5, P_LUCIAN_EYE)
+        L.px(cx + 6, head_y + 5, (255, 255, 255, 255))
+        # Colmillos
+        L.line([(cx - 5, head_y + 16), (cx - 5, head_y + 19)], Cl[HI], 2)
+        L.line([(cx + 5, head_y + 16), (cx + 5, head_y + 19)], Cl[HI], 2)
+    layers.append(L)
+
+    # 4. Brazos y garras
+    L = _L(w=72, h=72)
+    if state == 'pounce':
+        # Brazos extendidos hacia adelante en pleno salto
+        _box(L, cx - 28, cy - 8, cx - 18, cy + 10, Fur)
+        _box(L, cx + 18, cy - 8, cx + 28, cy + 10, Fur)
+        for i in range(4):
+            L.line([(cx - 26 + i * 2, cy + 10), (cx - 30 + i * 2, cy + 18)], Cl[HI], 2)
+            L.line([(cx + 20 + i * 2, cy + 10), (cx + 24 + i * 2, cy + 18)], Cl[HI], 2)
+    elif state == 'frenzy':
+        # Doble zarpazo cruzado
+        arm_sw = 6 if frame_idx in (1, 2) else -4
+        _box(L, cx - 22, cy - 6 + arm_sw, cx - 12, cy + 12 + arm_sw, Fur)
+        _box(L, cx + 12, cy - 6 - arm_sw, cx + 22, cy + 12 - arm_sw, Fur)
+        for i in range(4):
+            L.line([(cx - 20 + i * 2, cy + 12 + arm_sw), (cx - 28 + i * 2, cy + 20 + arm_sw)], Cl[HI], 2)
+            L.line([(cx + 14 + i * 2, cy + 12 - arm_sw), (cx + 22 + i * 2, cy + 20 - arm_sw)], Cl[HI], 2)
+    else:
+        # Brazos estándar
+        _box(L, cx - 24, cy - 2 + bob, cx - 16, cy + 14 + bob, Fur)
+        _box(L, cx + 16, cy - 2 + bob, cx + 24, cy + 14 + bob, Fur)
+        for i in range(3):
+            L.px(cx - 22 + i * 2, cy + 15 + bob, Cl[HI])
+            L.px(cx + 18 + i * 2, cy + 15 + bob, Cl[HI])
+    layers.append(L)
+
+    # 5. Efectos lunares / zarpazos
+    if state == 'howl':
+        fx = _L(noline=True, w=72, h=72)
+        r = 14 + frame_idx * 5
+        fx.arc((cx - r, cy - 20 - r // 2, cx + r, cy - 20 + r // 2), 0, 360, (120, 220, 255, 180), 2)
+        layers.append(fx)
+    elif state == 'frenzy' and frame_idx in (1, 2):
+        fx = _L(noline=True, w=72, h=72)
+        for y_off in (-8, 0, 8):
+            fx.line([(cx - 26, cy + y_off), (cx + 26, cy + 12 + y_off)], (140, 230, 255, 220), 2)
+            fx.line([(cx - 24, cy - 1 + y_off), (cx + 28, cy + 11 + y_off)], (255, 255, 255, 240), 1)
+        layers.append(fx)
+
+    img = create_canvas(72, 72)
+    _draw_shadow(ImageDraw.Draw(img), cx, cy + 26, 20, 6)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    return img
+
+
 def generate_tiles():
     import random
     for kind, S in TILE_STYLES.items():
@@ -1899,7 +2016,8 @@ def generate_tiles():
         print(f"Creado: tileset_{kind}.png")
 
 def generate_props():
-    props = create_canvas(320, 32)
+    # 416x32 px: 13 casillas de 32x32 px
+    props = create_canvas(416, 32)
     d = ImageDraw.Draw(props)
     
     WOOD_DARK = (75, 48, 28, 255)
@@ -1914,7 +2032,7 @@ def generate_props():
     BONE_COLOR = (235, 230, 210, 255)
     BONE_SHADOW = (150, 140, 120, 255)
     
-    # 0: antorcha
+    # 0: Antorcha
     ox = 0
     rect(d, ox + 13, 14, 6, 12, IRON_DARK, OUTLINE)
     d.point((ox + 15, 16), fill=IRON_LIGHT)
@@ -1925,7 +2043,7 @@ def generate_props():
     ellipse(d, ox + 13, 6, 6, 6, (255, 245, 120, 255))
     d.point((ox + 15, 7), fill=(255, 255, 240, 255))
     
-    # 1: barril
+    # 1: Barril
     ox = 32
     ellipse(d, ox + 5, 24, 22, 7, (10, 10, 16, 120))
     ellipse(d, ox + 5, 3, 22, 26, WOOD_MID, OUTLINE)
@@ -1942,7 +2060,7 @@ def generate_props():
     d.point((ox + 10, 21), fill=(200, 205, 215, 255))
     d.point((ox + 21, 21), fill=(200, 205, 215, 255))
     
-    # 2: cofre cerrado
+    # 2: Cofre cerrado
     ox = 64
     ellipse(d, ox + 4, 23, 24, 7, (10, 10, 16, 120))
     rect(d, ox + 4, 11, 24, 15, WOOD_MID, OUTLINE)
@@ -1957,7 +2075,7 @@ def generate_props():
     rect(d, ox + 15, 16, 2, 3, OUTLINE)
     d.point((ox + 14, 14), fill=GOLD_LIGHT)
     
-    # 3: lore
+    # 3: Pergamino de lore brillante
     ox = 96
     ellipse(d, ox + 3, 3, 26, 26, None, (255, 225, 75, 170))
     ellipse(d, ox + 6, 6, 20, 20, None, (255, 245, 150, 120))
@@ -1971,7 +2089,7 @@ def generate_props():
     ellipse(d, ox + 13, 13, 6, 6, (220, 35, 45, 255), OUTLINE)
     d.point((ox + 15, 14), fill=(255, 180, 180, 255))
     
-    # 4: escaleras
+    # 4: Escaleras de descenso
     ox = 128
     rect(d, ox + 2, 2, 28, 28, (20, 18, 26, 255), OUTLINE)
     for st in range(5):
@@ -1979,7 +2097,7 @@ def generate_props():
         rect(d, ox + 4 + st, sy, 24 - st * 2, 4, (65 + st * 14, 70 + st * 14, 82 + st * 14, 255), OUTLINE)
         d.line([(ox + 5 + st, sy), (ox + 26 - st, sy)], fill=(110 + st * 14, 120 + st * 14, 135 + st * 14, 255))
         
-    # 5: cajas
+    # 5: Caja de madera
     ox = 160
     ellipse(d, ox + 5, 24, 22, 7, (10, 10, 16, 120))
     rect(d, ox + 5, 5, 22, 22, WOOD_MID, OUTLINE)
@@ -1992,7 +2110,7 @@ def generate_props():
     d.point((ox + 7, 24), fill=IRON_LIGHT)
     d.point((ox + 24, 24), fill=IRON_LIGHT)
     
-    # 6: estandarte
+    # 6: Estandarte
     ox = 192
     rect(d, ox + 6, 3, 20, 3, GOLD_TRIM, OUTLINE)
     ellipse(d, ox + 4, 2, 4, 5, GOLD_LIGHT)
@@ -2004,7 +2122,7 @@ def generate_props():
     d.line([(ox + 13, 12), (ox + 17, 12)], fill=GOLD_LIGHT)
     d.polygon([(ox + 8, 24), (ox + 12, 28), (ox + 15, 23), (ox + 19, 28), (ox + 23, 24)], fill=BANNER_RED, outline=OUTLINE)
     
-    # 7: esqueleto
+    # 7: Esqueleto
     ox = 224
     ellipse(d, ox + 3, 18, 26, 10, (10, 10, 16, 110))
     rect(d, ox + 5, 12, 7, 6, BONE_COLOR, OUTLINE)
@@ -2017,7 +2135,7 @@ def generate_props():
     d.line([(ox + 7, 24), (ox + 24, 10)], fill=IRON_LIGHT, width=2)
     rect(d, ox + 6, 23, 3, 3, GOLD_TRIM, OUTLINE)
     
-    # 8: puerta
+    # 8: Puerta
     ox = 256
     rect(d, ox + 3, 2, 26, 28, (65, 72, 85, 255), OUTLINE)
     d.line([(ox + 4, 3), (ox + 27, 3)], fill=(95, 105, 122, 255))
@@ -2031,7 +2149,7 @@ def generate_props():
     ellipse(d, ox + 11, 15, 4, 4, None, IRON_LIGHT)
     ellipse(d, ox + 17, 15, 4, 4, None, IRON_LIGHT)
 
-    # 9: cofre abierto (ox = 288)
+    # 9: Cofre abierto
     ox = 288
     ellipse(d, ox + 4, 23, 24, 7, (10, 10, 16, 120))
     rect(d, ox + 4, 13, 24, 13, WOOD_MID, OUTLINE)
@@ -2046,10 +2164,87 @@ def generate_props():
     d.line([(ox + 9, 5), (ox + 23, 5)], fill=WOOD_LIGHT)
     rect(d, ox + 6, 6, 3, 6, IRON_DARK)
     rect(d, ox + 22, 6, 3, 6, IRON_DARK)
+
+    # =========================================================================
+    # NUEVOS PROPS DE BIBLIOTECA
+    # =========================================================================
+
+    # 10: Estante de libros (Bookshelf - ox = 320)
+    ox = 320
+    ellipse(d, ox + 2, 25, 28, 6, (10, 10, 16, 110))
+    # Mueble de roble
+    rect(d, ox + 2, 2, 28, 27, WOOD_DARK, OUTLINE)
+    rect(d, ox + 4, 4, 24, 23, (40, 24, 15, 255))
+    # Balda superior
+    d.line([(ox + 3, 14), (ox + 28, 14)], fill=WOOD_MID, width=2)
+    # Libros balda superior
+    book_colors_top = [
+        (185, 40, 40, 255), (60, 110, 200, 255), (45, 140, 60, 255),
+        (225, 180, 50, 255), (140, 60, 160, 255), (200, 90, 40, 255)
+    ]
+    for i, col in enumerate(book_colors_top):
+        bx = ox + 5 + i * 4
+        h = 7 + (i % 3)
+        rect(d, bx, 13 - h, 3, h, col, OUTLINE)
+        d.point((bx + 1, 13 - h + 2), fill=GOLD_LIGHT)
+    # Balda inferior
+    d.line([(ox + 3, 26), (ox + 28, 26)], fill=WOOD_MID, width=2)
+    # Libros balda inferior (inclinados y desordenados)
+    book_colors_bot = [
+        (60, 120, 180, 255), (210, 160, 40, 255), (170, 40, 40, 255),
+        (120, 80, 50, 255), (80, 160, 100, 255)
+    ]
+    for i, col in enumerate(book_colors_bot):
+        bx = ox + 5 + i * 4
+        h = 8 + ((i * 2) % 3)
+        rect(d, bx, 25 - h, 3, h, col, OUTLINE)
+    # Libro inclinado al final
+    d.line([(ox + 25, 19), (ox + 27, 25)], fill=(190, 50, 50, 255), width=2)
+
+    # 11: Libros y hojas tiradas por el suelo (Scattered books - ox = 352)
+    ox = 352
+    ellipse(d, ox + 4, 18, 24, 9, (10, 10, 16, 90))
+    # Hojas de papel sueltas en el piso
+    rect(d, ox + 6, 16, 6, 7, (245, 235, 210, 255), OUTLINE)
+    d.line([(ox + 8, 18), (ox + 10, 18)], fill=(120, 100, 80, 255))
+    rect(d, ox + 19, 13, 7, 6, (235, 225, 195, 255), OUTLINE)
+    # Libro abierto
+    d.polygon([(ox + 10, 21), (ox + 16, 18), (ox + 22, 21), (ox + 22, 26), (ox + 16, 23), (ox + 10, 26)],
+              fill=(245, 240, 220, 255), outline=OUTLINE)
+    d.line([(ox + 16, 18), (ox + 16, 24)], fill=(80, 50, 30, 255), width=1) # Lomo central
+    d.line([(ox + 11, 22), (ox + 15, 20)], fill=(100, 90, 80, 255))
+    d.line([(ox + 17, 20), (ox + 21, 22)], fill=(100, 90, 80, 255))
+    # Libro cerrado con cuero rojo tirado
+    d.polygon([(ox + 3, 10), (ox + 10, 7), (ox + 14, 12), (ox + 7, 15)],
+              fill=(175, 45, 45, 255), outline=OUTLINE)
+    d.point((ox + 8, 11), fill=GOLD_LIGHT)
+    # Libro azul cerrado
+    rect(d, ox + 22, 20, 8, 4, (45, 85, 155, 255), OUTLINE)
+    d.line([(ox + 22, 21), (ox + 29, 21)], fill=GOLD_LIGHT)
+
+    # 12: Mesa / Escritorio de roble (Study Desk - ox = 384)
+    ox = 384
+    # Sombras bajo las 4 patas
+    ellipse(d, ox + 4, 25, 6, 3, (10, 10, 16, 120))
+    ellipse(d, ox + 22, 25, 6, 3, (10, 10, 16, 120))
+    # Patas de madera
+    rect(d, ox + 5, 14, 4, 12, WOOD_DARK, OUTLINE)
+    rect(d, ox + 23, 14, 4, 12, WOOD_DARK, OUTLINE)
+    d.line([(ox + 6, 15), (ox + 6, 25)], fill=WOOD_MID)
+    d.line([(ox + 24, 15), (ox + 24, 25)], fill=WOOD_MID)
+    # Travesaño entre patas
+    d.line([(ox + 8, 21), (ox + 23, 21)], fill=WOOD_DARK, width=2)
+    # Tablero grueso con bisel de luz superior
+    rect(d, ox + 2, 7, 28, 8, WOOD_MID, OUTLINE)
+    d.line([(ox + 3, 8), (ox + 28, 8)], fill=WOOD_LIGHT, width=2) # Brillo del tablero
+    d.line([(ox + 3, 14), (ox + 28, 14)], fill=WOOD_DARK, width=1) # Borde inferior
+    # Tintero de vidrio y pluma sobre la mesa (esquina derecha)
+    rect(d, ox + 24, 5, 3, 3, (25, 25, 35, 255), OUTLINE)
+    d.line([(ox + 25, 5), (ox + 28, 1)], fill=(245, 245, 255, 255), width=1) # Pluma de ave
+    d.point((ox + 28, 1), fill=GOLD_LIGHT)
     
     props.save(os.path.join(ASSETS_DIR, 'props.png'))
-    print("Creado: props.png con cofre abierto")
-
+    print("Creado: props.png con Estanterias (320), Libros (352) y Mesa (384)")
 # ==============================================================================
 # HOJA DE ICONOS (24 ICONOS)
 # ==============================================================================
@@ -2305,6 +2500,16 @@ def build_all_spritesheets():
         hong_sheet.paste(f_atk, (frame * 96, 96))
     hong_sheet.save(os.path.join(ASSETS_DIR, 'boss_hong.png'))
     print("Creado: boss_hong.png")
+
+    # Sub-Jefe Lucian 72x72
+    lucian_sheet = create_canvas(72 * 4, 72 * 4)
+    lucian_states = ['stalk', 'howl', 'pounce', 'frenzy']
+    for row, state in enumerate(lucian_states):
+        for frame in range(4):
+            f_img = draw_lucian_frame(state, frame)
+            lucian_sheet.paste(f_img, (frame * 72, row * 72))
+    lucian_sheet.save(os.path.join(ASSETS_DIR, 'boss_lucian.png'))
+    print("Creado: boss_lucian.png")
     
     # 7. Tilesets, Utilería e Iconos
     generate_tiles()
