@@ -773,25 +773,82 @@ class DarkTowerGame {
 
         this.enemies.splice(index, 1);
     }
-
     killBoss() {
         const boss = this.activeBoss;
         this.player.enemiesKilled++;
 
         let expReward = 500;
         let lootTable = 'abracadabra';
+        const playerClass = this.player.characterClass; // 'warrior', 'archer' o 'mage'
 
-        if (boss.name.includes('Hong')) {
-            expReward = 2000;
-            lootTable = 'hong';
-        } else if (boss.name.includes('Lucian')) {
+        // =====================================================================
+        // BOTÍN LEGENDARIO GARANTIZADO SEGÚN EL SUB-JEFE Y LA CLASE DEL JUGADOR
+        // =====================================================================
+        if (boss.name.includes('Lucian')) {
             expReward = 850;
             lootTable = 'lucian';
+
+            // 1. LUCIAN (PISO 5): SUELTA LA ARMADURA LEGENDARIA SEGÚN TU HÉROE
+            const legendaryArmors = {
+                warrior: 'armor_plate_legend',    // Armadura del Paladín Solar
+                archer: 'armor_leather_legend',   // Manto Estelar del Fénix
+                mage: 'armor_robe_legend'         // Vestiduras Celestiales del Archimago
+            };
+
+            const armorId = legendaryArmors[playerClass] || 'armor_plate_legend';
+            const armorData = window.ITEM_DATABASE[armorId];
+            if (armorData) {
+                this.lootDrops.push(new GroundItem(
+                    boss.x,
+                    boss.y,
+                    { ...armorData, qty: 1 }
+                ));
+                this.floatingTexts.push(new FloatingText(
+                    boss.x, boss.y - 35,
+                    '¡ARMADURA LEGENDARIA!',
+                    '#f1c40f',
+                    true
+                ));
+            }
+
+        } else if (boss.name.includes('Abracadabra')) {
+            expReward = 1200;
+            lootTable = 'abracadabra';
+
+            // 2. ABRACADABRA (PISO 8): SUELTA EL ARMA LEGENDARIA SEGÚN TU HÉROE
+            const legendaryWeapons = {
+                warrior: 'sword_legend',    // Segadora Solar del Alba
+                archer: 'bow_legend',       // Arco Fénix del Ocaso
+                mage: 'staff_legend'        // Cetro de la Estrella Primordial
+            };
+
+            const weaponId = legendaryWeapons[playerClass] || 'sword_legend';
+            const weaponData = window.ITEM_DATABASE[weaponId];
+            if (weaponData) {
+                this.lootDrops.push(new GroundItem(
+                    boss.x,
+                    boss.y,
+                    { ...weaponData, qty: 1 }
+                ));
+                this.floatingTexts.push(new FloatingText(
+                    boss.x, boss.y - 35,
+                    '¡ARMA LEGENDARIA!',
+                    '#f1c40f',
+                    true
+                ));
+            }
+
+        } else if (boss.name.includes('Hong')) {
+            expReward = 2000;
+            lootTable = 'hong';
         }
 
         this.player.gainExp(expReward, this.floatingTexts);
+
+        // Suelta el resto del botín (oro, elixires, materiales)
         this.dropLoot(lootTable, boss.x, boss.y);
 
+        // Partículas de muerte del jefe
         for (let i = 0; i < 40; i++) {
             this.particles.push(new Particle(
                 boss.x, boss.y,
@@ -820,7 +877,6 @@ class DarkTowerGame {
             this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡PORTAL DE VICTORIA DESBLOQUEADO!', '#ffd700', true));
         }
     }
-
     render() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 

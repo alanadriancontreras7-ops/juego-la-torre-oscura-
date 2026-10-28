@@ -71,13 +71,13 @@ class Projectile {
         this.y = y;
         this.vx = vx;
         this.vy = vy;
-        this.type = type; // 'arrow', 'fireball', 'acid', 'void'
+        this.type = type; // 'arrow', 'fireball', 'acid', 'void', 'slash'
         this.damage = damage;
         this.owner = owner;
         this.look = look;
         this.life = 120;
-        this.radius = type === 'fireball' || type === 'acid' ? 7 : (type === 'void' ? 9 : 4);
-        this.pierce = type === 'void' ? 2 : 1;
+        this.radius = type === 'fireball' || type === 'acid' ? 7 : (type === 'void' ? 9 : (type === 'slash' ? 8 : 4));
+        this.pierce = type === 'void' ? 2 : (type === 'slash' ? 1 : 1);
         this.hitEntities = new Set();
     }
 
@@ -96,6 +96,8 @@ class Projectile {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, '#77ff22', 4, 18));
         } else if (this.type === 'void') {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, '#aa22ff', 5, 20));
+        } else if (this.type === 'slash') {
+            particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, '#70d6ff', 3.5, 12));
         }
 
         if (world.isWallAt(this.x, this.y)) {
@@ -152,6 +154,25 @@ class Projectile {
             ctx.fill();
             ctx.strokeStyle = '#bb33ff';
             ctx.lineWidth = 2;
+            ctx.stroke();
+        } else if (this.type === 'slash') {
+            // Zarpazo cortante de escarcha (medialuna que rota con la dirección)
+            const angle = Math.atan2(this.vy, this.vx);
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+
+            // Halo exterior cian
+            ctx.strokeStyle = '#00d2d3';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, 16, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+
+            // Filo interior blanco puro
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(-2, 0, 14, -Math.PI / 3, Math.PI / 3);
             ctx.stroke();
         }
         ctx.restore();
@@ -410,7 +431,7 @@ class Player {
         this.flashRedTimer = 0;
         this.invulnerableTimer = 0;
         this.invFullWarningTimer = 0;
-        this.abilityCooldown = 0; // Recarga de la habilidad F
+        this.abilityCooldown = 0;
 
         this.level = 1;
         this.exp = 0;
@@ -727,7 +748,6 @@ class Player {
         const stats = this.getTotalStats();
         const angle = Math.atan2(targetY - this.y, targetX - this.x);
 
-        // 1. GUERRERO: TORBELLINO DE ACERO (360° en área con gran empuje)
         if (this.characterClass === 'warrior') {
             if (this.mp < 6) {
                 floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (6 MP)', '#ff5555'));
@@ -765,9 +785,7 @@ class Player {
                 activeBoss.takeDamage(dmg, this.x, this.y);
                 floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg}`, '#ffdd55', true));
             }
-        }
-        // 2. ARQUERO: DISPARO EN ABANICO (5 Flechas perforantes)
-        else if (this.characterClass === 'archer') {
+        } else if (this.characterClass === 'archer') {
             if (this.mp < 8) {
                 floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (8 MP)', '#ff5555'));
                 if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
@@ -797,9 +815,7 @@ class Player {
                 p.pierce = 2;
                 projectiles.push(p);
             });
-        }
-        // 3. MAGO: NOVA DE HIELO (Explosión 360° que congela y ralentiza)
-        else if (this.characterClass === 'mage') {
+        } else if (this.characterClass === 'mage') {
             if (this.mp < 14) {
                 floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (14 MP)', '#ff5555'));
                 if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
@@ -828,14 +844,14 @@ class Player {
             enemies.forEach(enemy => {
                 if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) {
                     enemy.takeDamage(dmg, this.x, this.y);
-                    enemy.slowTimer = 180; // Congelado 3 segundos
+                    enemy.slowTimer = 180;
                     floatingTexts.push(new FloatingText(enemy.x, enemy.y - 15, `-${dmg} ❄️`, '#70d6ff', true));
                 }
             });
 
             if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 30) {
                 activeBoss.takeDamage(dmg, this.x, this.y);
-                activeBoss.slowTimer = 90; // Jefe ralentizado 1.5s
+                activeBoss.slowTimer = 90;
                 floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg} ❄️`, '#70d6ff', true));
             }
         }
@@ -931,7 +947,7 @@ class Enemy {
         this.knockbackY = 0;
         this.flashRedTimer = 0;
         this.attackCooldown = 0;
-        this.slowTimer = 0; // Temporizador de congelación
+        this.slowTimer = 0;
 
         this.initStats();
     }
@@ -1022,7 +1038,6 @@ class Enemy {
             const attackDist = this.type === 'demon' ? 140 : (this.type === 'spider' ? 100 : 26);
 
             if (dist > attackDist) {
-                // Si está congelado por la Nova de Hielo, se mueve al 40% de velocidad
                 const moveSpeed = (this.slowTimer > 0) ? (this.speed * 0.40) : this.speed;
 
                 const nx = this.x + Math.cos(angle) * moveSpeed + this.knockbackX;
@@ -1084,7 +1099,6 @@ class Enemy {
         const dx = Math.floor(this.x - destW / 2);
         const dy = Math.floor(this.y - destH / 2 - 4);
 
-        // Efecto visual de escarcha azul bajo los pies si está ralentizado
         if (this.slowTimer > 0) {
             ctx.save();
             ctx.fillStyle = 'rgba(112, 214, 255, 0.45)';
@@ -1474,17 +1488,49 @@ class BossLucian {
                 this.animFrame = (this.animFrame + 1) % 4;
             }
 
-            if (this.stateTimer > 120) {
+            if (this.stateTimer > 110) {
                 this.stateTimer = 0;
                 this.animFrame = 0;
-                if (Math.random() < 0.5) {
-                    this.state = 'howl';
+                const roll = Math.random();
+
+                // Si el jugador está lejos (más de 110 px) o por tirada aleatoria, lanza el zarpazo a distancia
+                if (dist > 110 || roll < 0.35) {
+                    this.state = 'ranged_slash';
                     window.soundEngine.playBossRoar();
-                } else {
+                } else if (roll < 0.70) {
                     this.state = 'pounce';
                     this.pounceVx = Math.cos(angle) * 7.5;
                     this.pounceVy = Math.sin(angle) * 7.5;
+                } else {
+                    this.state = 'howl';
+                    window.soundEngine.playBossRoar();
                 }
+            }
+        } else if (this.state === 'ranged_slash') {
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 7));
+
+            // En el fotograma 15 dispara ráfaga de 3 zarpazos en abanico
+            if (this.stateTimer === 15) {
+                window.soundEngine.playSwordSlash();
+
+                const slashAngles = [-0.25, 0, 0.25];
+                slashAngles.forEach(offset => {
+                    const a = angle + offset;
+                    const slashSpeed = 5.8;
+                    projectiles.push(new Projectile(
+                        this.x, this.y,
+                        Math.cos(a) * slashSpeed,
+                        Math.sin(a) * slashSpeed,
+                        'slash',
+                        this.atk + 8,
+                        'enemy'
+                    ));
+                });
+            }
+
+            if (this.stateTimer > 35) {
+                this.state = 'stalk';
+                this.stateTimer = 0;
             }
         } else if (this.state === 'howl') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 12));
@@ -1557,7 +1603,7 @@ class BossLucian {
         let row = 0;
         if (this.state === 'howl') row = 1;
         else if (this.state === 'pounce') row = 2;
-        else if (this.state === 'frenzy') row = 3;
+        else if (this.state === 'frenzy' || this.state === 'ranged_slash') row = 3;
 
         window.spriteManager.draw(
             ctx,
