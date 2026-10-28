@@ -442,12 +442,29 @@
             </div>
         </div>
 
-        <div id="victory-screen">
-            <div class="ending-card-box">
-                <div class="ending-title victory-text">¡VICTORIA GLORIOSA!</div>
-                <div id="victory-stats-summary" class="ending-stats-summary"></div>
-                <button class="pixel-btn btn-gold" id="btn-victory-restart">REGISTRAR EN EL SALÓN DE LA FAMA</button>
+        <!-- PANTALLA DE VICTORIA CON CINEMÁTICA -->
+        <div id="victory-screen" class="game-modal"
+            style="display: none; position: absolute; inset: 0; background: rgba(5, 5, 10, 0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center;">
+
+            <!-- Marco de la imagen de victoria -->
+            <div
+                style="position: relative; max-width: 900px; width: 90%; aspect-ratio: 16 / 9; border: 4px solid #f1c40f; box-shadow: 0 0 35px rgba(241, 196, 15, 0.4); border-radius: 8px; overflow: hidden; background: #000;">
+                <img src="/static/assets/sprites/victory_screen.png?v=1" alt="¡Victoria!"
+                    style="width: 100%; height: 100%; object-fit: contain; display: block; image-rendering: pixelated;">
             </div>
+
+            <!-- Resumen de estadísticas y botón debajo de la cinemática -->
+            <div
+                style="margin-top: 15px; text-align: center; background: rgba(20, 15, 30, 0.9); padding: 12px 24px; border: 2px solid #5a4270; border-radius: 6px;">
+                <div id="victory-stats-summary"
+                    style="font-family: 'Press Start 2P', monospace; font-size: 11px; color: #f1c40f; line-height: 1.8; margin-bottom: 12px;">
+                </div>
+                <button id="btn-victory-restart" class="pixel-btn btn-gold"
+                    style="font-size: 11px; padding: 10px 20px;">
+                    REGISTRAR EN EL SALÓN DE LA FAMA
+                </button>
+            </div>
+
         </div>
 
     </div>

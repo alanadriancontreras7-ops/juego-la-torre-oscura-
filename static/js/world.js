@@ -1,7 +1,8 @@
 /**
  * GENERACIÓN Y GESTIÓN DE PISOS (1 A 10)
- * Mazmorras al doble de tamaño (60x45), salas de biblioteca desordenada con escritorio
- * y notas situadas siempre sobre la mesa.
+ * Mazmorras grandes (60x45) con salas independientes que no se solapan.
+ * La biblioteca es un cuarto cerrado e independiente con estanterías, libros en el suelo
+ * y la nota siempre situada sobre el escritorio.
  */
 
 const BIOME_STYLE = {
@@ -15,7 +16,7 @@ class World {
     constructor(floor = 1) {
         this.floor = floor;
         this.tileSize = 32;
-        // Dimensiones aumentadas a más del doble (2.700 baldosas)
+        // Tamaño doble (2.700 baldosas)
         this.cols = 60;
         this.rows = 45;
 
@@ -31,10 +32,11 @@ class World {
         this.doors = [];
         this.acidPools = [];
 
-        // Elementos de la biblioteca
+        // Props de la biblioteca
         this.bookshelves = [];
         this.floorBooks = [];
         this.tables = [];
+        this.libRoom = null;
 
         this.loreScroll = null;
         this.stairs = null;
@@ -71,6 +73,7 @@ class World {
         this.bookshelves = [];
         this.floorBooks = [];
         this.tables = [];
+        this.libRoom = null;
 
         if (this.floor === 5) {
             this.generateArenaLucian();
@@ -82,6 +85,7 @@ class World {
             this.generateDungeonRooms();
         }
 
+        // Variaciones de losas y muros
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 if (this.grid[r][c] === 0) {
@@ -113,71 +117,127 @@ class World {
 
     generateDungeonRooms() {
         const rooms = [];
-        // Más salas para explorar en el mapa grande (10 habitaciones)
-        const numRooms = 10;
+        const targetRooms = 9;
+        let attempts = 0;
 
-        for (let i = 0; i < numRooms; i++) {
-            const w = Math.floor(Math.random() * 5) + 7; // ancho 7 a 11
-            const h = Math.floor(Math.random() * 4) + 6; // alto 6 a 9
-            let x, y;
-            if (i === 0) {
-                x = Math.floor(Math.random() * 4) + 4;
-                y = Math.floor(Math.random() * 3) + 5;
-            } else {
-                x = Math.floor(Math.random() * (this.cols - w - 6)) + 3;
-                y = Math.floor(Math.random() * (this.rows - h - 6)) + 4;
+        // 1. Colocar salas garantizando que NUNCA se toquen ni se solapen (3 baldosas de muro entre salas)
+        while (rooms.length < targetRooms && attempts < 400) {
+            attempts++;
+            const isLib = (rooms.length === 2); // La sala 2 será la biblioteca
+            const w = isLib ? 8 : (Math.floor(Math.random() * 4) + 8);  // Ancho 8 a 11
+            const h = isLib ? 7 : (Math.floor(Math.random() * 3) + 7);  // Alto 7 a 9
+            const x = Math.floor(Math.random() * (this.cols - w - 8)) + 4;
+            const y = Math.floor(Math.random() * (this.rows - h - 8)) + 4;
+
+            const newRoom = { x, y, w, h, isLib };
+
+            let overlaps = false;
+            for (const r of rooms) {
+                if (
+                    newRoom.x - 3 < r.x + r.w &&
+                    newRoom.x + newRoom.w + 3 > r.x &&
+                    newRoom.y - 3 < r.y + r.h &&
+                    newRoom.y + newRoom.h + 3 > r.y
+                ) {
+                    overlaps = true;
+                    break;
+                }
             }
 
-            for (let r = y; r < y + h; r++) {
-                for (let c = x; c < x + w; c++) {
+            if (!overlaps) {
+                rooms.push(newRoom);
+            }
+        }
+
+        // Tallar el suelo de cada habitación
+        rooms.forEach(room => {
+            for (let r = room.y; r < room.y + room.h; r++) {
+                for (let c = room.x; c < room.x + room.w; c++) {
                     this.grid[r][c] = 0;
                 }
             }
-
-            if (rooms.length > 0) {
-                const prev = rooms[rooms.length - 1];
-                const cx1 = Math.floor(prev.x + prev.w / 2);
-                const cy1 = Math.floor(prev.y + prev.h / 2);
-                const cx2 = Math.floor(x + w / 2);
-                const cy2 = Math.floor(y + h / 2);
-
-                const startX = Math.min(cx1, cx2);
-                const endX = Math.max(cx1, cx2);
-                for (let c = startX; c <= endX; c++) {
-                    this.grid[cy1][c] = 0;
-                    if (cy1 + 1 < this.rows - 1) this.grid[cy1 + 1][c] = 0;
-                }
-
-                const startY = Math.min(cy1, cy2);
-                const endY = Math.max(cy1, cy2);
-                for (let r = startY; r <= endY; r++) {
-                    this.grid[r][cx2] = 0;
-                    if (cx2 + 1 < this.cols - 1) this.grid[r][cx2 + 1] = 0;
-                }
-            }
-
-            rooms.push({ x, y, w, h });
-        }
+        });
 
         this.rooms = rooms;
 
-        // =====================================================================
-        // CONSTRUCCIÓN DE LA SALA DE BIBLIOTECA DESORDENADA
-        // =====================================================================
-        // Elegimos una sala intermedia (ej: sala 3) para ser la biblioteca oficial
-        const libRoomIdx = Math.min(3, rooms.length - 2);
-        const libRoom = rooms[libRoomIdx];
+        // 2. Conectar las salas principales en cadena (para que los pasillos no corten la biblioteca)
+        const mainRooms = rooms.filter(r => !r.isLib);
+        for (let i = 1; i < mainRooms.length; i++) {
+            const prev = mainRooms[i - 1];
+            const curr = mainRooms[i];
+            const cx1 = Math.floor(prev.x + prev.w / 2);
+            const cy1 = Math.floor(prev.y + prev.h / 2);
+            const cx2 = Math.floor(curr.x + curr.w / 2);
+            const cy2 = Math.floor(curr.y + curr.h / 2);
+
+            // Pasillo horizontal
+            const startX = Math.min(cx1, cx2);
+            const endX = Math.max(cx1, cx2);
+            for (let c = startX; c <= endX; c++) {
+                this.grid[cy1][c] = 0;
+                this.grid[cy1 + 1][c] = 0;
+            }
+
+            // Pasillo vertical
+            const startY = Math.min(cy1, cy2);
+            const endY = Math.max(cy1, cy2);
+            for (let r = startY; r <= endY; r++) {
+                this.grid[r][cx2] = 0;
+                this.grid[r][cx2 + 1] = 0;
+            }
+        }
+
+        // 3. Conectar la Biblioteca como cuarto anexo con UNA SOLA puerta hacia su sala vecina más cercana
+        const libRoom = rooms.find(r => r.isLib) || rooms[1];
+        this.libRoom = libRoom;
 
         if (libRoom) {
-            // 1. Estantes de libros a lo largo de la pared norte de la sala
-            for (let c = libRoom.x + 1; c < libRoom.x + libRoom.w - 1; c += 2) {
+            // Buscar la sala principal más cercana
+            let closestRoom = mainRooms[0];
+            let minDist = 9999;
+            const lcx = Math.floor(libRoom.x + libRoom.w / 2);
+            const lcy = Math.floor(libRoom.y + libRoom.h / 2);
+
+            for (const r of mainRooms) {
+                const rcx = Math.floor(r.x + r.w / 2);
+                const rcy = Math.floor(r.y + r.h / 2);
+                const d = Math.hypot(lcx - rcx, lcy - rcy);
+                if (d < minDist) {
+                    minDist = d;
+                    closestRoom = r;
+                }
+            }
+
+            // Pasillo único hacia la biblioteca (callejón sin salida)
+            const rcx = Math.floor(closestRoom.x + closestRoom.w / 2);
+            const rcy = Math.floor(closestRoom.y + closestRoom.h / 2);
+
+            const startX = Math.min(lcx, rcx);
+            const endX = Math.max(lcx, rcx);
+            for (let c = startX; c <= endX; c++) {
+                this.grid[rcy][c] = 0;
+                this.grid[rcy + 1][c] = 0;
+            }
+
+            const startY = Math.min(lcy, rcy);
+            const endY = Math.max(lcy, rcy);
+            for (let r = startY; r <= endY; r++) {
+                this.grid[r][lcx] = 0;
+                this.grid[r][lcx + 1] = 0;
+            }
+
+            // =================================================================
+            // DECORACIÓN DEL CUARTO DE BIBLIOTECA
+            // =================================================================
+            // A) Estanterías llenas pegadas a la pared norte completa
+            for (let c = libRoom.x + 1; c <= libRoom.x + libRoom.w - 2; c++) {
                 this.bookshelves.push({
                     x: c * this.tileSize,
                     y: (libRoom.y + 1) * this.tileSize
                 });
             }
 
-            // 2. Estantes en esquinas
+            // B) Estanterías en las esquinas laterales
             this.bookshelves.push({
                 x: (libRoom.x + 1) * this.tileSize,
                 y: (libRoom.y + 2) * this.tileSize
@@ -187,39 +247,31 @@ class World {
                 y: (libRoom.y + 2) * this.tileSize
             });
 
-            // 3. Libros tirados y hojas caídas por el suelo alrededor
-            this.floorBooks.push({
-                x: (libRoom.x + 2) * this.tileSize,
-                y: (libRoom.y + 3) * this.tileSize
-            });
-            this.floorBooks.push({
-                x: (libRoom.x + libRoom.w - 3) * this.tileSize,
-                y: (libRoom.y + 3) * this.tileSize
-            });
-            this.floorBooks.push({
-                x: Math.floor(libRoom.x + libRoom.w / 2 - 1) * this.tileSize,
-                y: (libRoom.y + Math.floor(libRoom.h / 2) + 1) * this.tileSize
-            });
-
-            // 4. Mesa / Escritorio en el centro de la biblioteca
+            // C) Mesa de roble en el centro del cuarto
             const deskX = Math.floor(libRoom.x + libRoom.w / 2) * this.tileSize;
-            const deskY = Math.floor(libRoom.y + libRoom.h / 2) * this.tileSize;
+            const deskY = Math.floor(libRoom.y + libRoom.h / 2 + 1) * this.tileSize;
             this.tables.push({ x: deskX, y: deskY });
 
-            // 5. La nota estará SIEMPRE encima de esta mesa
+            // D) La nota reposa exactamente SOBRE el escritorio
             this.loreScroll = {
                 x: deskX,
-                y: deskY - 4, // Colocada sobre el tablero
+                y: deskY - 4,
                 collected: false
             };
+
+            // E) Libros y hojas sueltas tiradas por el suelo alrededor de la mesa
+            this.floorBooks.push({ x: deskX - 32, y: deskY + 6 });
+            this.floorBooks.push({ x: deskX + 32, y: deskY + 4 });
+            this.floorBooks.push({ x: (libRoom.x + 2) * this.tileSize, y: (libRoom.y + 3) * this.tileSize });
+            this.floorBooks.push({ x: (libRoom.x + libRoom.w - 3) * this.tileSize, y: (libRoom.y + 3) * this.tileSize });
+
+            // F) Antorchas en la pared para iluminar la biblioteca
+            this.torches.push({ x: (libRoom.x + 2) * this.tileSize, y: libRoom.y * this.tileSize });
+            this.torches.push({ x: (libRoom.x + libRoom.w - 3) * this.tileSize, y: libRoom.y * this.tileSize });
         }
 
-        // =====================================================================
-        // UTILERÍA EN LAS OTRAS SALAS
-        // =====================================================================
-        rooms.forEach((room, idx) => {
-            if (idx === libRoomIdx) return; // No saturar la biblioteca
-
+        // 4. Utilería en las demás salas
+        mainRooms.forEach((room, idx) => {
             this.barrels.push({
                 x: (room.x + room.w - 2) * this.tileSize,
                 y: (room.y + 1) * this.tileSize,
@@ -238,8 +290,8 @@ class World {
             }
         });
 
-        // Máximo 2 cofres en salas aleatorias
-        const eligibleRooms = rooms.filter((_, idx) => idx !== 0 && idx !== libRoomIdx).sort(() => Math.random() - 0.5);
+        // 5. Máximo 2 cofres en salas principales aleatorias
+        const eligibleRooms = mainRooms.slice(1).sort(() => Math.random() - 0.5);
         const numChests = Math.min(2, Math.floor(Math.random() * 2) + 1);
         for (let i = 0; i < numChests && i < eligibleRooms.length; i++) {
             const room = eligibleRooms[i];
@@ -252,55 +304,96 @@ class World {
     }
 
     generateArenaLucian() {
-        // PISO 5: ANTESALA CON RINCÓN DE ESTUDIO + GUARIDA DE LUCIAN
+        // PISO 5: ANTESALA + BIBLIOTECA PRIVADA ANEXA + GUARIDA DE LUCIAN
         const cx = Math.floor(this.cols / 2); // 30
 
-        // 1. Antesala sur
-        for (let r = 32; r <= 40; r++) {
-            for (let c = cx - 10; c <= cx + 10; c++) {
+        // 1. Antesala sur principal
+        for (let r = 33; r <= 41; r++) {
+            for (let c = cx - 6; c <= cx + 6; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Pasillo
-        for (let r = 22; r <= 32; r++) {
-            for (let c = cx - 2; c <= cx + 2; c++) {
+
+        // 2. Cuarto cerrado de biblioteca anexo (al oeste con sus 4 paredes y 1 puerta)
+        for (let r = 33; r <= 40; r++) {
+            for (let c = 14; c <= 21; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Guarida norte de Lucian
+        // Puerta hacia la biblioteca
+        this.grid[36][22] = 0;
+        this.grid[37][22] = 0;
+        this.grid[36][23] = 0;
+        this.grid[37][23] = 0;
+
+        // Decoración de la biblioteca de Lucian
+        for (let c = 15; c <= 20; c++) {
+            this.bookshelves.push({ x: c * this.tileSize, y: 34 * this.tileSize });
+        }
+        const deskX = 18 * this.tileSize;
+        const deskY = 37 * this.tileSize;
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
+        this.floorBooks.push({ x: deskX - 32, y: deskY + 6 });
+        this.floorBooks.push({ x: deskX + 32, y: deskY + 4 });
+        this.torches.push({ x: 16 * this.tileSize, y: 33 * this.tileSize });
+
+        // 3. Pasillo hacia el norte
+        for (let r = 22; r <= 33; r++) {
+            for (let c = cx - 1; c <= cx + 1; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+
+        // 4. Gran Caverna de Lucian
         for (let r = 5; r <= 22; r++) {
             for (let c = cx - 14; c <= cx + 14; c++) {
                 this.grid[r][c] = 0;
             }
         }
-
-        // Estudio / Mesa con nota en la antesala sur
-        const deskX = (cx - 6) * this.tileSize;
-        const deskY = 36 * this.tileSize;
-        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
-        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
-        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
-        this.tables.push({ x: deskX, y: deskY });
-        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
     }
 
     generateArenaRotunda() {
-        // PISO 8: ANTECÁMARA CON MESA + ROTONDA DE ABRACADABRA
+        // PISO 8: ANTESALA + BIBLIOTECA PRIVADA ANEXA + ROTONDA DE ABRACADABRA
         const cx = Math.floor(this.cols / 2); // 30
 
-        // Antesala sur
-        for (let r = 32; r <= 40; r++) {
-            for (let c = cx - 10; c <= cx + 10; c++) {
+        // 1. Antesala sur
+        for (let r = 33; r <= 41; r++) {
+            for (let c = cx - 6; c <= cx + 6; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Pasillo
-        for (let r = 24; r <= 32; r++) {
-            for (let c = cx - 2; c <= cx + 2; c++) {
+
+        // 2. Cuarto cerrado de biblioteca anexo (oeste)
+        for (let r = 33; r <= 40; r++) {
+            for (let c = 14; c <= 21; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Rotonda norte
+        this.grid[36][22] = 0;
+        this.grid[37][22] = 0;
+        this.grid[36][23] = 0;
+        this.grid[37][23] = 0;
+
+        for (let c = 15; c <= 20; c++) {
+            this.bookshelves.push({ x: c * this.tileSize, y: 34 * this.tileSize });
+        }
+        const deskX = 18 * this.tileSize;
+        const deskY = 37 * this.tileSize;
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
+        this.floorBooks.push({ x: deskX - 32, y: deskY + 6 });
+        this.floorBooks.push({ x: deskX + 32, y: deskY + 4 });
+        this.torches.push({ x: 16 * this.tileSize, y: 33 * this.tileSize });
+
+        // 3. Pasillo norte
+        for (let r = 24; r <= 33; r++) {
+            for (let c = cx - 1; c <= cx + 1; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+
+        // 4. Rotonda de Abracadabra
         const cy = 13;
         const radius = 10;
         for (let r = 3; r <= 24; r++) {
@@ -312,62 +405,67 @@ class World {
             }
         }
 
-        // Charcos de ácido en la rotonda norte
+        // Charcos de ácido
         for (let i = 0; i < 4; i++) {
             const angle = (i * Math.PI) / 2;
             const px = (cx + Math.cos(angle) * 6) * this.tileSize;
             const py = (cy + Math.sin(angle) * 6) * this.tileSize;
             this.addAcidPool(px, py, 99999);
         }
-
-        // Mesa de estudio en la antesala
-        const deskX = (cx - 6) * this.tileSize;
-        const deskY = 36 * this.tileSize;
-        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
-        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
-        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
-        this.tables.push({ x: deskX, y: deskY });
-        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
     }
 
     generateArenaApex() {
-        // PISO 10: ANTESALA CON MESA + TRONO DE HONG
+        // PISO 10: ANTESALA + BIBLIOTECA PRIVADA ANEXA + SALÓN DE HONG
         const cx = Math.floor(this.cols / 2); // 30
 
-        // Antesala sur
-        for (let r = 32; r <= 40; r++) {
-            for (let c = cx - 10; c <= cx + 10; c++) {
+        // 1. Antesala sur
+        for (let r = 33; r <= 41; r++) {
+            for (let c = cx - 6; c <= cx + 6; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Puente sobre el vacío
-        for (let r = 21; r <= 32; r++) {
-            for (let c = cx - 2; c <= cx + 2; c++) {
+
+        // 2. Cuarto cerrado de biblioteca anexo (oeste)
+        for (let r = 33; r <= 40; r++) {
+            for (let c = 14; c <= 21; c++) {
                 this.grid[r][c] = 0;
             }
         }
-        // Gran Salón del Trono (Norte)
+        this.grid[36][22] = 0;
+        this.grid[37][22] = 0;
+        this.grid[36][23] = 0;
+        this.grid[37][23] = 0;
+
+        for (let c = 15; c <= 20; c++) {
+            this.bookshelves.push({ x: c * this.tileSize, y: 34 * this.tileSize });
+        }
+        const deskX = 18 * this.tileSize;
+        const deskY = 37 * this.tileSize;
+        this.tables.push({ x: deskX, y: deskY });
+        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
+        this.floorBooks.push({ x: deskX - 32, y: deskY + 6 });
+        this.floorBooks.push({ x: deskX + 32, y: deskY + 4 });
+        this.torches.push({ x: 16 * this.tileSize, y: 33 * this.tileSize });
+
+        // 3. Puente sobre el abismo
+        for (let r = 21; r <= 33; r++) {
+            for (let c = cx - 1; c <= cx + 1; c++) {
+                this.grid[r][c] = 0;
+            }
+        }
+
+        // 4. Salón del Trono de Hong
         for (let r = 4; r <= 21; r++) {
             for (let c = cx - 15; c <= cx + 15; c++) {
                 this.grid[r][c] = 0;
             }
         }
-
-        // Mesa de estudio en la antesala
-        const deskX = (cx - 6) * this.tileSize;
-        const deskY = 36 * this.tileSize;
-        this.bookshelves.push({ x: (cx - 8) * this.tileSize, y: 34 * this.tileSize });
-        this.bookshelves.push({ x: (cx - 6) * this.tileSize, y: 34 * this.tileSize });
-        this.floorBooks.push({ x: (cx - 4) * this.tileSize, y: 37 * this.tileSize });
-        this.tables.push({ x: deskX, y: deskY });
-        this.loreScroll = { x: deskX, y: deskY - 4, collected: false };
     }
 
     getStartingPosition() {
         const cx = Math.floor(this.cols / 2);
         if (this.floor === 5 || this.floor === 8 || this.floor === 10) {
-            // Spawn al sur de la antesala
-            return { x: cx * this.tileSize + 16, y: 37 * this.tileSize + 16 };
+            return { x: cx * this.tileSize + 16, y: 38 * this.tileSize + 16 };
         }
 
         if (this.rooms && this.rooms.length > 0) {
@@ -381,10 +479,9 @@ class World {
     }
 
     placeLoreScroll() {
-        // En todos los pisos la nota ya se colocó automáticamente sobre la mesa (en la biblioteca o antesala)
+        // En todos los pisos la nota ya se colocó sobre el escritorio
         if (this.loreScroll) return;
 
-        // Fallback por si acaso
         this.loreScroll = {
             x: 10 * this.tileSize,
             y: 10 * this.tileSize,
@@ -395,18 +492,17 @@ class World {
     placeStairs() {
         const cx = Math.floor(this.cols / 2);
         if (this.floor === 5 || this.floor === 8) {
-            // Escaleras al fondo norte detrás del sub-jefe
             this.stairs = {
                 x: cx * this.tileSize,
                 y: 5 * this.tileSize
             };
             return;
         } else if (this.floor === 10) {
-            this.stairs = null; // Aparece como portal al morir Hong
+            this.stairs = null;
             return;
         }
 
-        // Pisos normales: en la última sala
+        // Escaleras en la última sala principal
         if (this.rooms && this.rooms.length > 0) {
             const lastRoom = this.rooms[this.rooms.length - 1];
             this.stairs = {
@@ -423,7 +519,7 @@ class World {
         for (let r = 1; r < this.rows - 1; r++) {
             for (let c = 1; c < this.cols - 1; c++) {
                 if (this.grid[r][c] === 1 && this.grid[r + 1][c] === 0) {
-                    if (Math.random() < 0.16) {
+                    if (Math.random() < 0.15) {
                         this.torches.push({
                             x: c * this.tileSize,
                             y: r * this.tileSize
@@ -491,12 +587,12 @@ class World {
 
         // Colisión con estanterías de libros
         for (const bs of this.bookshelves) {
-            if (x + margin < bs.x + 28 && x + w - margin > bs.x + 4 && y + margin < bs.y + 28 && y + h - margin > bs.y + 4) {
+            if (x + margin < bs.x + 30 && x + w - margin > bs.x + 2 && y + margin < bs.y + 28 && y + h - margin > bs.y + 4) {
                 return true;
             }
         }
 
-        // Colisión con la mesa de la biblioteca
+        // Colisión con la mesa
         for (const t of this.tables) {
             if (x + margin < t.x + 28 && x + w - margin > t.x + 4 && y + margin < t.y + 26 && y + h - margin > t.y + 6) {
                 return true;
@@ -528,7 +624,6 @@ class World {
             this.flameFrame = (this.flameFrame + 1) % 4;
         }
 
-        // Partículas sobre la nota en la mesa
         if (this.loreScroll && !this.loreScroll.collected && Math.random() < 0.25) {
             particles.push(new Particle(
                 this.loreScroll.x + 16 + (Math.random() - 0.5) * 16,
@@ -675,7 +770,7 @@ class World {
         const propsSheet = window.spriteManager.sheets.props;
         if (!propsSheet) return;
 
-        // 3. Libros tirados y hojas caídas en el piso de la biblioteca (col 11, sx=352)
+        // 3. Libros tirados y hojas caídas en el suelo de la biblioteca (ox=352)
         this.floorBooks.forEach(fb => {
             ctx.drawImage(propsSheet, 352, 0, 32, 32, fb.x, fb.y, 32, 32);
         });
@@ -708,12 +803,12 @@ class World {
             ctx.drawImage(propsSheet, sx, 0, 32, 32, c.x, c.y, 32, 32);
         });
 
-        // 8. Estanterías de libros (col 10, sx=320)
+        // 8. Estanterías de libros (ox=320)
         this.bookshelves.forEach(bs => {
             ctx.drawImage(propsSheet, 320, 0, 32, 32, bs.x, bs.y, 32, 32);
         });
 
-        // 9. Mesa / Escritorio de roble (col 12, sx=384)
+        // 9. Mesa / Escritorio de roble (ox=384)
         this.tables.forEach(t => {
             ctx.drawImage(propsSheet, 384, 0, 32, 32, t.x, t.y, 32, 32);
         });
@@ -739,7 +834,7 @@ class World {
             ctx.drawImage(propsSheet, 0, 0, 32, 32, t.x, t.y + flickerOffset, 32, 32);
         });
 
-        // 11. Pergamino de Lore (col 3, sx=96) - Colocado sobre la mesa
+        // 11. Pergamino de Lore sobre el escritorio (ox=96)
         if (this.loreScroll && !this.loreScroll.collected) {
             ctx.drawImage(propsSheet, 96, 0, 32, 32, this.loreScroll.x, this.loreScroll.y, 32, 32);
         }

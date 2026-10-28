@@ -505,12 +505,10 @@ class DarkTowerGame {
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'flex';
 
+        // Resumen limpio de tus logros debajo de la ilustración
         document.getElementById('victory-stats-summary').innerHTML = `
-            <div>¡LA TORRE OSCURA HA SIDO PURIFICADA!</div>
-            <div>Héroe Legendario: ${this.player.name} (${this.player.characterClass.toUpperCase()})</div>
-            <div>Nivel Final: ${this.player.level}</div>
-            <div>Enemigos y Jefes Eliminados: ${this.player.enemiesKilled}</div>
-            <div>Fortuna Extraída: ${this.player.gold} G</div>
+            <div>Héroe: ${this.player.name} (${this.player.characterClass.toUpperCase()}) | Nivel: ${this.player.level}</div>
+            <div>Enemigos y Jefes Caídos: ${this.player.enemiesKilled} | Fortuna: ${this.player.gold} G</div>
         `;
 
         fetch('/api/hall_of_fame', {
