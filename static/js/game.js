@@ -58,7 +58,7 @@ class DarkTowerGame {
 
         this.canvas.addEventListener('mousedown', (e) => {
             if (this.state === this.STATE_PLAYING && this.player) {
-                if (e.button === 0) {
+                if (e.button === 0) { // Clic izquierdo: ataque básico
                     this.player.attack(this.mousePos.x, this.mousePos.y, this.projectiles, this.particles);
                 }
             }
@@ -119,6 +119,19 @@ class DarkTowerGame {
                 this.usePotion('potion_mana');
             } else if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
                 this.checkInteractions();
+            } else if (e.key === 'f' || e.key === 'F') { // Habilidad especial con F
+                if (this.player) {
+                    this.player.useSpecialAbility(
+                        this.mousePos.x,
+                        this.mousePos.y,
+                        this.world,
+                        this.enemies,
+                        this.activeBoss,
+                        this.projectiles,
+                        this.particles,
+                        this.floatingTexts
+                    );
+                }
             } else if (e.key === 'm' || e.key === 'M') {
                 window.soundEngine.toggleMute();
             }
@@ -165,17 +178,14 @@ class DarkTowerGame {
 
         // Generar jefes y salas previas centradas
         if (floorNumber === 5) {
-            // Lucian espera en su cueva norte
             this.activeBoss = new BossLucian(cx, 11 * this.world.tileSize);
             this.spawnAnteRoomEnemies(5);
             window.soundEngine.startBgm(false);
         } else if (floorNumber === 8) {
-            // Abracadabra espera en la rotonda norte
             this.activeBoss = new BossAbracadabra(cx, 13 * this.world.tileSize);
             this.spawnAnteRoomEnemies(8);
             window.soundEngine.startBgm(false);
         } else if (floorNumber === 10) {
-            // Hong espera en su gran salón norte
             this.activeBoss = new BossHong(cx, 11 * this.world.tileSize);
             this.spawnAnteRoomEnemies(10);
             window.soundEngine.startBgm(false);
@@ -188,7 +198,6 @@ class DarkTowerGame {
     }
 
     spawnFloorEnemies(floor) {
-        // Aumentado proporcionalmente al nuevo tamaño del piso (de 10 a 24 enemigos por piso)
         const count = 8 + floor * 2;
         const types = [];
 
@@ -205,6 +214,15 @@ class DarkTowerGame {
                 tries++;
                 const r = Math.floor(Math.random() * (this.world.rows - 6)) + 3;
                 const c = Math.floor(Math.random() * (this.world.cols - 6)) + 3;
+
+                // Evitar que aparezcan enemigos dentro de la biblioteca
+                if (this.world.libRoom) {
+                    const lr = this.world.libRoom;
+                    if (c >= lr.x && c < lr.x + lr.w && r >= lr.y && r < lr.y + lr.h) {
+                        continue;
+                    }
+                }
+
                 if (this.world.grid[r][c] === 0) {
                     const ex = c * this.world.tileSize + 16;
                     const ey = r * this.world.tileSize + 16;
@@ -218,9 +236,6 @@ class DarkTowerGame {
         }
     }
 
-    /**
-     * Genera guardianes dentro de la antecámara sur de los pisos 5, 8 y 10
-     */
     spawnAnteRoomEnemies(floor) {
         let types = ['spider', 'rat', 'bandit'];
         if (floor === 5) types = ['werewolf', 'skeleton', 'rat'];
@@ -233,41 +248,12 @@ class DarkTowerGame {
             let tries = 0;
             while (!placed && tries < 40) {
                 tries++;
-                const r = Math.floor(Math.random() * 6) + 33; // Filas de la antecámara sur
+                const r = Math.floor(Math.random() * 6) + 33;
                 const c = Math.floor(Math.random() * 16) + (cx - 8);
                 if (this.world.grid[r][c] === 0) {
                     const ex = c * this.world.tileSize + 16;
                     const ey = r * this.world.tileSize + 16;
                     if (Math.hypot(ex - this.player.x, ey - this.player.y) > 60) {
-                        const randomType = types[Math.floor(Math.random() * types.length)];
-                        this.enemies.push(new Enemy(randomType, ex, ey, floor));
-                        placed = true;
-                    }
-                }
-            }
-        }
-    }
-    spawnFloorEnemies(floor) {
-        const count = 4 + floor * 2;
-        const types = [];
-
-        if (floor <= 2) types.push('bandit', 'skeleton', 'rat');
-        else if (floor <= 4) types.push('bandit', 'skeleton', 'spider', 'rat');
-        else if (floor <= 6) types.push('spider', 'werewolf', 'rat');
-        else if (floor <= 7) types.push('werewolf', 'demon');
-        else if (floor === 9) types.push('demon', 'werewolf');
-
-        for (let i = 0; i < count; i++) {
-            let placed = false;
-            let tries = 0;
-            while (!placed && tries < 50) {
-                tries++;
-                const r = Math.floor(Math.random() * (this.world.rows - 4)) + 2;
-                const c = Math.floor(Math.random() * (this.world.cols - 4)) + 2;
-                if (this.world.grid[r][c] === 0) {
-                    const ex = c * this.world.tileSize + 16;
-                    const ey = r * this.world.tileSize + 16;
-                    if (Math.hypot(ex - this.player.x, ey - this.player.y) > 160) {
                         const randomType = types[Math.floor(Math.random() * types.length)];
                         this.enemies.push(new Enemy(randomType, ex, ey, floor));
                         placed = true;
@@ -283,8 +269,8 @@ class DarkTowerGame {
 
         // 1. Pergamino de Lore
         if (w.loreScroll && !w.loreScroll.collected) {
-            const dist = Math.hypot(p.x - w.loreScroll.x, p.y - w.loreScroll.y);
-            if (dist < 48) {
+            const dist = Math.hypot(p.x - (w.loreScroll.x + 16), p.y - (w.loreScroll.y + 16));
+            if (dist < 56) {
                 w.loreScroll.collected = true;
                 this.fetchAndShowLore(w.floor);
                 return;
@@ -353,7 +339,6 @@ class DarkTowerGame {
     }
 
     dropLoot(sourceType, x, y) {
-        // Filtro de probabilidad de aparición
         if (sourceType === 'barrel') {
             if (Math.random() > 0.30) return;
         } else if (sourceType === 'rat') {
@@ -395,7 +380,6 @@ class DarkTowerGame {
         };
 
         table.forEach(entry => {
-            // Oro
             if (entry.goldMin !== undefined) {
                 const goldAmt = Math.floor(Math.random() * (entry.goldMax - entry.goldMin + 1)) + entry.goldMin;
                 if (goldAmt > 0) {
@@ -505,7 +489,6 @@ class DarkTowerGame {
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'flex';
 
-        // Resumen limpio de tus logros debajo de la ilustración
         document.getElementById('victory-stats-summary').innerHTML = `
             <div>Héroe: ${this.player.name} (${this.player.characterClass.toUpperCase()}) | Nivel: ${this.player.level}</div>
             <div>Enemigos y Jefes Caídos: ${this.player.enemiesKilled} | Fortuna: ${this.player.gold} G</div>

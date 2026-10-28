@@ -1,6 +1,7 @@
+
 """
 Generador de Sprites Pixel Art 16-Bit para 'La Torre Oscura'
-Héroes con variantes de armas/armaduras y monstruos/jefes con sombreado de alta calidad.
+Héroes con variantes de armas/armaduras, monstruos/jefes detallados, tilesets, props e iconos.
 """
 
 import os
@@ -47,7 +48,6 @@ P_HAIR      = [(196, 126, 84), (154, 92, 60), (112, 66, 48), (78, 46, 40), (50, 
 P_PANTS     = [(168, 156, 134), (136, 122, 106), (102, 90, 82), (72, 62, 66), (48, 42, 52)]
 P_ORB       = [(255, 255, 232), (255, 232, 124), (255, 172, 52), (222, 102, 32), (152, 52, 30)]
 
-# Paletas de Armas y Armaduras
 P_OBSID        = [(150, 138, 176), (104, 92, 132), (66, 56, 92), (42, 34, 64), (26, 20, 42)]
 P_LAVA         = [(255, 240, 170), (255, 190, 80), (255, 110, 40), (214, 52, 36), (140, 28, 40)]
 P_CRIMSON      = [(255, 150, 130), (230, 70, 70), (176, 36, 52), (118, 24, 44), (76, 16, 36)]
@@ -70,7 +70,6 @@ EYE_RED = (255, 70, 60, 255)
 EYE_BLUE = (40, 90, 160, 255)
 EYE_N = (28, 22, 40, 255)
 
-# Paletas de Monstruos
 P_BONE      = [(255, 252, 238), (240, 232, 208), (202, 192, 164), (150, 138, 114), (98, 86, 70)]
 P_RUST      = [(220, 160, 130), (178, 110, 82), (136, 74, 52), (96, 48, 36), (62, 32, 28)]
 P_BANDIT    = [(168, 140, 120), (124, 96, 80), (88, 64, 52), (58, 40, 34), (36, 24, 22)]
@@ -87,6 +86,12 @@ P_PUSTULE   = [(255, 255, 140), (210, 255, 50), (145, 220, 25), (90, 160, 20), (
 P_PUTRID    = [(178, 195, 150), (135, 158, 110), (96, 122, 78), (65, 88, 52), (40, 58, 34)]
 P_TITAN_CH  = [(130, 36, 48), (96, 22, 34), (68, 14, 24), (44, 8, 16), (26, 4, 10)]
 P_TITAN_DK  = [(60, 48, 68), (44, 32, 52), (30, 20, 38), (20, 12, 26), (12, 6, 16)]
+
+# Paletas de Lucian (Blanco Espectral / Plateado)
+P_LUCIAN_FUR   = [(255, 255, 255), (230, 238, 248), (180, 194, 215), (125, 138, 162), (75, 86, 110)]
+P_LUCIAN_MANE  = [(215, 225, 240), (160, 175, 200), (110, 125, 150), (70, 82, 105), (42, 50, 70)]
+P_LUCIAN_EYE   = (40, 230, 255, 255)
+P_BLOOD        = [(255, 90, 90), (210, 30, 45), (145, 15, 25), (90, 8, 15), (50, 4, 8)]
 
 WARRIOR_ARMOR = [
     dict(S=P_STEEL,   G=P_GOLD,    C=P_BLUE,       R=P_RED,    eye=EYE_N),
@@ -107,6 +112,10 @@ MAGE_ARMOR = [
 def _dn(R):
     return [R[1], R[2], R[3], R[4], R[4]]
 
+# ==============================================================================
+# CLASE _L BLINDADA (COMPATIBLE CON CUALQUIER FORMATO DE LLAMADA)
+# ==============================================================================
+
 class _L:
     def __init__(s, noline=False, w=48, h=48, size=None):
         if size is not None:
@@ -120,21 +129,34 @@ class _L:
     def rect(s, x0, y0, x1, y1, c):
         s.d.rectangle([x0, y0, x1, y1], fill=c)
 
+    def rectangle(s, box, fill=None, outline=None, width=1):
+        s.d.rectangle(box, fill=fill, outline=outline, width=width)
+
     def poly(s, pts, c):
         s.d.polygon(pts, fill=c)
 
+    def polygon(s, pts, fill=None, outline=None):
+        s.d.polygon(pts, fill=fill, outline=outline)
+
     def ell(s, x0, y0, x1, y1, c):
         s.d.ellipse([x0, y0, x1, y1], fill=c)
+
+    def ellipse(s, box, fill=None, outline=None, width=1):
+        s.d.ellipse(box, fill=fill, outline=outline, width=width)
 
     def px(s, x, y, c):
         if 0 <= x < s.w and 0 <= y < s.h:
             s.im.putpixel((x, y), c)
 
-    def line(s, pts, c, w=1):
-        s.d.line(pts, fill=c, width=w)
+    def line(s, pts, c=None, w=1, fill=None, width=None):
+        color = fill if fill is not None else c
+        line_w = width if width is not None else w
+        s.d.line(pts, fill=color, width=line_w)
 
-    def arc(s, box, a0, a1, c, w=1):
-        s.d.arc(box, a0, a1, fill=c, width=w)
+    def arc(s, box, a0, a1, c=None, w=1, fill=None, width=None):
+        color = fill if fill is not None else c
+        line_w = width if width is not None else w
+        s.d.arc(box, a0, a1, fill=color, width=line_w)
 
 def _box(L, x0, y0, x1, y1, R):
     L.rect(x0, y0, x1, y1, R[MD])
@@ -223,7 +245,7 @@ def _draw_shadow(canvas_draw, cx, cy, rx, ry):
     canvas_draw.ellipse([cx - rx + 2, cy - ry + 1, cx + rx - 2, cy + ry - 1], fill=(10, 10, 18, 70))
 
 # ==============================================================================
-# SISTEMA DE ARMAS Y ARMADURAS DINÁMICAS
+# SISTEMA DE ARMAS Y ARMADURAS DINÁMICAS (HÉROES)
 # ==============================================================================
 
 def _blade(L, hand, tip, R=P_STEEL, look=0):
@@ -236,7 +258,7 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
     sx, sy = hx + ux * 3, hy + uy * 3
     pmx, pmy = int(hx - ux * 3), int(hy - uy * 3)
 
-    if look == 1: # Demoniaca
+    if look == 1:
         O, F = P_OBSID, P_LAVA
         L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], O[DK], 2)
         L.ell(pmx - 1, pmy - 1, pmx + 1, pmy + 1, F[MD])
@@ -252,7 +274,7 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
         L.px(int(tx), int(ty), F[HI])
         return
 
-    if look == 2: # Legendaria
+    if look == 2:
         H, Gd = P_HOLY, P_GOLD
         L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], Gd[DK], 2)
         L.ell(pmx - 1, pmy - 1, pmx + 1, pmy + 1, Gd[HI])
@@ -267,7 +289,6 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
         L.px(int(gx), int(gy), P_AQUA[MD])
         return
 
-    # Comun
     L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], P_WOOD[DK], 2)
     L.px(pmx, pmy, P_GOLD[MD])
     L.line([(gx - nx * 3, gy - ny * 3), (gx + nx * 3, gy + ny * 3)], P_GOLD[MD], 2)
@@ -966,10 +987,9 @@ def draw_mage_frame(direction, anim_frame, is_attack=False, wl=0, ak=0):
     return _render_hero('mage', direction, anim_frame, is_attack, wl, ak)
 
 # ==============================================================================
-# ENEMIGOS 16-BIT SHADED ART
+# ENEMIGOS COMUNES 16-BIT SHADED ART
 # ==============================================================================
 
-# 1. BANDIDO (enemy_bandit.png - 48x48)
 def draw_bandit_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1086,7 +1106,6 @@ def draw_bandit_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
-# 2. ESQUELETO (enemy_skeleton.png - 48x48)
 def draw_skeleton_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1195,7 +1214,6 @@ def draw_skeleton_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
-# 3. ARAÑA GIGANTE (enemy_spider.png - 48x48)
 def draw_spider_frame(direction, anim_frame):
     dr = 1 if direction == 2 else direction
     cy_shift = 1 if anim_frame in (1, 3) else 0
@@ -1275,7 +1293,6 @@ def draw_spider_frame(direction, anim_frame):
         img = ImageOps.mirror(img)
     return img
 
-# 4. RATA GIGANTE (enemy_rat.png - 48x48)
 def draw_rat_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1349,7 +1366,6 @@ def draw_rat_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
-# 5. HOMBRE LOBO (enemy_werewolf.png - 56x56)
 def draw_werewolf_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1464,7 +1480,6 @@ def draw_werewolf_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
-# 6. DEMONIO MENOR (enemy_demon.png - 56x56)
 def draw_demon_frame(direction, anim_frame, is_attack=False):
     dr = 1 if direction == 2 else direction
     b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
@@ -1566,151 +1581,328 @@ def draw_demon_frame(direction, anim_frame, is_attack=False):
         img = ImageOps.mirror(img)
     return img
 
-# 7. ABRACADABRA (boss_abracadabra.png - 72x72)
-def draw_abracadabra_frame(state, frame_idx):
+# ==============================================================================
+# JEFES REDISEÑADOS 16-BIT CON VOLUMEN Y SOMBRAS
+# ==============================================================================
+
+# 1. LUCIAN, EL PRIMER HOMBRE LOBO (Piso 5) - 72x72
+def draw_lucian_frame(state, frame_idx):
     layers = []
-    Pt, Pust, Tox = P_PUTRID, P_PUSTULE, P_TOXIC
+    Fur, Mn, Cl, Bl = P_LUCIAN_FUR, P_LUCIAN_MANE, P_BONE, P_BLOOD
     cx, cy = 36, 38
+    bob = 2 if frame_idx in (1, 3) else 0
 
-    swell = 0
-    if state == 'swell':
-        swell = frame_idx * 3
-    elif state == 'vomit':
-        swell = 2
-    elif state == 'charge':
-        cx += (frame_idx % 2) * 2 - 1
-
+    # Cola de lobo
     L = _L(w=72, h=72)
-    leg_bob = 2 if frame_idx in (1, 3) else 0
-    _box(L, cx - 18, cy + 18 - leg_bob, cx - 6, cy + 29 - leg_bob, Pt)
-    _box(L, cx + 6, cy + 18 + leg_bob, cx + 18, cy + 29 + leg_bob, _dn(Pt))
+    tail_ang = 4 if frame_idx % 2 == 0 else -4
+    L.poly([(cx - 8, cy + 14), (cx - 24 + tail_ang, cy + 10), (cx - 30 + tail_ang, cy + 20), (cx - 16, cy + 22)], Mn[MD])
+    L.line([(cx - 8, cy + 14), (cx - 24 + tail_ang, cy + 10)], Fur[HI], 2)
     layers.append(L)
 
+    # Piernas digitígradas
     L = _L(w=72, h=72)
-    _ball(L, cx - 24 - swell, cy - 10 - swell // 2, cx + 24 + swell, cy + 24 + swell // 2, Pt)
-    L.rect(cx - 20 - swell, cy + 12, cx + 20 + swell, cy + 18, P_WOOD[DK])
-    _ball(L, cx - 18, cy - 4, cx - 8, cy + 6, Pust)
-    _ball(L, cx + 10, cy - 8, cx + 22, cy + 4, Pust)
-    _ball(L, cx - 4, cy + 4, cx + 4, cy + 12, Pust)
-    _ball(L, cx + 12, cy + 6, cx + 18, cy + 12, Pust)
-    layers.append(L)
-
-    L = _L(w=72, h=72)
-    head_y = cy - 25 - (swell // 2)
-    _ball(L, cx - 14, head_y, cx + 14, head_y + 20, Pt)
-    L.ell(cx - 9, head_y + 4, cx - 3, head_y + 10, (255, 240, 100, 255))
-    L.px(cx - 6, head_y + 7, (20, 15, 20, 255))
-    L.ell(cx + 4, head_y + 3, cx + 11, head_y + 10, (255, 240, 100, 255))
-    L.px(cx + 7, head_y + 6, (20, 15, 20, 255))
-
-    if state != 'vomit':
-        L.rect(cx - 8, head_y + 12, cx + 8, head_y + 17, (30, 20, 25, 255))
-        for t in range(4):
-            L.px(cx - 6 + t * 4, head_y + 13, (240, 230, 170, 255))
-            L.px(cx - 4 + t * 4, head_y + 16, (240, 230, 170, 255))
+    leg_off = 3 if frame_idx in (1, 3) else -2
+    if state == 'pounce':
+        L.poly([(cx - 22, cy + 14), (cx - 14, cy + 14), (cx - 12, cy + 26), (cx - 20, cy + 28)], Fur[MD])
+        L.poly([(cx + 12, cy + 14), (cx + 20, cy + 14), (cx + 22, cy + 26), (cx + 14, cy + 28)], _dn(Fur)[MD])
+        for i in range(3):
+            L.line([(cx - 20 + i * 3, cy + 28), (cx - 22 + i * 3, cy + 32)], Cl[HI], 2)
+            L.line([(cx + 14 + i * 3, cy + 28), (cx + 12 + i * 3, cy + 32)], Cl[HI], 2)
     else:
-        L.ell(cx - 11, head_y + 10, cx + 11, head_y + 22, (20, 10, 15, 255))
-        L.poly([(cx - 7, head_y + 16), (cx + 7, head_y + 16), (cx + 18, cy + 28), (cx - 18, cy + 28)], Tox[MD])
-        L.line([(cx - 4, head_y + 16), (cx - 10, cy + 28)], Tox[HI], 2)
-        L.line([(cx + 4, head_y + 16), (cx + 10, cy + 28)], Tox[HI], 2)
+        L.poly([(cx - 18, cy + 14), (cx - 9, cy + 14), (cx - 7 + leg_off, cy + 23), (cx - 16 + leg_off, cy + 24)], Fur[MD])
+        L.poly([(cx - 16 + leg_off, cy + 24), (cx - 8 + leg_off, cy + 23), (cx - 10 + leg_off, cy + 30), (cx - 17 + leg_off, cy + 30)], Fur[DK])
+        L.line([(cx - 18, cy + 14), (cx - 16 + leg_off, cy + 24)], Fur[LT], 1)
+        L.poly([(cx + 8, cy + 14), (cx + 17, cy + 14), (cx + 16 - leg_off, cy + 24), (cx + 7 - leg_off, cy + 23)], _dn(Fur)[MD])
+        L.poly([(cx + 7 - leg_off, cy + 23), (cx + 16 - leg_off, cy + 24), (cx + 15 - leg_off, cy + 30), (cx + 8 - leg_off, cy + 30)], _dn(Fur)[DK])
+        for i in range(3):
+            L.line([(cx - 16 + leg_off + i * 3, cy + 30), (cx - 18 + leg_off + i * 3, cy + 33)], Cl[HI], 2)
+            L.line([(cx + 8 - leg_off + i * 3, cy + 30), (cx + 6 - leg_off + i * 3, cy + 33)], Cl[HI], 2)
     layers.append(L)
 
+    # Torso con pelaje y melena
     L = _L(w=72, h=72)
-    arm_sw = 3 if frame_idx in (1, 2) else -2
-    _box(L, cx - 29 - swell, cy - 4 + arm_sw, cx - 22 - swell, cy + 16 + arm_sw, Pt)
-    _box(L, cx + 22 + swell, cy - 4 - arm_sw, cx + 29 + swell, cy + 16 - arm_sw, Pt)
-    for c in range(3):
-        L.px(cx - 28 - swell + c * 2, cy + 17 + arm_sw, P_BONE[HI])
-        L.px(cx + 23 + swell + c * 2, cy + 17 - arm_sw, P_BONE[HI])
+    L.poly([(cx - 17, cy - 8 + bob), (cx + 17, cy - 8 + bob),
+            (cx + 19, cy + 4 + bob), (cx + 13, cy + 16 + bob),
+            (cx - 13, cy + 16 + bob), (cx - 19, cy + 4 + bob)], Fur[MD])
+    L.poly([(cx - 15, cy - 6 + bob), (cx, cy + 15 + bob), (cx + 15, cy - 6 + bob),
+            (cx + 8, cy + 2 + bob), (cx, cy + 8 + bob), (cx - 8, cy + 2 + bob)], Mn[LT])
+    L.poly([(cx - 10, cy - 4 + bob), (cx, cy + 12 + bob), (cx + 10, cy - 4 + bob)], Fur[HI])
+    L.poly([(cx - 19, cy + bob), (cx - 24, cy + 3 + bob), (cx - 17, cy + 7 + bob)], Fur[LT])
+    L.poly([(cx + 19, cy + bob), (cx + 24, cy + 3 + bob), (cx + 17, cy + 7 + bob)], Fur[MD])
     layers.append(L)
 
-    if state in ('vomit', 'swell'):
+    # Cabeza con hocico y ojos cian
+    L = _L(w=72, h=72)
+    if state == 'howl':
+        head_y = cy - 24 + bob
+        L.poly([(cx - 14, head_y + 4), (cx - 18, head_y - 12), (cx - 8, head_y - 4)], Mn[DK])
+        L.poly([(cx + 8, head_y - 4), (cx + 18, head_y - 12), (cx + 14, head_y + 4)], Mn[DK])
+        L.poly([(cx - 14, head_y + 8), (cx + 14, head_y + 8), (cx + 12, head_y - 4), (cx - 12, head_y - 4)], Mn[MD])
+        L.poly([(cx - 8, head_y - 4), (cx + 8, head_y - 4), (cx + 6, head_y - 15), (cx - 6, head_y - 15)], Fur[LT])
+        L.rect(cx - 5, head_y - 14, cx + 5, head_y - 8, (28, 14, 20, 255))
+        L.line([(cx - 4, head_y - 14), (cx - 4, head_y - 10)], Cl[HI], 2)
+        L.line([(cx + 4, head_y - 14), (cx + 4, head_y - 10)], Cl[HI], 2)
+        L.line([(cx - 3, head_y - 8), (cx - 3, head_y - 11)], Cl[HI], 2)
+        L.line([(cx + 3, head_y - 8), (cx + 3, head_y - 11)], Cl[HI], 2)
+    else:
+        head_y = cy - 18 + bob
+        L.poly([(cx - 14, head_y + 4), (cx - 19, head_y - 14), (cx - 7, head_y - 3)], Mn[DK])
+        L.line([(cx - 14, head_y + 4), (cx - 19, head_y - 14)], Fur[HI], 1)
+        L.poly([(cx - 13, head_y + 2), (cx - 16, head_y - 10), (cx - 8, head_y - 2)], Bl[MD])
+        L.poly([(cx + 7, head_y - 3), (cx + 19, head_y - 14), (cx + 14, head_y + 4)], Mn[DK])
+        L.line([(cx + 7, head_y - 3), (cx + 19, head_y - 14)], Fur[HI], 1)
+        L.poly([(cx + 8, head_y - 2), (cx + 16, head_y - 10), (cx + 13, head_y + 2)], Bl[MD])
+        L.poly([(cx - 16, head_y + 3), (cx + 16, head_y + 3),
+                (cx + 12, head_y + 16), (cx - 12, head_y + 16)], Fur[MD])
+        L.poly([(cx - 10, head_y - 3), (cx + 10, head_y - 3),
+                (cx + 14, head_y + 6), (cx - 14, head_y + 6)], Fur[LT])
+        L.poly([(cx - 10, head_y + 3), (cx - 4, head_y + 2), (cx - 6, head_y + 6)], P_LUCIAN_EYE)
+        L.px(cx - 7, head_y + 3, (255, 255, 255, 255))
+        L.poly([(cx + 4, head_y + 2), (cx + 10, head_y + 3), (cx + 6, head_y + 6)], P_LUCIAN_EYE)
+        L.px(cx + 7, head_y + 3, (255, 255, 255, 255))
+        L.line([(cx - 10, head_y + 1), (cx - 4, head_y + 2)], Mn[DP], 2)
+        L.line([(cx + 4, head_y + 2), (cx + 10, head_y + 1)], Mn[DP], 2)
+        L.poly([(cx - 7, head_y + 6), (cx + 7, head_y + 6), (cx + 5, head_y + 15), (cx - 5, head_y + 15)], Fur[LT])
+        L.poly([(cx - 3, head_y + 7), (cx + 3, head_y + 7), (cx, head_y + 10)], (22, 16, 26, 255))
+        L.line([(cx - 5, head_y + 13), (cx - 5, head_y + 18)], Cl[HI], 2)
+        L.line([(cx + 5, head_y + 13), (cx + 5, head_y + 18)], Cl[HI], 2)
+        L.px(cx - 5, head_y + 18, Bl[HI])
+    layers.append(L)
+
+    # Brazos y garras
+    L = _L(w=72, h=72)
+    if state == 'pounce':
+        L.poly([(cx - 28, cy - 4), (cx - 16, cy - 8), (cx - 18, cy + 12), (cx - 30, cy + 10)], Fur[LT])
+        L.poly([(cx + 16, cy - 8), (cx + 28, cy - 4), (cx + 30, cy + 10), (cx + 18, cy + 12)], Fur[MD])
+        for i in range(4):
+            L.line([(cx - 28 + i * 3, cy + 10), (cx - 32 + i * 3, cy + 20)], Cl[HI], 2)
+            L.line([(cx + 20 + i * 3, cy + 10), (cx + 24 + i * 3, cy + 20)], Cl[HI], 2)
+    elif state == 'frenzy':
+        arm_sw = 8 if frame_idx in (1, 2) else -4
+        L.poly([(cx - 26, cy - 4 + arm_sw), (cx - 14, cy - 6 + arm_sw),
+                (cx - 12, cy + 14 + arm_sw), (cx - 24, cy + 16 + arm_sw)], Fur[LT])
+        L.poly([(cx + 14, cy - 6 - arm_sw), (cx + 26, cy - 4 - arm_sw),
+                (cx + 24, cy + 16 - arm_sw), (cx + 12, cy + 14 - arm_sw)], Fur[MD])
+        for i in range(4):
+            L.line([(cx - 22 + i * 3, cy + 15 + arm_sw), (cx - 28 + i * 3, cy + 25 + arm_sw)], Cl[HI], 2)
+            L.line([(cx + 14 + i * 3, cy + 15 - arm_sw), (cx + 20 + i * 3, cy + 25 - arm_sw)], Cl[HI], 2)
+    else:
+        L.poly([(cx - 24, cy - 4 + bob), (cx - 15, cy - 6 + bob),
+                (cx - 13, cy + 12 + bob), (cx - 22, cy + 14 + bob)], Fur[LT])
+        L.poly([(cx + 15, cy - 6 + bob), (cx + 24, cy - 4 + bob),
+                (cx + 22, cy + 14 + bob), (cx + 13, cy + 12 + bob)], Fur[MD])
+        for i in range(4):
+            L.line([(cx - 21 + i * 2, cy + 13 + bob), (cx - 23 + i * 2, cy + 20 + bob)], Cl[HI], 2)
+            L.line([(cx + 15 + i * 2, cy + 13 + bob), (cx + 17 + i * 2, cy + 20 + bob)], Cl[HI], 2)
+    layers.append(L)
+
+    # Ondas y zarpazos
+    if state == 'howl':
         fx = _L(noline=True, w=72, h=72)
-        for _a in range(0, 360, 45):
-            rad = 18 + frame_idx * 4
-            fx.px(int(cx + math.cos(math.radians(_a)) * rad),
-                  int(cy + math.sin(math.radians(_a)) * (rad // 2)),
-                  (180, 255, 60, 200))
+        r = 12 + frame_idx * 7
+        fx.arc((cx - r, cy - 24 - r // 2, cx + r, cy - 24 + r // 2), 0, 360, (70, 220, 255, 170), 3)
+        fx.arc((cx - r + 3, cy - 24 - r // 2 + 1, cx + r - 3, cy - 24 + r // 2 - 1), 0, 360, (230, 250, 255, 230), 1)
+        layers.append(fx)
+    elif state == 'frenzy' and frame_idx in (1, 2):
+        fx = _L(noline=True, w=72, h=72)
+        for y_off in (-10, 0, 10):
+            fx.line([(cx - 30, cy - 2 + y_off), (cx + 30, cy + 12 + y_off)], (60, 210, 255, 210), 3)
+            fx.line([(cx - 28, cy - 3 + y_off), (cx + 32, cy + 11 + y_off)], (255, 255, 255, 255), 1)
         layers.append(fx)
 
     img = create_canvas(72, 72)
-    _draw_shadow(ImageDraw.Draw(img), cx, cy + 28, 24, 7)
+    _draw_shadow(ImageDraw.Draw(img), cx, cy + 27, 24, 7)
     for lay in layers:
         img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
     return img
 
-# 8. HONG (boss_hong.png - 96x96)
+# 2. ABRACADABRA (Piso 8) - 72x72
+def draw_abracadabra_frame(state, frame_idx):
+    layers = []
+    Pt, Pust, Tox = P_PUTRID, P_PUSTULE, P_TOXIC
+    cx, cy = 36, 38
+    swell = (frame_idx * 4) if state == 'swell' else (2 if state == 'vomit' else 0)
+
+    # Piernas
+    L = _L(w=72, h=72)
+    leg_bob = 2 if frame_idx in (1, 3) else 0
+    L.poly([(cx - 20, cy + 16 - leg_bob), (cx - 7, cy + 16 - leg_bob),
+            (cx - 5, cy + 29 - leg_bob), (cx - 22, cy + 29 - leg_bob)], Pt[MD])
+    L.poly([(cx + 6, cy + 16 + leg_bob), (cx + 19, cy + 16 + leg_bob),
+            (cx + 21, cy + 29 + leg_bob), (cx + 4, cy + 29 + leg_bob)], _dn(Pt)[MD])
+    L.line([(cx - 21, cy + 24 - leg_bob), (cx - 6, cy + 24 - leg_bob)], Pt[DK], 2)
+    L.line([(cx + 5, cy + 24 + leg_bob), (cx + 20, cy + 24 + leg_bob)], Pt[DP], 2)
+    layers.append(L)
+
+    # Vientre mórbido y pústulas
+    L = _L(w=72, h=72)
+    L.poly([(cx - 22 - swell, cy - 8 - swell // 2), (cx + 22 + swell, cy - 8 - swell // 2),
+            (cx + 26 + swell, cy + 12 + swell // 2), (cx + 16 + swell, cy + 22 + swell // 2),
+            (cx - 16 - swell, cy + 22 + swell // 2), (cx - 26 - swell, cy + 12 + swell // 2)], Pt[MD])
+    L.line([(cx - 22 - swell, cy - 8 - swell // 2), (cx - 26 - swell, cy + 12 + swell // 2)], Pt[LT], 2)
+    L.arc([cx - 20 - swell, cy + 6, cx + 20 + swell, cy + 18], 10, 170, fill=Pt[DK], width=3)
+    L.poly([(cx - 20 - swell, cy + 12), (cx + 20 + swell, cy + 12),
+            (cx + 16 + swell, cy + 19), (cx - 16 - swell, cy + 19)], (60, 48, 40, 255))
+    L.line([(cx - 12, cy + 19), (cx - 8, cy + 24)], (45, 34, 28, 255), 2)
+    pustules = [
+        (cx - 16, cy - 4, 6), (cx + 14, cy - 6, 8),
+        (cx - 6, cy + 3, 5), (cx + 10, cy + 5, 6),
+        (cx - 18, cy + 8, 4), (cx + 18, cy + 2, 5)
+    ]
+    for px, py, pr in pustules:
+        _ball(L, px - pr, py - pr, px + pr, py + pr, Pust)
+        L.px(px - pr // 2, py - pr // 2, (255, 255, 240, 255))
+    layers.append(L)
+
+    # Cabeza y rostro asimétrico
+    L = _L(w=72, h=72)
+    head_y = cy - 24 - (swell // 2)
+    L.poly([(cx - 15, head_y + 2), (cx + 15, head_y + 2),
+            (cx + 12, head_y + 17), (cx - 12, head_y + 17)], Pt[MD])
+    L.line([(cx - 15, head_y + 2), (cx + 15, head_y + 2)], Pt[LT], 2)
+    L.ellipse([cx - 10, head_y + 4, cx - 4, head_y + 10], fill=(245, 225, 60, 255), outline=OUTLINE)
+    L.px(cx - 7, head_y + 7, (25, 20, 25, 255))
+    L.ellipse([cx + 2, head_y + 2, cx + 12, head_y + 12], fill=(255, 240, 70, 255), outline=OUTLINE)
+    L.px(cx + 8, head_y + 6, (200, 30, 40, 255))
+    L.px(cx + 6, head_y + 8, (25, 20, 25, 255))
+
+    # Boca y Vómito
+    if state != 'vomit':
+        L.poly([(cx - 9, head_y + 12), (cx + 9, head_y + 12),
+                (cx + 7, head_y + 18), (cx - 7, head_y + 18)], (30, 18, 22, 255))
+        for t in range(5):
+            L.px(cx - 7 + t * 3, head_y + 13, (240, 235, 160, 255))
+            L.px(cx - 6 + t * 3, head_y + 17, (210, 200, 140, 255))
+        L.line([(cx - 8, head_y + 16), (cx - 8, head_y + 23)], Tox[MD], 2)
+        L.px(cx - 8, head_y + 23, Tox[HI])
+    else:
+        L.ellipse([cx - 13, head_y + 9, cx + 13, head_y + 23], fill=(20, 10, 15, 255), outline=OUTLINE)
+        L.poly([(cx - 8, head_y + 15), (cx + 8, head_y + 15),
+                (cx + 22, cy + 28), (cx - 22, cy + 28)], Tox[MD])
+        L.poly([(cx - 5, head_y + 16), (cx + 5, head_y + 16),
+                (cx + 14, cy + 27), (cx - 14, cy + 27)], Tox[HI])
+        for gx, gy in [(-18, 12), (18, 14), (-12, 22), (14, 24)]:
+            L.ellipse([cx + gx, cy + gy, cx + gx + 3, cy + gy + 3], fill=Tox[HI])
+    layers.append(L)
+
+    # Brazos
+    L = _L(w=72, h=72)
+    arm_sw = 4 if frame_idx in (1, 2) else -3
+    L.poly([(cx - 30 - swell, cy - 6 + arm_sw), (cx - 20 - swell, cy - 8 + arm_sw),
+            (cx - 18 - swell, cy + 14 + arm_sw), (cx - 28 - swell, cy + 16 + arm_sw)], Pt[MD])
+    L.poly([(cx + 20 + swell, cy - 8 - arm_sw), (cx + 30 + swell, cy - 6 - arm_sw),
+            (cx + 28 + swell, cy + 16 - arm_sw), (cx + 18 + swell, cy + 14 - arm_sw)], _dn(Pt)[MD])
+    for c in range(3):
+        L.line([(cx - 27 - swell + c * 3, cy + 15 + arm_sw), (cx - 29 - swell + c * 3, cy + 21 + arm_sw)], (220, 210, 150, 255), 2)
+        L.line([(cx + 20 + swell + c * 3, cy + 15 - arm_sw), (cx + 22 + swell + c * 3, cy + 21 - arm_sw)], (220, 210, 150, 255), 2)
+    layers.append(L)
+
+    img = create_canvas(72, 72)
+    _draw_shadow(ImageDraw.Draw(img), cx, cy + 28, 25, 8)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    return img
+
+# 3. HONG DEVORADOR DE HOMBRES (Piso 10) - 96x96
 def draw_hong_frame(frame_idx, is_cleave=False):
     layers = []
     Ch, Dk, Vd, Gld = P_TITAN_CH, P_TITAN_DK, P_VOID, P_GOLD
     cx, cy = 48, 48
     bob = 2 if frame_idx in (1, 3) else 0
 
+    # Capa rasgada
     L = _L(w=96, h=96)
-    L.poly([(cx - 32, cy - 24 + bob), (cx - 46, cy + 24), (cx + 46, cy + 24), (cx + 32, cy - 24 + bob)], Dk[MD])
-    L.line([(cx - 32, cy - 24 + bob), (cx - 46, cy + 24)], Dk[LT], 2)
-    L.line([(cx + 32, cy - 24 + bob), (cx + 46, cy + 24)], Dk[DK], 2)
+    L.poly([(cx - 32, cy - 20 + bob), (cx + 32, cy - 20 + bob),
+            (cx + 42, cy + 30), (cx + 20, cy + 36), (cx, cy + 28), (cx - 20, cy + 36), (cx - 42, cy + 30)], Dk[DP])
+    L.line([(cx - 32, cy - 20 + bob), (cx - 42, cy + 30)], Dk[DK], 2)
+    L.line([(cx + 32, cy - 20 + bob), (cx + 42, cy + 30)], Dk[DK], 2)
     layers.append(L)
 
+    # Grebas acorazadas
     L = _L(w=96, h=96)
-    for x0 in (cx - 24, cx + 8):
-        _box(L, x0, cy + 18 + bob, x0 + 16, cy + 39 + bob, Ch)
-        L.line([(x0 + 4, cy + 20 + bob), (x0 + 4, cy + 36 + bob)], Gld[MD], 2)
-        _box(L, x0 - 2, cy + 39 + bob, x0 + 18, cy + 43 + bob, Dk)
+    for x0, is_right in ((cx - 24, False), (cx + 8, True)):
+        pal = _dn(Ch) if is_right else Ch
+        L.poly([(x0 + 2, cy + 16 + bob), (x0 + 14, cy + 16 + bob),
+                (x0 + 16, cy + 30 + bob), (x0, cy + 30 + bob)], pal[MD])
+        L.poly([(x0 + 4, cy + 28 + bob), (x0 + 12, cy + 28 + bob), (x0 + 8, cy + 34 + bob)], Gld[MD])
+        L.poly([(x0 + 1, cy + 32 + bob), (x0 + 15, cy + 32 + bob),
+                (x0 + 16, cy + 42 + bob), (x0 - 2, cy + 42 + bob)], pal[DK])
+        L.line([(x0 + 1, cy + 32 + bob), (x0 - 2, cy + 42 + bob)], pal[LT], 2)
+        L.line([(x0 + 4, cy + 18 + bob), (x0 + 4, cy + 40 + bob)], Gld[MD], 1)
     layers.append(L)
 
+    # Torso quitinoso y FAUCES DEL PECHO
     L = _L(w=96, h=96)
-    _box(L, cx - 28, cy - 18 + bob, cx + 28, cy + 18 + bob, Ch)
+    L.poly([(cx - 28, cy - 16 + bob), (cx + 28, cy - 16 + bob),
+            (cx + 22, cy + 18 + bob), (cx - 22, cy + 18 + bob)], Ch[MD])
+    L.line([(cx - 28, cy - 16 + bob), (cx, cy - 8 + bob), (cx + 28, cy - 16 + bob)], Ch[LT], 2)
+    L.poly([(cx - 28, cy - 16 + bob), (cx - 42, cy - 26 + bob), (cx - 36, cy - 4 + bob)], Ch[LT])
+    L.poly([(cx + 28, cy - 16 + bob), (cx + 42, cy - 26 + bob), (cx + 36, cy - 4 + bob)], Ch[LT])
+
+    # Fondo abisal y vórtice
     mouth_pulse = 2 if frame_idx % 2 == 1 else 0
-    L.ell(cx - 18, cy - 6 + bob - mouth_pulse, cx + 18, cy + 12 + bob + mouth_pulse, Vd[DK])
-    L.ell(cx - 12, cy - 2 + bob, cx + 12, cy + 8 + bob, Vd[HI])
-    for t in range(5):
-        L.line([(cx - 16 + t * 4, cy - 6 + bob), (cx - 14 + t * 4, cy - 2 + bob)], P_BONE[HI], 2)
-        L.line([(cx - 16 + t * 4, cy + 12 + bob), (cx - 14 + t * 4, cy + 8 + bob)], P_BONE[HI], 2)
+    L.ellipse([cx - 18, cy - 6 + bob - mouth_pulse, cx + 18, cy + 14 + bob + mouth_pulse], fill=(12, 4, 18, 255), outline=OUTLINE)
+    L.ellipse([cx - 12, cy - 2 + bob, cx + 12, cy + 10 + bob], fill=Vd[MD])
+    L.ellipse([cx - 6, cy + 1 + bob, cx + 6, cy + 7 + bob], fill=Vd[HI])
+    # Costillas con colmillos
+    for t in range(6):
+        tx = cx - 15 + t * 5
+        L.poly([(tx, cy - 6 + bob), (tx + 3, cy - 6 + bob), (tx + 1, cy - 1 + bob)], P_BONE[HI])
+        L.poly([(tx, cy + 13 + bob), (tx + 3, cy + 13 + bob), (tx + 1, cy + 8 + bob)], P_BONE[HI])
     layers.append(L)
 
+    # Cabeza demoníaca y cuernos
     L = _L(w=96, h=96)
-    _ball(L, cx - 16, cy - 38 + bob, cx + 16, cy - 16 + bob, Ch)
-    L.poly([(cx - 16, cy - 34 + bob), (cx - 30, cy - 46 + bob), (cx - 18, cy - 26 + bob)], Dk[MD])
-    L.poly([(cx + 16, cy - 34 + bob), (cx + 30, cy - 46 + bob), (cx + 18, cy - 26 + bob)], Dk[MD])
-    L.ell(cx - 10, cy - 28 + bob, cx - 4, cy - 23 + bob, (255, 200, 30, 255))
-    L.ell(cx + 4, cy - 28 + bob, cx + 10, cy - 23 + bob, (255, 200, 30, 255))
+    head_y = cy - 34 + bob
+    L.poly([(cx - 12, head_y + 4), (cx - 34, head_y - 16), (cx - 18, head_y - 2)], Dk[MD])
+    L.line([(cx - 12, head_y + 4), (cx - 34, head_y - 16)], Dk[LT], 2)
+    L.poly([(cx + 12, head_y + 4), (cx + 34, head_y - 16), (cx + 18, head_y - 2)], Dk[MD])
+    L.line([(cx + 12, head_y + 4), (cx + 34, head_y - 16)], Dk[LT], 2)
+    L.poly([(cx - 16, head_y + 6), (cx - 28, head_y + 12), (cx - 14, head_y + 12)], Dk[DK])
+    L.poly([(cx + 16, head_y + 6), (cx + 28, head_y + 12), (cx + 14, head_y + 12)], Dk[DK])
+    L.poly([(cx - 15, head_y - 4), (cx + 15, head_y - 4),
+            (cx + 11, head_y + 16), (cx - 11, head_y + 16)], Ch[MD])
+    L.line([(cx - 15, head_y - 4), (cx + 15, head_y - 4)], Ch[LT], 2)
+    L.poly([(cx - 10, head_y + 3), (cx - 3, head_y + 1), (cx - 5, head_y + 6)], (255, 210, 40, 255))
+    L.px(cx - 6, head_y + 3, (255, 255, 255, 255))
+    L.poly([(cx + 3, head_y + 1), (cx + 10, head_y + 3), (cx + 5, head_y + 6)], (255, 210, 40, 255))
+    L.px(cx + 6, head_y + 3, (255, 255, 255, 255))
     layers.append(L)
 
+    # Brazos y Mandoble Rúnico
     L = _L(w=96, h=96)
     if not is_cleave:
-        _ball(L, cx - 38, cy - 18 + bob, cx - 24, cy - 4 + bob, Ch)
-        _ball(L, cx + 24, cy - 18 + bob, cx + 38, cy - 4 + bob, Ch)
-        _box(L, cx - 36, cy - 6 + bob, cx - 26, cy + 16 + bob, Ch)
-        _box(L, cx + 26, cy - 6 + bob, cx + 36, cy + 16 + bob, Ch)
-        _blade(L, (cx + 32, cy + 12 + bob), (cx + 32, cy - 36 + bob), P_STEEL)
+        L.poly([(cx - 38, cy - 14 + bob), (cx - 24, cy - 16 + bob), (cx - 22, cy + 12 + bob), (cx - 36, cy + 14 + bob)], Ch[LT])
+        L.poly([(cx + 24, cy - 16 + bob), (cx + 38, cy - 14 + bob), (cx + 36, cy + 14 + bob), (cx + 22, cy + 12 + bob)], Ch[MD])
+        _blade(L, (cx + 32, cy + 12 + bob), (cx + 32, cy - 36 + bob), P_STEEL, look=1)
     else:
         if frame_idx in (0, 1):
-            _box(L, cx - 20, cy - 42, cx - 10, cy - 20, Ch)
-            _box(L, cx + 10, cy - 42, cx + 20, cy - 20, Ch)
-            _blade(L, (cx, cy - 42), (cx, cy - 6), P_STEEL)
+            L.poly([(cx - 24, cy - 38), (cx - 12, cy - 40), (cx - 14, cy - 16), (cx - 26, cy - 14)], Ch[LT])
+            L.poly([(cx + 12, cy - 40), (cx + 24, cy - 38), (cx + 26, cy - 14), (cx + 14, cy - 16)], Ch[MD])
+            _blade(L, (cx, cy - 38), (cx, cy - 2), P_STEEL, look=1)
         else:
-            _box(L, cx - 24, cy - 10, cx - 12, cy + 16, Ch)
-            _box(L, cx + 12, cy - 10, cx + 24, cy + 16, Ch)
-            _blade(L, (cx, cy + 12), (cx, cy + 46), P_STEEL)
+            L.poly([(cx - 26, cy - 8), (cx - 14, cy - 10), (cx - 12, cy + 18), (cx - 24, cy + 20)], Ch[LT])
+            L.poly([(cx + 14, cy - 10), (cx + 26, cy - 8), (cx + 24, cy + 20), (cx + 12, cy + 18)], Ch[MD])
+            _blade(L, (cx, cy + 14), (cx, cy + 46), P_STEEL, look=1)
     layers.append(L)
 
+    # Impacto de Cleave
     if is_cleave and frame_idx in (2, 3):
         fx = _L(noline=True, w=96, h=96)
-        fx.arc((cx - 38, cy + 18, cx + 38, cy + 48), 0, 180, (220, 80, 255, 220), 4)
-        fx.arc((cx - 44, cy + 12, cx + 44, cy + 52), 0, 180, (255, 230, 255, 255), 2)
-        for p in (-30, -15, 0, 15, 30):
-            fx.px(cx + p, cy + 42, (255, 255, 255, 255))
+        fx.arc((cx - 42, cy + 20, cx + 42, cy + 50), 0, 180, (220, 70, 255, 230), 4)
+        fx.arc((cx - 46, cy + 16, cx + 46, cy + 54), 0, 180, (255, 240, 255, 255), 2)
+        for p in (-32, -16, 0, 16, 32):
+            fx.px(cx + p, cy + 44, (255, 220, 100, 255))
         layers.append(fx)
 
     img = create_canvas(96, 96)
-    _draw_shadow(ImageDraw.Draw(img), cx, cy + 42, 32, 8)
+    _draw_shadow(ImageDraw.Draw(img), cx, cy + 43, 34, 9)
     for lay in layers:
         img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
     return img
 
 # ==============================================================================
-# TILESETS Y PROPS (INCLUYE COFRE ABIERTO)
+# TILESETS Y PROPS (INCLUYE COFRE ABIERTO, MESA, ESTANTES Y LIBROS)
 # ==============================================================================
 
 TILE_STYLES = {
@@ -1875,123 +2067,6 @@ def _void_tile(S, rng):
         img.putpixel((rng.randrange(32), rng.randrange(32)), _shade(S['void'], rng.choice([0.85, 1.2])))
     return img
 
-    # ==============================================================================
-# SUB-JEFE: LUCIAN, EL PRIMER HOMBRE LOBO (boss_lucian.png - 72x72)
-# Lobo titánico de pelaje blanco plateado, ojos cian helados y garras lunares
-# ==============================================================================
-
-P_LUCIAN_FUR  = [(255, 255, 255), (232, 238, 246), (190, 200, 218), (140, 150, 172), (90, 100, 120)]
-P_LUCIAN_MANE = [(224, 230, 242), (176, 186, 206), (130, 140, 164), (88, 98, 120), (55, 62, 80)]
-P_LUCIAN_EYE  = (65, 230, 255, 255) # Ojos cian espectrales
-
-def draw_lucian_frame(state, frame_idx):
-    layers = []
-    Fur, Mn, Cl = P_LUCIAN_FUR, P_LUCIAN_MANE, P_BONE
-    cx, cy = 36, 38
-    bob = 2 if frame_idx in (1, 3) else 0
-
-    # 1. Piernas digitígradas musculosas
-    L = _L(w=72, h=72)
-    leg_shift = 3 if frame_idx in (1, 3) else -2
-    if state == 'pounce':
-        _box(L, cx - 18, cy + 18, cx - 10, cy + 28, Fur)
-        _box(L, cx + 8, cy + 18, cx + 16, cy + 28, _dn(Fur))
-    else:
-        _box(L, cx - 15 + leg_shift, cy + 16, cx - 8 + leg_shift, cy + 28, Fur)
-        _box(L, cx + 7 - leg_shift, cy + 16, cx + 14 - leg_shift, cy + 28, _dn(Fur))
-        for c in range(3):
-            L.px(cx - 14 + leg_shift + c * 2, cy + 29, Cl[HI])
-            L.px(cx + 8 - leg_shift + c * 2, cy + 29, Cl[HI])
-    layers.append(L)
-
-    # 2. Torso colosal y joroba de pelaje blanco
-    L = _L(w=72, h=72)
-    _ball(L, cx - 16, cy - 8 + bob, cx + 16, cy + 18 + bob, Fur)
-    # Melena plateada densa
-    L.poly([(cx - 14, cy - 4 + bob), (cx, cy + 12 + bob), (cx + 14, cy - 4 + bob)], Mn[LT])
-    L.line([(cx, cy - 4 + bob), (cx, cy + 14 + bob)], Fur[HI], 2)
-    layers.append(L)
-
-    # 3. Cabeza lupina según estado (Aullido o Ataque)
-    L = _L(w=72, h=72)
-    if state == 'howl':
-        # Cabeza hacia atrás aullando al cielo
-        head_y = cy - 24 + bob
-        _ball(L, cx - 12, head_y - 4, cx + 12, head_y + 14, Mn)
-        L.poly([(cx - 10, head_y), (cx - 13, head_y - 12), (cx - 6, head_y - 2)], Mn[DK])
-        L.poly([(cx + 6, head_y - 2), (cx + 13, head_y - 12), (cx + 10, head_y)], Mn[DK])
-        # Hocico apuntando hacia arriba
-        _box(L, cx - 6, head_y - 8, cx + 6, head_y + 2, Fur)
-        L.rect(cx - 4, head_y - 6, cx + 4, head_y - 1, (20, 15, 25, 255))
-        for t in (-3, 0, 3):
-            L.px(cx + t, head_y - 6, Cl[HI])
-            L.px(cx + t, head_y - 1, Cl[HI])
-    else:
-        # Cabeza de frente agresiva
-        head_y = cy - 18 + bob
-        _ball(L, cx - 14, head_y, cx + 14, head_y + 16, Mn)
-        L.poly([(cx - 12, head_y + 2), (cx - 15, head_y - 10), (cx - 7, head_y)], Mn[DK])
-        L.poly([(cx + 7, head_y), (cx + 15, head_y - 10), (cx + 12, head_y + 2)], Mn[DK])
-        # Hocico
-        _box(L, cx - 7, head_y + 8, cx + 7, head_y + 17, Fur)
-        L.px(cx - 1, head_y + 9, (18, 14, 20, 255))
-        L.px(cx, head_y + 9, (18, 14, 20, 255))
-        # Ojos cian brillantes
-        L.px(cx - 6, head_y + 5, P_LUCIAN_EYE)
-        L.px(cx - 5, head_y + 5, (255, 255, 255, 255))
-        L.px(cx + 5, head_y + 5, P_LUCIAN_EYE)
-        L.px(cx + 6, head_y + 5, (255, 255, 255, 255))
-        # Colmillos
-        L.line([(cx - 5, head_y + 16), (cx - 5, head_y + 19)], Cl[HI], 2)
-        L.line([(cx + 5, head_y + 16), (cx + 5, head_y + 19)], Cl[HI], 2)
-    layers.append(L)
-
-    # 4. Brazos y garras
-    L = _L(w=72, h=72)
-    if state == 'pounce':
-        # Brazos extendidos hacia adelante en pleno salto
-        _box(L, cx - 28, cy - 8, cx - 18, cy + 10, Fur)
-        _box(L, cx + 18, cy - 8, cx + 28, cy + 10, Fur)
-        for i in range(4):
-            L.line([(cx - 26 + i * 2, cy + 10), (cx - 30 + i * 2, cy + 18)], Cl[HI], 2)
-            L.line([(cx + 20 + i * 2, cy + 10), (cx + 24 + i * 2, cy + 18)], Cl[HI], 2)
-    elif state == 'frenzy':
-        # Doble zarpazo cruzado
-        arm_sw = 6 if frame_idx in (1, 2) else -4
-        _box(L, cx - 22, cy - 6 + arm_sw, cx - 12, cy + 12 + arm_sw, Fur)
-        _box(L, cx + 12, cy - 6 - arm_sw, cx + 22, cy + 12 - arm_sw, Fur)
-        for i in range(4):
-            L.line([(cx - 20 + i * 2, cy + 12 + arm_sw), (cx - 28 + i * 2, cy + 20 + arm_sw)], Cl[HI], 2)
-            L.line([(cx + 14 + i * 2, cy + 12 - arm_sw), (cx + 22 + i * 2, cy + 20 - arm_sw)], Cl[HI], 2)
-    else:
-        # Brazos estándar
-        _box(L, cx - 24, cy - 2 + bob, cx - 16, cy + 14 + bob, Fur)
-        _box(L, cx + 16, cy - 2 + bob, cx + 24, cy + 14 + bob, Fur)
-        for i in range(3):
-            L.px(cx - 22 + i * 2, cy + 15 + bob, Cl[HI])
-            L.px(cx + 18 + i * 2, cy + 15 + bob, Cl[HI])
-    layers.append(L)
-
-    # 5. Efectos lunares / zarpazos
-    if state == 'howl':
-        fx = _L(noline=True, w=72, h=72)
-        r = 14 + frame_idx * 5
-        fx.arc((cx - r, cy - 20 - r // 2, cx + r, cy - 20 + r // 2), 0, 360, (120, 220, 255, 180), 2)
-        layers.append(fx)
-    elif state == 'frenzy' and frame_idx in (1, 2):
-        fx = _L(noline=True, w=72, h=72)
-        for y_off in (-8, 0, 8):
-            fx.line([(cx - 26, cy + y_off), (cx + 26, cy + 12 + y_off)], (140, 230, 255, 220), 2)
-            fx.line([(cx - 24, cy - 1 + y_off), (cx + 28, cy + 11 + y_off)], (255, 255, 255, 240), 1)
-        layers.append(fx)
-
-    img = create_canvas(72, 72)
-    _draw_shadow(ImageDraw.Draw(img), cx, cy + 26, 20, 6)
-    for lay in layers:
-        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
-    return img
-
-
 def generate_tiles():
     import random
     for kind, S in TILE_STYLES.items():
@@ -2016,7 +2091,6 @@ def generate_tiles():
         print(f"Creado: tileset_{kind}.png")
 
 def generate_props():
-    # 416x32 px: 13 casillas de 32x32 px
     props = create_canvas(416, 32)
     d = ImageDraw.Draw(props)
     
@@ -2075,7 +2149,7 @@ def generate_props():
     rect(d, ox + 15, 16, 2, 3, OUTLINE)
     d.point((ox + 14, 14), fill=GOLD_LIGHT)
     
-    # 3: Pergamino de lore brillante
+    # 3: Pergamino de lore
     ox = 96
     ellipse(d, ox + 3, 3, 26, 26, None, (255, 225, 75, 170))
     ellipse(d, ox + 6, 6, 20, 20, None, (255, 245, 150, 120))
@@ -2089,7 +2163,7 @@ def generate_props():
     ellipse(d, ox + 13, 13, 6, 6, (220, 35, 45, 255), OUTLINE)
     d.point((ox + 15, 14), fill=(255, 180, 180, 255))
     
-    # 4: Escaleras de descenso
+    # 4: Escaleras
     ox = 128
     rect(d, ox + 2, 2, 28, 28, (20, 18, 26, 255), OUTLINE)
     for st in range(5):
@@ -2097,7 +2171,7 @@ def generate_props():
         rect(d, ox + 4 + st, sy, 24 - st * 2, 4, (65 + st * 14, 70 + st * 14, 82 + st * 14, 255), OUTLINE)
         d.line([(ox + 5 + st, sy), (ox + 26 - st, sy)], fill=(110 + st * 14, 120 + st * 14, 135 + st * 14, 255))
         
-    # 5: Caja de madera
+    # 5: Cajas
     ox = 160
     ellipse(d, ox + 5, 24, 22, 7, (10, 10, 16, 120))
     rect(d, ox + 5, 5, 22, 22, WOOD_MID, OUTLINE)
@@ -2165,19 +2239,12 @@ def generate_props():
     rect(d, ox + 6, 6, 3, 6, IRON_DARK)
     rect(d, ox + 22, 6, 3, 6, IRON_DARK)
 
-    # =========================================================================
-    # NUEVOS PROPS DE BIBLIOTECA
-    # =========================================================================
-
     # 10: Estante de libros (Bookshelf - ox = 320)
     ox = 320
     ellipse(d, ox + 2, 25, 28, 6, (10, 10, 16, 110))
-    # Mueble de roble
     rect(d, ox + 2, 2, 28, 27, WOOD_DARK, OUTLINE)
     rect(d, ox + 4, 4, 24, 23, (40, 24, 15, 255))
-    # Balda superior
     d.line([(ox + 3, 14), (ox + 28, 14)], fill=WOOD_MID, width=2)
-    # Libros balda superior
     book_colors_top = [
         (185, 40, 40, 255), (60, 110, 200, 255), (45, 140, 60, 255),
         (225, 180, 50, 255), (140, 60, 160, 255), (200, 90, 40, 255)
@@ -2187,9 +2254,7 @@ def generate_props():
         h = 7 + (i % 3)
         rect(d, bx, 13 - h, 3, h, col, OUTLINE)
         d.point((bx + 1, 13 - h + 2), fill=GOLD_LIGHT)
-    # Balda inferior
     d.line([(ox + 3, 26), (ox + 28, 26)], fill=WOOD_MID, width=2)
-    # Libros balda inferior (inclinados y desordenados)
     book_colors_bot = [
         (60, 120, 180, 255), (210, 160, 40, 255), (170, 40, 40, 255),
         (120, 80, 50, 255), (80, 160, 100, 255)
@@ -2198,53 +2263,44 @@ def generate_props():
         bx = ox + 5 + i * 4
         h = 8 + ((i * 2) % 3)
         rect(d, bx, 25 - h, 3, h, col, OUTLINE)
-    # Libro inclinado al final
     d.line([(ox + 25, 19), (ox + 27, 25)], fill=(190, 50, 50, 255), width=2)
 
     # 11: Libros y hojas tiradas por el suelo (Scattered books - ox = 352)
     ox = 352
     ellipse(d, ox + 4, 18, 24, 9, (10, 10, 16, 90))
-    # Hojas de papel sueltas en el piso
     rect(d, ox + 6, 16, 6, 7, (245, 235, 210, 255), OUTLINE)
     d.line([(ox + 8, 18), (ox + 10, 18)], fill=(120, 100, 80, 255))
     rect(d, ox + 19, 13, 7, 6, (235, 225, 195, 255), OUTLINE)
-    # Libro abierto
     d.polygon([(ox + 10, 21), (ox + 16, 18), (ox + 22, 21), (ox + 22, 26), (ox + 16, 23), (ox + 10, 26)],
               fill=(245, 240, 220, 255), outline=OUTLINE)
-    d.line([(ox + 16, 18), (ox + 16, 24)], fill=(80, 50, 30, 255), width=1) # Lomo central
+    d.line([(ox + 16, 18), (ox + 16, 24)], fill=(80, 50, 30, 255), width=1)
     d.line([(ox + 11, 22), (ox + 15, 20)], fill=(100, 90, 80, 255))
     d.line([(ox + 17, 20), (ox + 21, 22)], fill=(100, 90, 80, 255))
-    # Libro cerrado con cuero rojo tirado
     d.polygon([(ox + 3, 10), (ox + 10, 7), (ox + 14, 12), (ox + 7, 15)],
               fill=(175, 45, 45, 255), outline=OUTLINE)
     d.point((ox + 8, 11), fill=GOLD_LIGHT)
-    # Libro azul cerrado
     rect(d, ox + 22, 20, 8, 4, (45, 85, 155, 255), OUTLINE)
     d.line([(ox + 22, 21), (ox + 29, 21)], fill=GOLD_LIGHT)
 
     # 12: Mesa / Escritorio de roble (Study Desk - ox = 384)
     ox = 384
-    # Sombras bajo las 4 patas
     ellipse(d, ox + 4, 25, 6, 3, (10, 10, 16, 120))
     ellipse(d, ox + 22, 25, 6, 3, (10, 10, 16, 120))
-    # Patas de madera
     rect(d, ox + 5, 14, 4, 12, WOOD_DARK, OUTLINE)
     rect(d, ox + 23, 14, 4, 12, WOOD_DARK, OUTLINE)
     d.line([(ox + 6, 15), (ox + 6, 25)], fill=WOOD_MID)
     d.line([(ox + 24, 15), (ox + 24, 25)], fill=WOOD_MID)
-    # Travesaño entre patas
     d.line([(ox + 8, 21), (ox + 23, 21)], fill=WOOD_DARK, width=2)
-    # Tablero grueso con bisel de luz superior
     rect(d, ox + 2, 7, 28, 8, WOOD_MID, OUTLINE)
-    d.line([(ox + 3, 8), (ox + 28, 8)], fill=WOOD_LIGHT, width=2) # Brillo del tablero
-    d.line([(ox + 3, 14), (ox + 28, 14)], fill=WOOD_DARK, width=1) # Borde inferior
-    # Tintero de vidrio y pluma sobre la mesa (esquina derecha)
+    d.line([(ox + 3, 8), (ox + 28, 8)], fill=WOOD_LIGHT, width=2)
+    d.line([(ox + 3, 14), (ox + 28, 14)], fill=WOOD_DARK, width=1)
     rect(d, ox + 24, 5, 3, 3, (25, 25, 35, 255), OUTLINE)
-    d.line([(ox + 25, 5), (ox + 28, 1)], fill=(245, 245, 255, 255), width=1) # Pluma de ave
+    d.line([(ox + 25, 5), (ox + 28, 1)], fill=(245, 245, 255, 255), width=1)
     d.point((ox + 28, 1), fill=GOLD_LIGHT)
     
     props.save(os.path.join(ASSETS_DIR, 'props.png'))
-    print("Creado: props.png con Estanterias (320), Libros (352) y Mesa (384)")
+    print("Creado: props.png (13 props)")
+
 # ==============================================================================
 # HOJA DE ICONOS (24 ICONOS)
 # ==============================================================================
@@ -2387,6 +2443,7 @@ def generate_icons():
             cell.alpha_composite(L.im if L.noline else _outline(L.im))
         icons.alpha_composite(cell, (i * 24, 0))
 
+    # Pociones, materiales y oro (indices 6 a 9)
     ox = 144
     rect(d, ox + 10, 3, 4, 4, (180, 180, 190, 255), OUTLINE)
     ellipse(d, ox + 6, 7, 12, 14, (235, 40, 50, 255), OUTLINE)
@@ -2415,7 +2472,7 @@ def generate_icons():
 def build_all_spritesheets():
     print("Generando spritesheets...")
     
-    # 1. Jugadores: 9 combinaciones por clase (3 armas x 3 armaduras)
+    # 1. Jugadores: 9 combinaciones por clase
     classes = [
         ('warrior', draw_warrior_frame),
         ('archer', draw_archer_frame),
@@ -2437,7 +2494,7 @@ def build_all_spritesheets():
                     sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}.png'))
         print(f"Creado: player_{cls}_w*_a*.png (9 combinaciones)")
 
-    # 2. Enemigos 48x48
+    # 2. Enemigos comunes 48x48
     enemies_48 = [
         ('enemy_bandit.png', draw_bandit_frame),
         ('enemy_skeleton.png', draw_skeleton_frame),
@@ -2481,27 +2538,7 @@ def build_all_spritesheets():
         sheet.save(os.path.join(ASSETS_DIR, filename))
         print(f"Creado: {filename}")
         
-    # 5. Sub-Jefe Abracadabra 72x72
-    abra_sheet = create_canvas(72 * 4, 72 * 4)
-    states = ['walk', 'swell', 'vomit', 'charge']
-    for row, state in enumerate(states):
-        for frame in range(4):
-            f_img = draw_abracadabra_frame(state, frame)
-            abra_sheet.paste(f_img, (frame * 72, row * 72))
-    abra_sheet.save(os.path.join(ASSETS_DIR, 'boss_abracadabra.png'))
-    print("Creado: boss_abracadabra.png")
-    
-    # 6. Jefe Final Hong 96x96
-    hong_sheet = create_canvas(96 * 4, 96 * 2)
-    for frame in range(4):
-        f_img = draw_hong_frame(frame, is_cleave=False)
-        hong_sheet.paste(f_img, (frame * 96, 0))
-        f_atk = draw_hong_frame(frame, is_cleave=True)
-        hong_sheet.paste(f_atk, (frame * 96, 96))
-    hong_sheet.save(os.path.join(ASSETS_DIR, 'boss_hong.png'))
-    print("Creado: boss_hong.png")
-
-    # Sub-Jefe Lucian 72x72
+    # 5. Sub-Jefe Lucian 72x72 (Piso 5)
     lucian_sheet = create_canvas(72 * 4, 72 * 4)
     lucian_states = ['stalk', 'howl', 'pounce', 'frenzy']
     for row, state in enumerate(lucian_states):
@@ -2510,8 +2547,28 @@ def build_all_spritesheets():
             lucian_sheet.paste(f_img, (frame * 72, row * 72))
     lucian_sheet.save(os.path.join(ASSETS_DIR, 'boss_lucian.png'))
     print("Creado: boss_lucian.png")
+
+    # 6. Sub-Jefe Abracadabra 72x72 (Piso 8)
+    abra_sheet = create_canvas(72 * 4, 72 * 4)
+    abra_states = ['walk', 'swell', 'vomit', 'charge']
+    for row, state in enumerate(abra_states):
+        for frame in range(4):
+            f_img = draw_abracadabra_frame(state, frame)
+            abra_sheet.paste(f_img, (frame * 72, row * 72))
+    abra_sheet.save(os.path.join(ASSETS_DIR, 'boss_abracadabra.png'))
+    print("Creado: boss_abracadabra.png")
     
-    # 7. Tilesets, Utilería e Iconos
+    # 7. Jefe Final Hong 96x96 (Piso 10)
+    hong_sheet = create_canvas(96 * 4, 96 * 2)
+    for frame in range(4):
+        f_img = draw_hong_frame(frame, is_cleave=False)
+        hong_sheet.paste(f_img, (frame * 96, 0))
+        f_atk = draw_hong_frame(frame, is_cleave=True)
+        hong_sheet.paste(f_atk, (frame * 96, 96))
+    hong_sheet.save(os.path.join(ASSETS_DIR, 'boss_hong.png'))
+    print("Creado: boss_hong.png")
+    
+    # 8. Tilesets, Utilería (con Estanterías, Libros y Mesa) e Iconos
     generate_tiles()
     generate_props()
     generate_icons()

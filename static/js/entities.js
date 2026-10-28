@@ -410,6 +410,7 @@ class Player {
         this.flashRedTimer = 0;
         this.invulnerableTimer = 0;
         this.invFullWarningTimer = 0;
+        this.abilityCooldown = 0; // Recarga de la habilidad F
 
         this.level = 1;
         this.exp = 0;
@@ -562,6 +563,7 @@ class Player {
         if (this.invulnerableTimer > 0) this.invulnerableTimer--;
         if (this.attackCooldown > 0) this.attackCooldown--;
         if (this.invFullWarningTimer > 0) this.invFullWarningTimer--;
+        if (this.abilityCooldown > 0) this.abilityCooldown--;
 
         let dx = 0;
         let dy = 0;
@@ -714,6 +716,131 @@ class Player {
         }
     }
 
+    useSpecialAbility(targetX, targetY, world, enemies, activeBoss, projectiles, particles, floatingTexts) {
+        if (this.abilityCooldown > 0) {
+            const segs = (this.abilityCooldown / 60).toFixed(1);
+            floatingTexts.push(new FloatingText(this.x, this.y - 30, `¡Recargando! (${segs}s)`, '#a4b0be'));
+            if (window.soundEngine) window.soundEngine.playTone(140, 'sine', 0.08, 0.15);
+            return;
+        }
+
+        const stats = this.getTotalStats();
+        const angle = Math.atan2(targetY - this.y, targetX - this.x);
+
+        // 1. GUERRERO: TORBELLINO DE ACERO (360° en área con gran empuje)
+        if (this.characterClass === 'warrior') {
+            if (this.mp < 6) {
+                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (6 MP)', '#ff5555'));
+                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
+                return;
+            }
+
+            this.mp -= 6;
+            this.abilityCooldown = 180;
+            window.soundEngine.playSwordSlash();
+
+            const radius = 75;
+            const dmg = Math.floor(stats.atk * 1.5);
+            floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡TORBELLINO!', '#f1c40f', true));
+
+            for (let i = 0; i < 24; i++) {
+                const a = (i * Math.PI * 2) / 24;
+                particles.push(new Particle(
+                    this.x + Math.cos(a) * 35,
+                    this.y + Math.sin(a) * 35,
+                    Math.cos(a) * 3.5,
+                    Math.sin(a) * 3.5,
+                    '#ffd700', 4, 18
+                ));
+            }
+
+            enemies.forEach(enemy => {
+                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) {
+                    enemy.takeDamage(dmg, this.x, this.y);
+                    floatingTexts.push(new FloatingText(enemy.x, enemy.y - 15, `-${dmg}`, '#ffdd55', true));
+                }
+            });
+
+            if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 25) {
+                activeBoss.takeDamage(dmg, this.x, this.y);
+                floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg}`, '#ffdd55', true));
+            }
+        }
+        // 2. ARQUERO: DISPARO EN ABANICO (5 Flechas perforantes)
+        else if (this.characterClass === 'archer') {
+            if (this.mp < 8) {
+                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (8 MP)', '#ff5555'));
+                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
+                return;
+            }
+
+            this.mp -= 8;
+            this.abilityCooldown = 150;
+            window.soundEngine.playArrowShot();
+            floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡LLUVIA DE FLECHAS!', '#2ecc71', true));
+
+            const spreadAngles = [-0.36, -0.18, 0, 0.18, 0.36];
+            const dmg = Math.floor(stats.atk * 0.95);
+            const weaponLook = this.getWeaponLook();
+
+            spreadAngles.forEach(offset => {
+                const a = angle + offset;
+                const p = new Projectile(
+                    this.x, this.y,
+                    Math.cos(a) * 9.2,
+                    Math.sin(a) * 9.2,
+                    'arrow',
+                    dmg,
+                    'player',
+                    weaponLook
+                );
+                p.pierce = 2;
+                projectiles.push(p);
+            });
+        }
+        // 3. MAGO: NOVA DE HIELO (Explosión 360° que congela y ralentiza)
+        else if (this.characterClass === 'mage') {
+            if (this.mp < 14) {
+                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (14 MP)', '#ff5555'));
+                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
+                return;
+            }
+
+            this.mp -= 14;
+            this.abilityCooldown = 180;
+            window.soundEngine.playMagicCast();
+
+            const radius = 105;
+            const dmg = Math.floor(stats.atk + stats.mag * 1.8);
+            floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡NOVA DE HIELO!', '#00d2d3', true));
+
+            for (let i = 0; i < 32; i++) {
+                const a = (i * Math.PI * 2) / 32;
+                particles.push(new Particle(
+                    this.x, this.y,
+                    Math.cos(a) * 4.8,
+                    Math.sin(a) * 4.8,
+                    i % 2 === 0 ? '#70d6ff' : '#ffffff',
+                    5, 24
+                ));
+            }
+
+            enemies.forEach(enemy => {
+                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) {
+                    enemy.takeDamage(dmg, this.x, this.y);
+                    enemy.slowTimer = 180; // Congelado 3 segundos
+                    floatingTexts.push(new FloatingText(enemy.x, enemy.y - 15, `-${dmg} ❄️`, '#70d6ff', true));
+                }
+            });
+
+            if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 30) {
+                activeBoss.takeDamage(dmg, this.x, this.y);
+                activeBoss.slowTimer = 90; // Jefe ralentizado 1.5s
+                floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg} ❄️`, '#70d6ff', true));
+            }
+        }
+    }
+
     takeDamage(damage, sourceX = 0, sourceY = 0) {
         if (this.invulnerableTimer > 0) return;
 
@@ -804,6 +931,7 @@ class Enemy {
         this.knockbackY = 0;
         this.flashRedTimer = 0;
         this.attackCooldown = 0;
+        this.slowTimer = 0; // Temporizador de congelación
 
         this.initStats();
     }
@@ -878,6 +1006,7 @@ class Enemy {
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
         if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
@@ -893,8 +1022,11 @@ class Enemy {
             const attackDist = this.type === 'demon' ? 140 : (this.type === 'spider' ? 100 : 26);
 
             if (dist > attackDist) {
-                const nx = this.x + Math.cos(angle) * this.speed + this.knockbackX;
-                const ny = this.y + Math.sin(angle) * this.speed + this.knockbackY;
+                // Si está congelado por la Nova de Hielo, se mueve al 40% de velocidad
+                const moveSpeed = (this.slowTimer > 0) ? (this.speed * 0.40) : this.speed;
+
+                const nx = this.x + Math.cos(angle) * moveSpeed + this.knockbackX;
+                const ny = this.y + Math.sin(angle) * moveSpeed + this.knockbackY;
 
                 if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                     this.x = nx;
@@ -952,6 +1084,16 @@ class Enemy {
         const dx = Math.floor(this.x - destW / 2);
         const dy = Math.floor(this.y - destH / 2 - 4);
 
+        // Efecto visual de escarcha azul bajo los pies si está ralentizado
+        if (this.slowTimer > 0) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(112, 214, 255, 0.45)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + this.height / 2 - 2, this.width / 2 + 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
         window.spriteManager.draw(
             ctx,
             this.spriteKey,
@@ -993,7 +1135,8 @@ class BossAbracadabra {
         this.stateTimer = 0;
         this.animFrame = 0;
         this.direction = 0;
-        this.activated = false; // Espera hasta que entres a su sala
+        this.activated = false;
+        this.slowTimer = 0;
 
         this.chargeVx = 0;
         this.chargeVy = 0;
@@ -1004,17 +1147,17 @@ class BossAbracadabra {
 
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
-        // Despierta solo cuando el jugador entra a la rotonda norte
         if (!this.activated) {
             if (player.y < 16 * world.tileSize || dist < 240) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
                 if (window.soundEngine) window.soundEngine.startBgm(true);
             } else {
-                return; // Espera en el norte
+                return;
             }
         }
 
@@ -1022,7 +1165,7 @@ class BossAbracadabra {
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
         if (this.state === 'walk') {
-            const speed = 1.3;
+            const speed = (this.slowTimer > 0) ? 0.8 : 1.3;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
 
@@ -1136,7 +1279,7 @@ class BossAbracadabra {
         );
     }
 }
-//boss hong
+
 class BossHong {
     constructor(x, y) {
         this.name = 'Hong Devorador de Hombres';
@@ -1152,22 +1295,23 @@ class BossHong {
         this.stateTimer = 0;
         this.animFrame = 0;
         this.flashRedTimer = 0;
-        this.activated = false; // Espera hasta cruzar el puente
+        this.activated = false;
+        this.slowTimer = 0;
     }
 
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
-        // Despierta solo cuando el jugador cruza el puente hacia el trono
         if (!this.activated) {
             if (player.y < 14 * world.tileSize || dist < 260) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
                 if (window.soundEngine) window.soundEngine.startBgm(true);
             } else {
-                return; // Espera en el trono
+                return;
             }
         }
 
@@ -1186,7 +1330,7 @@ class BossHong {
         ));
 
         if (this.state === 'idle') {
-            const speed = 1.4;
+            const speed = (this.slowTimer > 0) ? 0.8 : 1.4;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
 
@@ -1268,10 +1412,6 @@ class BossHong {
     }
 }
 
-
-
-// SUB-JEFE LUCIAN, EL PRIMER HOMBRE LOBO 
-
 class BossLucian {
     constructor(x, y) {
         this.name = 'Sub-Jefe Lucian';
@@ -1283,11 +1423,12 @@ class BossLucian {
         this.width = 46;
         this.height = 48;
 
-        this.state = 'stalk'; // 'stalk', 'howl', 'pounce', 'frenzy'
+        this.state = 'stalk';
         this.stateTimer = 0;
         this.animFrame = 0;
         this.direction = 0;
-        this.activated = false; // Solo despierta al entrar a su guarida
+        this.activated = false;
+        this.slowTimer = 0;
 
         this.pounceVx = 0;
         this.pounceVy = 0;
@@ -1298,24 +1439,23 @@ class BossLucian {
 
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
-        // Despertar solo al entrar a su cámara norte
         if (!this.activated) {
             if (player.y < 16 * world.tileSize || dist < 240) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
                 if (window.soundEngine) window.soundEngine.startBgm(true);
             } else {
-                return; // Espera en el fondo de la guarida
+                return;
             }
         }
 
         this.stateTimer++;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
 
-        // Partículas lunares gélidas continuas
         if (Math.random() < 0.25) {
             particles.push(new Particle(
                 this.x + (Math.random() - 0.5) * 36,
@@ -1326,8 +1466,7 @@ class BossLucian {
         }
 
         if (this.state === 'stalk') {
-            // Acecho rápido hacia el jugador
-            const speed = 1.6;
+            const speed = (this.slowTimer > 0) ? 0.9 : 1.6;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
 
@@ -1338,7 +1477,6 @@ class BossLucian {
             if (this.stateTimer > 120) {
                 this.stateTimer = 0;
                 this.animFrame = 0;
-                // Alternar entre Aullido lunar y Embestida/Salto
                 if (Math.random() < 0.5) {
                     this.state = 'howl';
                     window.soundEngine.playBossRoar();
@@ -1351,7 +1489,6 @@ class BossLucian {
         } else if (this.state === 'howl') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 12));
 
-            // Onda expansiva de aullido (aleja al jugador y crea partículas de choque)
             if (this.stateTimer === 25) {
                 for (let i = 0; i < 16; i++) {
                     const a = (i * Math.PI * 2) / 16;
@@ -1371,7 +1508,6 @@ class BossLucian {
                 this.stateTimer = 0;
             }
         } else if (this.state === 'pounce') {
-            // Salto letal a gran velocidad
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 8));
             const nx = this.x + this.pounceVx;
             const ny = this.y + this.pounceVy;
@@ -1391,7 +1527,6 @@ class BossLucian {
                 }
             }
         } else if (this.state === 'frenzy') {
-            // Ráfaga cuerpo a cuerpo de zarpazos cruzados
             this.animFrame = (Math.floor(this.stateTimer / 6)) % 4;
 
             if (this.stateTimer % 15 === 0 && dist < 55) {
@@ -1419,7 +1554,7 @@ class BossLucian {
         const dx = Math.floor(this.x - destW / 2);
         const dy = Math.floor(this.y - destH / 2 - 8);
 
-        let row = 0; // stalk
+        let row = 0;
         if (this.state === 'howl') row = 1;
         else if (this.state === 'pounce') row = 2;
         else if (this.state === 'frenzy') row = 3;
@@ -1436,12 +1571,13 @@ class BossLucian {
         );
     }
 }
+
 window.Player = Player;
 window.Enemy = Enemy;
 window.BossAbracadabra = BossAbracadabra;
 window.BossHong = BossHong;
+window.BossLucian = BossLucian;
 window.Projectile = Projectile;
 window.Particle = Particle;
 window.FloatingText = FloatingText;
 window.GroundItem = GroundItem;
-window.BossLucian = BossLucian;
