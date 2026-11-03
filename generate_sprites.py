@@ -2500,6 +2500,8 @@ def generate_icons():
 
     icons.save(os.path.join(ASSETS_DIR, 'icons.png'))
     print(f"Creado: icons.png ({n} iconos de alta resolución 24x24)")
+
+    
 # ==============================================================================
 # BUCLE PRINCIPAL DE CONSTRUCCIÓN
 # ==============================================================================
