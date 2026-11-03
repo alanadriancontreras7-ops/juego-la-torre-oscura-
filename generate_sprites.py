@@ -2345,10 +2345,17 @@ ICON_BUILDERS = [
     lambda: _icon_leather(1), lambda: _icon_leather(2), lambda: _icon_robe(1), lambda: _icon_robe(2),
 ]
 
+# ==============================================================================
+# GENERACIÓN DE ICONOS 24x24 (MATERIALES, LLAVE Y EQUIPO DE HUESO/LOBO)
+# ==============================================================================
+
 def generate_icons():
-    n = len(ICON_BUILDERS)
+    # 34 iconos en total (0 a 33)
+    n = 34
     icons = create_canvas(24 * n, 24)
     d = ImageDraw.Draw(icons)
+
+    # 1. Iconos base de armas y armaduras clásicas (0 a 5 y 10 a 21)
     for i, builder in enumerate(ICON_BUILDERS):
         if builder is None:
             continue
@@ -2357,28 +2364,142 @@ def generate_icons():
             cell.alpha_composite(L.im if L.noline else _outline(L.im))
         icons.alpha_composite(cell, (i * 24, 0))
 
-    # Pociones, materiales y oro (indices 6 a 9)
-    ox = 144
-    rect(d, ox + 10, 3, 4, 4, (180, 180, 190, 255), OUTLINE)
-    ellipse(d, ox + 6, 7, 12, 14, (235, 40, 50, 255), OUTLINE)
-    ellipse(d, ox + 8, 10, 4, 4, (255, 200, 200, 255))
+    # --- CONSUMIBLES (6 y 7) ---
+    # 6: Poción de Salud
+    ox = 6 * 24
+    rect(d, ox + 10, 3, 4, 3, (180, 185, 195, 255), OUTLINE)
+    ellipse(d, ox + 6, 6, 12, 15, (230, 45, 55, 255), OUTLINE)
+    d.point((ox + 8, 9), fill=(255, 210, 210, 255))
 
-    ox = 168
-    rect(d, ox + 10, 3, 4, 4, (180, 180, 190, 255), OUTLINE)
-    ellipse(d, ox + 6, 7, 12, 14, (40, 120, 245, 255), OUTLINE)
-    ellipse(d, ox + 8, 10, 4, 4, (200, 230, 255, 255))
+    # 7: Poción de Maná
+    ox = 7 * 24
+    rect(d, ox + 10, 3, 4, 3, (180, 185, 195, 255), OUTLINE)
+    ellipse(d, ox + 6, 6, 12, 15, (45, 130, 245, 255), OUTLINE)
+    d.point((ox + 8, 9), fill=(210, 235, 255, 255))
 
-    ox = 192
-    ellipse(d, ox + 4, 6, 16, 12, (100, 90, 85, 255), OUTLINE)
-    ellipse(d, ox + 6, 8, 12, 8, (135, 125, 120, 255))
+    # 8: FRAGMENTO DE HUESO MALDITO (mat_bone)
+    ox = 8 * 24
+    # Hueso fémur cruzado con fisuras y médula
+    ellipse(d, ox + 4, 5, 5, 5, (245, 242, 230, 255), OUTLINE)
+    ellipse(d, ox + 7, 3, 5, 5, (245, 242, 230, 255), OUTLINE)
+    d.line([(ox + 7, 7), (ox + 16, 16)], fill=(245, 242, 230, 255), width=3)
+    d.line([(ox + 8, 8), (ox + 15, 15)], fill=(210, 202, 185, 255), width=1)
+    ellipse(d, ox + 14, 15, 5, 5, (245, 242, 230, 255), OUTLINE)
+    ellipse(d, ox + 16, 13, 5, 5, (245, 242, 230, 255), OUTLINE)
+    d.point((ox + 11, 10), fill=(80, 50, 40, 255)) # Fisura oscura
 
-    ox = 216
+    # 9: Oro
+    ox = 9 * 24
     ellipse(d, ox + 4, 9, 10, 10, (245, 195, 40, 255), OUTLINE)
-    ellipse(d, ox + 10, 6, 10, 10, (255, 220, 70, 255), OUTLINE)
+    ellipse(d, ox + 10, 6, 10, 10, (255, 225, 75, 255), OUTLINE)
+    d.point((ox + 13, 9), fill=(255, 255, 200, 255))
+
+    # --- NUEVOS MATERIALES Y LLAVE (22 a 25) ---
+
+    # 22: SEDA DE ARAÑA GIGANTE (mat_silk)
+    ox = 22 * 24
+    ellipse(d, ox + 5, 5, 14, 14, (240, 248, 255, 255), OUTLINE)
+    # Patrón de tela/madeja tejida
+    d.line([(ox + 6, 8), (ox + 17, 16)], fill=(160, 210, 255, 255), width=2)
+    d.line([(ox + 8, 17), (ox + 16, 7)], fill=(160, 210, 255, 255), width=2)
+    d.line([(ox + 12, 5), (ox + 12, 19)], fill=(255, 255, 255, 255), width=1)
+    d.point((ox + 10, 10), fill=(255, 255, 255, 255))
+
+    # 23: PIEL DE HOMBRE LOBO (mat_pelt)
+    ox = 23 * 24
+    # Cuero de pelaje gris desollado con garras
+    pelt_pts = [(ox + 6, 4), (ox + 17, 4), (ox + 19, 9), (ox + 18, 18), (ox + 12, 20), (ox + 5, 18), (ox + 4, 9)]
+    d.polygon(pelt_pts, fill=(115, 110, 125, 255), outline=OUTLINE)
+    d.polygon([(ox + 7, 6), (ox + 16, 6), (ox + 14, 16), (ox + 9, 16)], fill=(155, 150, 165, 255))
+    # Mechones de pelo
+    d.line([(ox + 10, 8), (ox + 11, 13)], fill=(230, 235, 245, 255), width=1)
+    d.line([(ox + 13, 9), (ox + 14, 14)], fill=(230, 235, 245, 255), width=1)
+
+    # 24: CUERNO DE DEMONIO (mat_horn)
+    ox = 24 * 24
+    # Cuerno curvado de obsidiana y fuego
+    horn_pts = [(ox + 6, 18), (ox + 11, 18), (ox + 18, 12), (ox + 19, 5), (ox + 15, 5), (ox + 10, 12)]
+    d.polygon(horn_pts, fill=(45, 20, 30, 255), outline=OUTLINE)
+    d.line([(ox + 8, 16), (ox + 16, 7)], fill=(215, 45, 55, 255), width=2)
+    d.line([(ox + 10, 17), (ox + 17, 8)], fill=(255, 140, 40, 255), width=1)
+    d.point((ox + 18, 5), fill=(255, 220, 120, 255))
+
+    # 25: LLAVE DE MAZMORRA (dungeon_key)
+    ox = 25 * 24
+    # Aro dorado superior calado
+    ellipse(d, ox + 5, 3, 9, 9, (245, 195, 40, 255), OUTLINE)
+    ellipse(d, ox + 7, 5, 5, 5, (20, 15, 25, 255)) # Hueco de la llave
+    # Espiga recta y dientes
+    d.line([(ox + 13, 11), (ox + 19, 17)], fill=(245, 195, 40, 255), width=3)
+    d.line([(ox + 13, 11), (ox + 19, 17)], fill=(255, 240, 140, 255), width=1)
+    d.line([(ox + 18, 16), (ox + 16, 18)], fill=(245, 195, 40, 255), width=2)
+    d.line([(ox + 20, 18), (ox + 18, 20)], fill=(245, 195, 40, 255), width=2)
+
+    # --- EQUIPO DE HUESO (26 a 29) ---
+
+    # 26: MACHETE DE HUESO (sword_bone)
+    ox = 26 * 24
+    d.line([(ox + 5, 19), (ox + 8, 16)], fill=(120, 85, 60, 255), width=3) # Mango cuero
+    blade_bone = [(ox + 8, 16), (ox + 18, 4), (ox + 20, 7), (ox + 12, 18)]
+    d.polygon(blade_bone, fill=(245, 240, 225, 255), outline=OUTLINE)
+    # Dientes en el filo
+    for t in (10, 13, 16):
+        d.point((ox + t, 24 - t), fill=(180, 40, 50, 255))
+
+    # 27: ARCO DE HUESO (bow_bone)
+    ox = 27 * 24
+    d.arc((ox + 5, 3, ox + 18, 20), 90, 270, fill=(240, 235, 220, 255), width=3)
+    d.line([(ox + 12, 3), (ox + 12, 20)], fill=(180, 170, 155, 255), width=1) # Cuerda
+    d.point((ox + 11, 4), fill=(140, 40, 40, 255))
+    d.point((ox + 11, 19), fill=(140, 40, 40, 255))
+
+    # 28: BÁCULO DE CALAVERA (staff_bone)
+    ox = 28 * 24
+    d.line([(ox + 6, 19), (ox + 16, 8)], fill=(90, 60, 45, 255), width=2)
+    ellipse(d, ox + 13, 3, 8, 8, (245, 240, 225, 255), OUTLINE)
+    d.point((ox + 15, 6), fill=(40, 210, 255, 255)) # Ojos turquesa mágicos
+    d.point((ox + 18, 6), fill=(40, 210, 255, 255))
+
+    # 29: ARMADURA DE COSTILLAS (armor_bone)
+    ox = 29 * 24
+    rect(d, ox + 6, 7, 12, 13, (110, 85, 65, 255), OUTLINE)
+    for ry in (9, 12, 15):
+        d.line([(ox + 7, ry), (ox + 16, ry)], fill=(245, 240, 225, 255), width=2)
+    d.line([(ox + 11, 7), (ox + 11, 19)], fill=(200, 195, 180, 255), width=1)
+
+    # --- EQUIPO DE LOBO FERAL (30 a 33) ---
+
+    # 30: ESPADA COLMILLO DE LOBO (sword_wolf)
+    ox = 30 * 24
+    d.line([(ox + 5, 19), (ox + 8, 16)], fill=(60, 50, 70, 255), width=3)
+    d.line([(ox + 7, 15), (ox + 20, 4)], fill=(180, 190, 205, 255), width=3)
+    d.line([(ox + 8, 14), (ox + 19, 5)], fill=(255, 255, 255, 255), width=1)
+    # Colmillos adosados a la empuñadura
+    d.polygon([(ox + 7, 18), (ox + 10, 15), (ox + 6, 14)], fill=(245, 245, 230, 255))
+
+    # 31: ARCO DE TENDÓN DE LOBO (bow_wolf)
+    ox = 31 * 24
+    d.arc((ox + 5, 3, ox + 18, 20), 90, 270, fill=(80, 75, 90, 255), width=3)
+    d.line([(ox + 12, 3), (ox + 12, 20)], fill=(70, 220, 255, 255), width=1) # Cuerda de tendón cian
+    ellipse(d, ox + 9, 2, 4, 4, fill=(150, 140, 160, 255))
+    ellipse(d, ox + 9, 18, 4, 4, fill=(150, 140, 160, 255))
+
+    # 32: BÁCULO DE LOBO (staff_wolf)
+    ox = 32 * 24
+    d.line([(ox + 6, 19), (ox + 16, 7)], fill=(70, 65, 80, 255), width=2)
+    ellipse(d, ox + 14, 4, 7, 7, (130, 140, 155, 255), OUTLINE)
+    d.point((ox + 16, 6), fill=(40, 230, 255, 255)) # Gema cian de lobo
+
+    # 33: JUBÓN / ARMADURA DE LOBO (armor_wolf)
+    ox = 33 * 24
+    d.polygon([(ox + 6, 6), (ox + 17, 6), (ox + 19, 19), (ox + 5, 19)], fill=(100, 95, 110, 255), outline=OUTLINE)
+    # Cuello de pelaje blanco de lobo ártico
+    d.ellipse([(ox + 7, 5), (ox + 16, 10)], fill=(235, 242, 250, 255))
+    d.line([(ox + 6, 13), (ox + 17, 13)], fill=(50, 45, 60, 255), width=2) # Correa con hebilla
+    d.point((ox + 11, 13), fill=(245, 195, 40, 255))
 
     icons.save(os.path.join(ASSETS_DIR, 'icons.png'))
-    print(f"Creado: icons.png ({n} iconos 24x24)")
-
+    print(f"Creado: icons.png ({n} iconos de alta resolución 24x24)")
 # ==============================================================================
 # BUCLE PRINCIPAL DE CONSTRUCCIÓN
 # ==============================================================================

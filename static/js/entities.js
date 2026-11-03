@@ -1,5 +1,5 @@
 /**
- * ENTIDADES DE JUEGO: JUGADOR, ENEMIGOS, JEFES, PROYECTILES Y BOTÍN EN EL SUELO
+ * ENTIDADES DE JUEGO: JUGADOR CON BONOS DE CONJUNTO, ENEMIGOS REBALANCEADOS Y JEFES
  */
 
 class Particle {
@@ -71,13 +71,13 @@ class Projectile {
         this.y = y;
         this.vx = vx;
         this.vy = vy;
-        this.type = type; // 'arrow', 'fireball', 'acid', 'void', 'slash'
+        this.type = type;
         this.damage = damage;
         this.owner = owner;
         this.look = look;
         this.life = 120;
         this.radius = type === 'fireball' || type === 'acid' ? 7 : (type === 'void' ? 9 : (type === 'slash' ? 8 : 4));
-        this.pierce = type === 'void' ? 2 : (type === 'slash' ? 1 : 1);
+        this.pierce = type === 'void' ? 2 : 1;
         this.hitEntities = new Set();
     }
 
@@ -156,19 +156,14 @@ class Projectile {
             ctx.lineWidth = 2;
             ctx.stroke();
         } else if (this.type === 'slash') {
-            // Zarpazo cortante de escarcha (medialuna que rota con la dirección)
             const angle = Math.atan2(this.vy, this.vx);
             ctx.translate(this.x, this.y);
             ctx.rotate(angle);
-
-            // Halo exterior cian
             ctx.strokeStyle = '#00d2d3';
             ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.arc(0, 0, 16, -Math.PI / 3, Math.PI / 3);
             ctx.stroke();
-
-            // Filo interior blanco puro
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -178,10 +173,6 @@ class Projectile {
         ctx.restore();
     }
 }
-
-// ==============================================================================
-// CLASE DE OBJETO / BOTÍN EN EL SUELO (GROUND ITEM / LOOT DROP)
-// ==============================================================================
 
 class GroundItem {
     constructor(x, y, item, isGold = false, goldAmount = 0) {
@@ -240,22 +231,8 @@ class GroundItem {
             this.y -= this.vy * 1.5;
         }
 
-        if (!this.isGold && this.item) {
-            if (this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
-                particles.push(new Particle(
-                    this.x + (Math.random() - 0.5) * 14,
-                    this.y + (Math.random() - 0.5) * 10,
-                    (Math.random() - 0.5) * 0.4, -0.6,
-                    '#fdcb6e', 3.5, 20
-                ));
-            } else if (this.rarity === 'RARE' && Math.random() < 0.12) {
-                particles.push(new Particle(
-                    this.x + (Math.random() - 0.5) * 12,
-                    this.y + (Math.random() - 0.5) * 8,
-                    (Math.random() - 0.5) * 0.3, -0.5,
-                    '#3498db', 3, 18
-                ));
-            }
+        if (!this.isGold && this.item && this.rarity === 'LEGENDARY' && Math.random() < 0.28) {
+            particles.push(new Particle(this.x + (Math.random() - 0.5) * 14, this.y + (Math.random() - 0.5) * 10, 0, -0.6, '#fdcb6e', 3.5, 20));
         }
 
         if (this.life < this.pickupDelay) return;
@@ -278,12 +255,7 @@ class GroundItem {
                     if (window.game && window.game.floatingTexts) {
                         window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡INVENTARIO LLENO!', '#ff3333', true));
                     }
-                    if (window.soundEngine) window.soundEngine.playTone(160, 'sawtooth', 0.15, 0.25);
                 }
-
-                const pushAngle = (dist > 2) ? Math.atan2(this.y - player.y, this.x - player.x) : Math.random() * Math.PI * 2;
-                this.vx = Math.cos(pushAngle) * 2.2;
-                this.vy = Math.sin(pushAngle) * 2.2;
             }
         }
     }
@@ -321,27 +293,11 @@ class GroundItem {
 
     onSuccessfulPickup(player) {
         this.pickedUp = true;
-        if (this.item.type === 'consumable') {
-            window.soundEngine.playPotion();
-        } else {
-            window.soundEngine.playItemPickup();
-        }
+        window.soundEngine.playItemPickup();
 
         if (window.game && window.game.floatingTexts) {
             const rInfo = window.ITEM_RARITIES[this.item.rarity] || window.ITEM_RARITIES.COMMON;
-            const isSpecial = this.item.rarity === 'EPIC' || this.item.rarity === 'LEGENDARY';
-            window.game.floatingTexts.push(new FloatingText(this.x, this.y - 18, `+ ${this.item.name}`, rInfo.color, isSpecial));
-        }
-
-        if (window.game && window.game.particles) {
-            for (let i = 0; i < 7; i++) {
-                window.game.particles.push(new Particle(
-                    this.x, this.y,
-                    (Math.random() - 0.5) * 3,
-                    (Math.random() - 0.5) * 3,
-                    this.color, 3, 16
-                ));
-            }
+            window.game.floatingTexts.push(new FloatingText(this.x, this.y - 18, `+ ${this.item.name}`, rInfo.color, true));
         }
 
         if (window.uiManager && document.getElementById('inventory-modal').style.display === 'flex') {
@@ -351,56 +307,23 @@ class GroundItem {
 
     draw(ctx) {
         ctx.save();
-
         const floatY = Math.sin(this.bobTimer) * 3;
         const drawX = Math.floor(this.x);
         const drawY = Math.floor(this.y + floatY);
 
-        ctx.fillStyle = 'rgba(10, 10, 18, 0.45)';
-        ctx.beginPath();
-        ctx.ellipse(drawX, Math.floor(this.y + 9), 10, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
         ctx.fillStyle = this.color;
-        ctx.globalAlpha = 0.25 + Math.sin(this.bobTimer * 1.5) * 0.12;
+        ctx.globalAlpha = 0.25;
         ctx.beginPath();
         ctx.arc(drawX, drawY, 13, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
 
-        if (this.rarity === 'EPIC' || this.rarity === 'LEGENDARY') {
-            const beamHeight = this.rarity === 'LEGENDARY' ? 38 : 24;
-            const beamGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY - beamHeight);
-            beamGrad.addColorStop(0, this.color);
-            beamGrad.addColorStop(1, 'transparent');
-            ctx.fillStyle = beamGrad;
-            ctx.globalAlpha = 0.4 + Math.sin(this.bobTimer * 2) * 0.2;
-            ctx.fillRect(drawX - 2, drawY - beamHeight, 4, beamHeight);
-            ctx.globalAlpha = 1.0;
-        }
-
         const iconSize = 20;
         const iconIdx = this.isGold ? 9 : (this.item ? (this.item.icon || 0) : 0);
         window.spriteManager.drawIcon(ctx, iconIdx, drawX - iconSize / 2, drawY - iconSize / 2, iconSize);
-
-        const distToPlayer = Math.hypot(window.game.player.x - this.x, window.game.player.y - this.y);
-        if (distToPlayer < 65 || this.rarity === 'LEGENDARY') {
-            ctx.font = '8px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 3;
-            ctx.strokeText(this.name, drawX, drawY - 14);
-            ctx.fillStyle = this.color;
-            ctx.fillText(this.name, drawX, drawY - 14);
-        }
-
         ctx.restore();
     }
 }
-
-// ==============================================================================
-// CLASE DEL JUGADOR
-// ==============================================================================
 
 class Player {
     constructor(characterClass = 'warrior', name = 'Aventurero') {
@@ -426,7 +349,6 @@ class Player {
         this.attackFrame = 0;
         this.attackTimer = 0;
         this.attackCooldown = 0;
-        this.slashArcAngle = 0;
 
         this.flashRedTimer = 0;
         this.invulnerableTimer = 0;
@@ -473,41 +395,16 @@ class Player {
         this.slashHitbox = null;
     }
 
-    resetPlayerPosition(x, y) {
-        this.spawnPlayer(x, y);
-    }
-
     applyClassBaseStats() {
         if (this.characterClass === 'warrior') {
-            this.maxHp = 150;
-            this.hp = 150;
-            this.maxMp = 30;
-            this.mp = 30;
-            this.strength = 14;
-            this.dexterity = 8;
-            this.magic = 4;
-            this.constitution = 14;
-            this.speed = 2.7;
+            this.maxHp = 150; this.hp = 150; this.maxMp = 30; this.mp = 30;
+            this.strength = 14; this.dexterity = 8; this.magic = 4; this.constitution = 14; this.speed = 2.7;
         } else if (this.characterClass === 'archer') {
-            this.maxHp = 110;
-            this.hp = 110;
-            this.maxMp = 50;
-            this.mp = 50;
-            this.strength = 8;
-            this.dexterity = 15;
-            this.magic = 6;
-            this.constitution = 10;
-            this.speed = 3.2;
+            this.maxHp = 110; this.hp = 110; this.maxMp = 50; this.mp = 50;
+            this.strength = 8; this.dexterity = 15; this.magic = 6; this.constitution = 10; this.speed = 3.2;
         } else if (this.characterClass === 'mage') {
-            this.maxHp = 90;
-            this.hp = 90;
-            this.maxMp = 100;
-            this.mp = 100;
-            this.strength = 5;
-            this.dexterity = 7;
-            this.magic = 16;
-            this.constitution = 8;
-            this.speed = 2.8;
+            this.maxHp = 90; this.hp = 90; this.maxMp = 100; this.mp = 100;
+            this.strength = 5; this.dexterity = 7; this.magic = 16; this.constitution = 8; this.speed = 2.8;
         }
     }
 
@@ -531,6 +428,20 @@ class Player {
             }
         });
 
+        const wLook = this.getWeaponLook();
+        const aLook = this.getArmorLook();
+        let setBonusName = null;
+
+        if (wLook === 1 && aLook === 1) {
+            bonusAtk += 8;
+            totalStr += 3;
+            setBonusName = 'SET DEMONÍACO (+8 ATK)';
+        } else if (wLook === 2 && aLook === 2) {
+            bonusAtk += 14;
+            bonusDef += 10;
+            setBonusName = 'SET CELESTIAL (+14 ATK, +10 DEF, REGEN)';
+        }
+
         return {
             str: totalStr,
             dex: totalDex,
@@ -538,7 +449,8 @@ class Player {
             con: totalCon,
             atk: bonusAtk + Math.floor(totalStr * 1.5 + totalDex * 0.5),
             def: bonusDef + Math.floor(totalCon * 0.8),
-            critChance: Math.min(50, 5 + totalDex * 1.2)
+            critChance: Math.min(50, 5 + totalDex * 1.2),
+            setBonus: setBonusName
         };
     }
 
@@ -586,6 +498,11 @@ class Player {
         if (this.invFullWarningTimer > 0) this.invFullWarningTimer--;
         if (this.abilityCooldown > 0) this.abilityCooldown--;
 
+        if (this.getWeaponLook() === 2 && this.getArmorLook() === 2 && Math.random() < 0.03) {
+            this.hp = Math.min(this.maxHp, this.hp + 2);
+            this.mp = Math.min(this.maxMp, this.mp + 2);
+        }
+
         let dx = 0;
         let dy = 0;
 
@@ -608,12 +525,10 @@ class Player {
             }
 
             const moveSpeed = this.speed;
-
             let nextX = this.x + dx * moveSpeed + this.knockbackX;
             if (!world.isSolid(nextX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                 this.x = nextX;
             }
-
             let nextY = this.y + dy * moveSpeed + this.knockbackY;
             if (!world.isSolid(this.x - this.width / 2, nextY - this.height / 2, this.width, this.height)) {
                 this.y = nextY;
@@ -627,16 +542,6 @@ class Player {
         } else {
             this.animFrame = 0;
             this.animTimer = 0;
-            if (Math.abs(this.knockbackX) > 0.1 || Math.abs(this.knockbackY) > 0.1) {
-                let nextKbX = this.x + this.knockbackX;
-                if (!world.isSolid(nextKbX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
-                    this.x = nextKbX;
-                }
-                let nextKbY = this.y + this.knockbackY;
-                if (!world.isSolid(this.x - this.width / 2, nextKbY - this.height / 2, this.width, this.height)) {
-                    this.y = nextKbY;
-                }
-            }
         }
 
         this.knockbackX *= 0.82;
@@ -653,15 +558,12 @@ class Player {
             }
         }
 
-        if (this.mp < this.maxMp && Math.random() < 0.05) {
-            this.mp = Math.min(this.maxMp, this.mp + 1);
-        }
-
-        if (world.isInAcid(this.x, this.y)) {
-            if (this.invulnerableTimer === 0) {
-                this.takeDamage(6, 0, 0);
-                particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 2, -1, '#66ee22', 5, 20));
-            }
+        if (world.traps) {
+            world.traps.forEach(t => {
+                if (t.active && Math.hypot(this.x - (t.x + 12), this.y - (t.y + 12)) < 16) {
+                    this.takeDamage(12, t.x + 12, t.y + 12);
+                }
+            });
         }
     }
 
@@ -689,181 +591,74 @@ class Player {
             const slashDist = 28;
             const sx = this.x + Math.cos(angle) * slashDist;
             const sy = this.y + Math.sin(angle) * slashDist;
-            const particleCol = ['#b0e0ff', '#ff6a3a', '#fff3b0'][weaponLook];
-            for (let i = 0; i < 8; i++) {
-                particles.push(new Particle(
-                    sx, sy,
-                    Math.cos(angle + (Math.random() - 0.5)) * 3,
-                    Math.sin(angle + (Math.random() - 0.5)) * 3,
-                    particleCol, 4, 15
-                ));
-            }
-            this.slashHitbox = {
-                x: sx,
-                y: sy,
-                radius: 36,
-                damage: stats.atk,
-                angle: angle
-            };
+            this.slashHitbox = { x: sx, y: sy, radius: 36, damage: stats.atk, angle };
         } else if (this.characterClass === 'archer') {
             window.soundEngine.playArrowShot();
-            const arrowSpeed = 8.5;
-            projectiles.push(new Projectile(
-                this.x, this.y,
-                Math.cos(angle) * arrowSpeed,
-                Math.sin(angle) * arrowSpeed,
-                'arrow',
-                stats.atk,
-                'player',
-                weaponLook
-            ));
+            projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 8.5, Math.sin(angle) * 8.5, 'arrow', stats.atk, 'player', weaponLook));
         } else if (this.characterClass === 'mage') {
             if (this.mp >= 4) {
                 this.mp -= 4;
                 window.soundEngine.playMagicCast();
-                const magicSpeed = 5.5;
-                projectiles.push(new Projectile(
-                    this.x, this.y,
-                    Math.cos(angle) * magicSpeed,
-                    Math.sin(angle) * magicSpeed,
-                    'fireball',
-                    stats.atk + 8,
-                    'player',
-                    weaponLook
-                ));
-            } else {
-                window.soundEngine.playTone(150, 'sine', 0.1, 0.2);
+                projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 5.5, Math.sin(angle) * 5.5, 'fireball', stats.atk + 8, 'player', weaponLook));
             }
         }
     }
 
     useSpecialAbility(targetX, targetY, world, enemies, activeBoss, projectiles, particles, floatingTexts) {
-        if (this.abilityCooldown > 0) {
-            const segs = (this.abilityCooldown / 60).toFixed(1);
-            floatingTexts.push(new FloatingText(this.x, this.y - 30, `¡Recargando! (${segs}s)`, '#a4b0be'));
-            if (window.soundEngine) window.soundEngine.playTone(140, 'sine', 0.08, 0.15);
-            return;
-        }
-
+        if (this.abilityCooldown > 0) return;
         const stats = this.getTotalStats();
         const angle = Math.atan2(targetY - this.y, targetX - this.x);
 
-        if (this.characterClass === 'warrior') {
-            if (this.mp < 6) {
-                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (6 MP)', '#ff5555'));
-                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
-                return;
-            }
-
+        if (this.characterClass === 'warrior' && this.mp >= 6) {
             this.mp -= 6;
             this.abilityCooldown = 180;
             window.soundEngine.playSwordSlash();
-
             const radius = 75;
             const dmg = Math.floor(stats.atk * 1.5);
             floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡TORBELLINO!', '#f1c40f', true));
 
-            for (let i = 0; i < 24; i++) {
-                const a = (i * Math.PI * 2) / 24;
-                particles.push(new Particle(
-                    this.x + Math.cos(a) * 35,
-                    this.y + Math.sin(a) * 35,
-                    Math.cos(a) * 3.5,
-                    Math.sin(a) * 3.5,
-                    '#ffd700', 4, 18
-                ));
-            }
-
             enemies.forEach(enemy => {
-                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) {
-                    enemy.takeDamage(dmg, this.x, this.y);
-                    floatingTexts.push(new FloatingText(enemy.x, enemy.y - 15, `-${dmg}`, '#ffdd55', true));
-                }
+                if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) enemy.takeDamage(dmg, this.x, this.y);
             });
-
-            if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 25) {
-                activeBoss.takeDamage(dmg, this.x, this.y);
-                floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg}`, '#ffdd55', true));
-            }
-        } else if (this.characterClass === 'archer') {
-            if (this.mp < 8) {
-                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (8 MP)', '#ff5555'));
-                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
-                return;
-            }
-
+            if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 25) activeBoss.takeDamage(dmg, this.x, this.y);
+        } else if (this.characterClass === 'archer' && this.mp >= 8) {
             this.mp -= 8;
             this.abilityCooldown = 150;
             window.soundEngine.playArrowShot();
             floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡LLUVIA DE FLECHAS!', '#2ecc71', true));
 
-            const spreadAngles = [-0.36, -0.18, 0, 0.18, 0.36];
-            const dmg = Math.floor(stats.atk * 0.95);
-            const weaponLook = this.getWeaponLook();
-
-            spreadAngles.forEach(offset => {
+            [-0.36, -0.18, 0, 0.18, 0.36].forEach(offset => {
                 const a = angle + offset;
-                const p = new Projectile(
-                    this.x, this.y,
-                    Math.cos(a) * 9.2,
-                    Math.sin(a) * 9.2,
-                    'arrow',
-                    dmg,
-                    'player',
-                    weaponLook
-                );
+                const p = new Projectile(this.x, this.y, Math.cos(a) * 9.2, Math.sin(a) * 9.2, 'arrow', Math.floor(stats.atk * 0.95), 'player', this.getWeaponLook());
                 p.pierce = 2;
                 projectiles.push(p);
             });
-        } else if (this.characterClass === 'mage') {
-            if (this.mp < 14) {
-                floatingTexts.push(new FloatingText(this.x, this.y - 30, '¡Falta Maná! (14 MP)', '#ff5555'));
-                if (window.soundEngine) window.soundEngine.playTone(130, 'sawtooth', 0.1, 0.2);
-                return;
-            }
-
+        } else if (this.characterClass === 'mage' && this.mp >= 14) {
             this.mp -= 14;
             this.abilityCooldown = 180;
             window.soundEngine.playMagicCast();
-
             const radius = 105;
             const dmg = Math.floor(stats.atk + stats.mag * 1.8);
             floatingTexts.push(new FloatingText(this.x, this.y - 42, '¡NOVA DE HIELO!', '#00d2d3', true));
-
-            for (let i = 0; i < 32; i++) {
-                const a = (i * Math.PI * 2) / 32;
-                particles.push(new Particle(
-                    this.x, this.y,
-                    Math.cos(a) * 4.8,
-                    Math.sin(a) * 4.8,
-                    i % 2 === 0 ? '#70d6ff' : '#ffffff',
-                    5, 24
-                ));
-            }
 
             enemies.forEach(enemy => {
                 if (Math.hypot(enemy.x - this.x, enemy.y - this.y) <= radius) {
                     enemy.takeDamage(dmg, this.x, this.y);
                     enemy.slowTimer = 180;
-                    floatingTexts.push(new FloatingText(enemy.x, enemy.y - 15, `-${dmg} ❄️`, '#70d6ff', true));
                 }
             });
-
             if (activeBoss && Math.hypot(activeBoss.x - this.x, activeBoss.y - this.y) <= radius + 30) {
                 activeBoss.takeDamage(dmg, this.x, this.y);
                 activeBoss.slowTimer = 90;
-                floatingTexts.push(new FloatingText(activeBoss.x, activeBoss.y - 20, `-${dmg} ❄️`, '#70d6ff', true));
             }
         }
     }
 
     takeDamage(damage, sourceX = 0, sourceY = 0) {
         if (this.invulnerableTimer > 0) return;
-
         const stats = this.getTotalStats();
         const actualDmg = Math.max(1, damage - Math.floor(stats.def * 0.4));
         this.hp = Math.max(0, this.hp - actualDmg);
-
         this.flashRedTimer = 10;
         this.invulnerableTimer = 25;
         window.soundEngine.playHit();
@@ -873,17 +668,13 @@ class Player {
             this.knockbackX = Math.cos(kbAngle) * 5.0;
             this.knockbackY = Math.sin(kbAngle) * 5.0;
         }
-
         return actualDmg;
     }
 
     gainExp(amount, floatingTexts) {
         this.exp += amount;
         floatingTexts.push(new FloatingText(this.x, this.y - 20, `+${amount} EXP`, '#f39c12'));
-
-        if (this.exp >= this.nextExp) {
-            this.levelUp(floatingTexts);
-        }
+        if (this.exp >= this.nextExp) this.levelUp(floatingTexts);
     }
 
     levelUp(floatingTexts) {
@@ -891,45 +682,25 @@ class Player {
         this.exp -= this.nextExp;
         this.nextExp = Math.floor(this.nextExp * 1.5);
         this.attributePoints += 3;
-
-        this.maxHp += 15;
-        this.hp = this.maxHp;
-        this.maxMp += 10;
-        this.mp = this.maxMp;
-
+        this.maxHp += 15; this.hp = this.maxHp;
+        this.maxMp += 10; this.mp = this.maxMp;
         window.soundEngine.playLevelUp();
         floatingTexts.push(new FloatingText(this.x, this.y - 40, '¡NIVEL SUPERADO!', '#ffd700', true));
     }
 
     draw(ctx) {
-        const frameW = 48;
-        const frameH = 48;
-        const destW = 48;
-        const destH = 48;
-        const dx = Math.floor(this.x - destW / 2);
-        const dy = Math.floor(this.y - destH / 2 - 6);
-
-        let col = this.animFrame;
-        if (this.isAttacking) {
-            col = 4 + this.attackFrame;
-        }
+        const frameW = 48; const frameH = 48;
+        const dx = Math.floor(this.x - 24);
+        const dy = Math.floor(this.y - 30);
+        let col = this.isAttacking ? (4 + this.attackFrame) : this.animFrame;
         let row = this.direction;
 
-        const flash = this.flashRedTimer > 0;
-        window.spriteManager.draw(
-            ctx,
-            this.getSpriteKey(),
-            col, row,
-            frameW, frameH,
-            dx, dy, destW, destH,
-            false,
-            flash
-        );
+        window.spriteManager.draw(ctx, this.getSpriteKey(), col, row, frameW, frameH, dx, dy, 48, 48, false, this.flashRedTimer > 0);
     }
 }
 
 // ==============================================================================
-// CLASES DE ENEMIGOS Y JEFES
+// CLASES DE ENEMIGOS REBALANCEADAS (VIDA Y DAÑO EQUILIBRADOS)
 // ==============================================================================
 
 class Enemy {
@@ -938,83 +709,70 @@ class Enemy {
         this.x = x;
         this.y = y;
         this.floor = floor;
-
         this.direction = 0;
         this.animFrame = 0;
         this.animTimer = 0;
-
         this.knockbackX = 0;
         this.knockbackY = 0;
         this.flashRedTimer = 0;
         this.attackCooldown = 0;
         this.slowTimer = 0;
-
+        this.hasKey = false;
         this.initStats();
     }
 
     initStats() {
-        const fMod = 1 + (this.floor - 1) * 0.22;
+        // Multiplicador de dificultad aumentado a +35% por piso
+        const fMod = 1 + (this.floor - 1) * 0.35;
 
-        if (this.type === 'bandit') {
-            this.name = 'Bandido de Cripta';
-            this.maxHp = Math.floor(35 * fMod);
-            this.atk = Math.floor(8 * fMod);
-            this.speed = 1.9;
-            this.expReward = 25;
-            this.width = 24;
-            this.height = 28;
-            this.spriteKey = 'bandit';
-            this.frameSize = 48;
-        } else if (this.type === 'skeleton') {
-            this.name = 'Esqueleto del Osario';
-            this.maxHp = Math.floor(45 * fMod);
-            this.atk = Math.floor(10 * fMod);
-            this.speed = 1.5;
-            this.expReward = 32;
-            this.width = 24;
-            this.height = 30;
-            this.spriteKey = 'skeleton';
-            this.frameSize = 48;
-        } else if (this.type === 'spider') {
-            this.name = 'Araña Ponzoñosa';
-            this.maxHp = Math.floor(38 * fMod);
-            this.atk = Math.floor(12 * fMod);
-            this.speed = 2.4;
-            this.expReward = 35;
-            this.width = 30;
-            this.height = 24;
-            this.spriteKey = 'spider';
-            this.frameSize = 48;
-        } else if (this.type === 'rat') {
-            this.name = 'Rata Gigante de Cloaca';
-            this.maxHp = Math.floor(32 * fMod);
-            this.atk = Math.floor(9 * fMod);
+        if (this.type === 'rat') {
+            this.name = 'Rata de Cloaca';
+            this.maxHp = Math.floor(65 * fMod);
+            this.atk = Math.floor(16 * fMod);
             this.speed = 2.6;
             this.expReward = 28;
-            this.width = 24;
-            this.height = 22;
-            this.spriteKey = 'rat';
-            this.frameSize = 48;
+            this.width = 24; this.height = 22;
+            this.spriteKey = 'rat'; this.frameSize = 48;
+        } else if (this.type === 'bandit') {
+            this.name = 'Bandido de Cripta';
+            this.maxHp = Math.floor(85 * fMod);
+            this.atk = Math.floor(20 * fMod);
+            this.speed = 1.9;
+            this.expReward = 32;
+            this.width = 24; this.height = 28;
+            this.spriteKey = 'bandit'; this.frameSize = 48;
+        } else if (this.type === 'skeleton') {
+            this.name = 'Esqueleto del Osario';
+            this.maxHp = Math.floor(110 * fMod);
+            this.atk = Math.floor(24 * fMod);
+            this.speed = 1.5;
+            this.expReward = 40;
+            this.width = 24; this.height = 30;
+            this.spriteKey = 'skeleton'; this.frameSize = 48;
+        } else if (this.type === 'spider') {
+            this.name = 'Araña Ponzoñosa';
+            this.maxHp = Math.floor(95 * fMod);
+            this.atk = Math.floor(26 * fMod);
+            this.speed = 2.4;
+            this.expReward = 45;
+            this.width = 30; this.height = 24;
+            this.spriteKey = 'spider'; this.frameSize = 48;
         } else if (this.type === 'werewolf') {
             this.name = 'Hombre Lobo Feral';
-            this.maxHp = Math.floor(75 * fMod);
-            this.atk = Math.floor(18 * fMod);
+            this.maxHp = Math.floor(240 * fMod);
+            this.atk = Math.floor(42 * fMod);
             this.speed = 2.7;
-            this.expReward = 60;
-            this.width = 32;
-            this.height = 36;
-            this.spriteKey = 'werewolf';
-            this.frameSize = 56;
+            this.expReward = 90;
+            this.width = 32; this.height = 36;
+            this.spriteKey = 'werewolf'; this.frameSize = 56;
         } else if (this.type === 'demon') {
-            this.name = 'Demonio Menor de Obsidiana';
-            this.maxHp = Math.floor(95 * fMod);
-            this.atk = Math.floor(22 * fMod);
+            this.name = 'Demonio Menor';
+            this.maxHp = Math.floor(320 * fMod);
+            this.atk = Math.floor(55 * fMod);
             this.speed = 2.0;
-            this.expReward = 85;
-            this.width = 32;
-            this.height = 36;
-            this.spriteKey = 'demon';
-            this.frameSize = 56;
+            this.expReward = 130;
+            this.width = 32; this.height = 36;
+            this.spriteKey = 'demon'; this.frameSize = 56;
         }
         this.hp = this.maxHp;
     }
@@ -1025,80 +783,49 @@ class Enemy {
         if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
-
         if (dist < 260) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
-
-            if (Math.abs(player.x - this.x) > Math.abs(player.y - this.y)) {
-                this.direction = player.x > this.x ? 2 : 1;
-            } else {
-                this.direction = player.y > this.y ? 0 : 3;
-            }
-
+            this.direction = Math.abs(player.x - this.x) > Math.abs(player.y - this.y) ? (player.x > this.x ? 2 : 1) : (player.y > this.y ? 0 : 3);
             const attackDist = this.type === 'demon' ? 140 : (this.type === 'spider' ? 100 : 26);
 
             if (dist > attackDist) {
                 const moveSpeed = (this.slowTimer > 0) ? (this.speed * 0.40) : this.speed;
-
                 const nx = this.x + Math.cos(angle) * moveSpeed + this.knockbackX;
                 const ny = this.y + Math.sin(angle) * moveSpeed + this.knockbackY;
-
-                if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
-                    this.x = nx;
-                }
-                if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) {
-                    this.y = ny;
-                }
+                if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
+                if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
 
                 this.animTimer++;
                 if (this.animTimer >= 8) {
                     this.animFrame = (this.animFrame + 1) % 4;
                     this.animTimer = 0;
                 }
-            } else {
-                if (this.attackCooldown <= 0) {
-                    this.executeAttack(player, angle, projectiles, particles);
-                }
+            } else if (this.attackCooldown <= 0) {
+                this.attackCooldown = 45;
+                if (this.type === 'spider') projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.5, Math.sin(angle) * 4.5, 'acid', this.atk, 'enemy'));
+                else if (this.type === 'demon') projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 'void', this.atk, 'enemy'));
+                else player.takeDamage(this.atk, this.x, this.y);
             }
         }
-
         this.knockbackX *= 0.82;
         this.knockbackY *= 0.82;
-    }
-
-    executeAttack(player, angle, projectiles, particles) {
-        this.attackCooldown = 45;
-
-        if (this.type === 'spider') {
-            projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.5, Math.sin(angle) * 4.5, 'acid', this.atk, 'enemy'));
-        } else if (this.type === 'demon') {
-            projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 'void', this.atk, 'enemy'));
-        } else {
-            player.takeDamage(this.atk, this.x, this.y);
-            for (let i = 0; i < 5; i++) {
-                particles.push(new Particle(player.x, player.y, (Math.random() - 0.5) * 3, (Math.random() - 0.5) * 3, '#ff3333', 3, 12));
-            }
-        }
     }
 
     takeDamage(damage, sourceX, sourceY) {
         this.hp = Math.max(0, this.hp - damage);
         this.flashRedTimer = 8;
         window.soundEngine.playHit();
-
         const angle = Math.atan2(this.y - sourceY, this.x - sourceX);
         this.knockbackX = Math.cos(angle) * 4.5;
         this.knockbackY = Math.sin(angle) * 4.5;
-
         return this.hp <= 0;
     }
 
     draw(ctx) {
-        const destW = this.frameSize;
-        const destH = this.frameSize;
-        const dx = Math.floor(this.x - destW / 2);
-        const dy = Math.floor(this.y - destH / 2 - 4);
+        const dx = Math.floor(this.x - this.frameSize / 2);
+        const dy = Math.floor(this.y - this.frameSize / 2 - 4);
 
+        // Efecto de escarcha si está ralentizado
         if (this.slowTimer > 0) {
             ctx.save();
             ctx.fillStyle = 'rgba(112, 214, 255, 0.45)';
@@ -1108,6 +835,7 @@ class Enemy {
             ctx.restore();
         }
 
+        // Dibujar el sprite del enemigo
         window.spriteManager.draw(
             ctx,
             this.spriteKey,
@@ -1115,385 +843,90 @@ class Enemy {
             this.direction,
             this.frameSize,
             this.frameSize,
-            dx, dy, destW, destH,
+            dx, dy,
+            this.frameSize,
+            this.frameSize,
             false,
             this.flashRedTimer > 0
         );
 
-        if (this.hp < this.maxHp) {
-            const barW = 28;
-            const barH = 4;
-            const bx = this.x - barW / 2;
-            const by = this.y - this.height / 2 - 12;
+        // Ícono de llave sobre la cabeza si es el portador
+        if (this.hasKey) {
+            ctx.fillStyle = '#f1c40f';
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText('🔑', this.x - 4, this.y - this.height / 2 - 18);
+        }
 
-            ctx.fillStyle = '#100a12';
+        // =====================================================================
+        // BARRA DE VIDA: SOLO APARECE TRAS RECIBIR EL PRIMER GOLPE
+        // =====================================================================
+        if (this.hp < this.maxHp && this.hp > 0) {
+            const barW = 30;
+            const barH = 5;
+            const bx = Math.floor(this.x - barW / 2);
+            const by = Math.floor(this.y - this.height / 2 - 10);
+
+            // 1. Marco exterior negro grueso
+            ctx.fillStyle = '#08050d';
             ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-            ctx.fillStyle = '#ff2a3b';
-            ctx.fillRect(bx, by, Math.max(0, (this.hp / this.maxHp) * barW), barH);
+
+            // 2. Fondo rojo oscuro (vida perdida)
+            ctx.fillStyle = '#4a151b';
+            ctx.fillRect(bx, by, barW, barH);
+
+            // 3. Relleno rojo vivo de vida actual
+            const hpPct = Math.max(0, Math.min(1, this.hp / this.maxHp));
+            const fillW = Math.floor(barW * hpPct);
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(bx, by, fillW, barH);
+
+            // 4. Brillo superior de 1px
+            ctx.fillStyle = '#ff7675';
+            ctx.fillRect(bx, by, fillW, 1);
         }
     }
 }
 
-class BossAbracadabra {
-    constructor(x, y) {
-        this.name = 'Sub-Jefe Abracadabra';
-        this.x = x;
-        this.y = y;
-        this.maxHp = 2950;
-        this.hp = 2950;
-        this.atk = 100;
-        this.width = 44;
-        this.height = 46;
-
-        this.state = 'walk';
-        this.stateTimer = 0;
-        this.animFrame = 0;
-        this.direction = 0;
-        this.activated = false;
-        this.slowTimer = 0;
-
-        this.chargeVx = 0;
-        this.chargeVy = 0;
-        this.flashRedTimer = 0;
-        this.knockbackX = 0;
-        this.knockbackY = 0;
-    }
-
-    update(player, world, projectiles, particles) {
-        if (this.flashRedTimer > 0) this.flashRedTimer--;
-        if (this.slowTimer > 0) this.slowTimer--;
-
-        const dist = Math.hypot(player.x - this.x, player.y - this.y);
-
-        if (!this.activated) {
-            if (player.y < 16 * world.tileSize || dist < 240) {
-                this.activated = true;
-                window.soundEngine.playBossRoar();
-                if (window.soundEngine) window.soundEngine.startBgm(true);
-            } else {
-                return;
-            }
-        }
-
-        this.stateTimer++;
-        const angle = Math.atan2(player.y - this.y, player.x - this.x);
-
-        if (this.state === 'walk') {
-            const speed = (this.slowTimer > 0) ? 0.8 : 1.3;
-            this.x += Math.cos(angle) * speed;
-            this.y += Math.sin(angle) * speed;
-
-            if (this.stateTimer % 12 === 0) {
-                this.animFrame = (this.animFrame + 1) % 4;
-            }
-
-            if (this.stateTimer > 160) {
-                this.state = 'swell';
-                this.stateTimer = 0;
-                this.animFrame = 0;
-                window.soundEngine.playBossRoar();
-            }
-        } else if (this.state === 'swell') {
-            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 15));
-
-            particles.push(new Particle(
-                this.x + (Math.random() - 0.5) * 30,
-                this.y - 10 + (Math.random() - 0.5) * 20,
-                0, -1, '#b4ff1e', 4, 15
-            ));
-
-            if (this.stateTimer > 60) {
-                if (Math.random() < 0.5) {
-                    this.state = 'vomit';
-                    this.stateTimer = 0;
-                    this.animFrame = 0;
-                    this.spewAcid(angle, projectiles, particles);
-                } else {
-                    this.state = 'charge';
-                    this.stateTimer = 0;
-                    this.chargeVx = Math.cos(angle) * 6.5;
-                    this.chargeVy = Math.sin(angle) * 6.5;
-                }
-            }
-        } else if (this.state === 'vomit') {
-            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 10));
-            if (this.stateTimer > 40) {
-                this.state = 'exhausted';
-                this.stateTimer = 0;
-            }
-        } else if (this.state === 'charge') {
-            const nx = this.x + this.chargeVx;
-            const ny = this.y + this.chargeVy;
-
-            particles.push(new Particle(this.x, this.y + 16, -this.chargeVx * 0.2, -0.5, '#6b5438', 5, 20));
-
-            if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 35) {
-                this.state = 'exhausted';
-                this.stateTimer = 0;
-            } else {
-                this.x = nx;
-                this.y = ny;
-                if (dist < 40) {
-                    player.takeDamage(this.atk + 50, this.x, this.y);
-                }
-            }
-        } else if (this.state === 'exhausted') {
-            this.animFrame = 0;
-            if (this.stateTimer > 110) {
-                this.state = 'walk';
-                this.stateTimer = 0;
-            }
-        }
-    }
-
-    spewAcid(centerAngle, projectiles, particles) {
-        window.soundEngine.playAcidSpit();
-        const spread = [-0.4, -0.2, 0, 0.2, 0.4];
-        spread.forEach(offset => {
-            const a = centerAngle + offset;
-            projectiles.push(new Projectile(
-                this.x, this.y,
-                Math.cos(a) * 4.2, Math.sin(a) * 4.2,
-                'acid',
-                this.atk + 50,
-                'enemy'
-            ));
-        });
-    }
-
-    takeDamage(damage, sourceX, sourceY) {
-        const mul = (this.state === 'exhausted') ? 1.3 : 1.0;
-        const actual = Math.floor(damage * mul);
-        this.hp = Math.max(0, this.hp - actual);
-        this.flashRedTimer = 6;
-        window.soundEngine.playHit();
-        return this.hp <= 0;
-    }
-
-    draw(ctx) {
-        const destW = 72;
-        const destH = 72;
-        const dx = Math.floor(this.x - destW / 2);
-        const dy = Math.floor(this.y - destH / 2 - 8);
-
-        let row = 0;
-        if (this.state === 'swell') row = 1;
-        else if (this.state === 'vomit') row = 2;
-        else if (this.state === 'charge') row = 3;
-
-        window.spriteManager.draw(
-            ctx,
-            'abracadabra',
-            this.animFrame,
-            row,
-            72, 72,
-            dx, dy, destW, destH,
-            false,
-            this.flashRedTimer > 0
-        );
-    }
-}
-
-class BossHong {
-    constructor(x, y) {
-        this.name = 'Hong Devorador de Hombres';
-        this.x = x;
-        this.y = y;
-        this.maxHp = 3400;
-        this.hp = 3400;
-        this.atk = 114;
-        this.width = 60;
-        this.height = 64;
-
-        this.state = 'idle';
-        this.stateTimer = 0;
-        this.animFrame = 0;
-        this.flashRedTimer = 0;
-        this.activated = false;
-        this.slowTimer = 0;
-    }
-
-    update(player, world, projectiles, particles) {
-        if (this.flashRedTimer > 0) this.flashRedTimer--;
-        if (this.slowTimer > 0) this.slowTimer--;
-
-        const dist = Math.hypot(player.x - this.x, player.y - this.y);
-
-        if (!this.activated) {
-            if (player.y < 14 * world.tileSize || dist < 260) {
-                this.activated = true;
-                window.soundEngine.playBossRoar();
-                if (window.soundEngine) window.soundEngine.startBgm(true);
-            } else {
-                return;
-            }
-        }
-
-        this.stateTimer++;
-        const angle = Math.atan2(player.y - this.y, player.x - this.x);
-
-        if (this.stateTimer % 10 === 0) {
-            this.animFrame = (this.animFrame + 1) % 4;
-        }
-
-        particles.push(new Particle(
-            this.x + (Math.random() - 0.5) * 50,
-            this.y + (Math.random() - 0.5) * 40,
-            (Math.random() - 0.5) * 0.5, -0.8,
-            '#aa22ee', 5, 25
-        ));
-
-        if (this.state === 'idle') {
-            const speed = (this.slowTimer > 0) ? 0.8 : 1.4;
-            this.x += Math.cos(angle) * speed;
-            this.y += Math.sin(angle) * speed;
-
-            if (this.stateTimer > 120) {
-                this.stateTimer = 0;
-                const rand = Math.random();
-                if (rand < 0.45) {
-                    this.state = 'barrage';
-                    window.soundEngine.playBossRoar();
-                } else {
-                    this.state = 'cleave';
-                }
-            }
-        } else if (this.state === 'barrage') {
-            if (this.stateTimer === 30) {
-                for (let i = 0; i < 8; i++) {
-                    const a = (i * Math.PI * 2) / 8;
-                    projectiles.push(new Projectile(
-                        this.x, this.y,
-                        Math.cos(a) * 3.8, Math.sin(a) * 3.8,
-                        'void',
-                        this.atk + 157,
-                        'enemy'
-                    ));
-                }
-            }
-            if (this.stateTimer > 60) {
-                this.state = 'idle';
-                this.stateTimer = 0;
-            }
-        } else if (this.state === 'cleave') {
-            if (this.stateTimer === 25) {
-                window.soundEngine.playSwordSlash();
-                if (dist < 80) {
-                    player.takeDamage(this.atk + 30, this.x, this.y);
-                }
-                for (let i = 0; i < 15; i++) {
-                    particles.push(new Particle(
-                        this.x + Math.cos(angle) * 45,
-                        this.y + Math.sin(angle) * 45,
-                        (Math.random() - 0.5) * 4,
-                        (Math.random() - 0.5) * 4,
-                        '#ff2244', 5, 18
-                    ));
-                }
-            }
-            if (this.stateTimer > 55) {
-                this.state = 'idle';
-                this.stateTimer = 0;
-            }
-        }
-    }
-
-    takeDamage(damage, sourceX, sourceY) {
-        this.hp = Math.max(0, this.hp - damage);
-        this.flashRedTimer = 6;
-        window.soundEngine.playHit();
-        return this.hp <= 0;
-    }
-
-    draw(ctx) {
-        const destW = 96;
-        const destH = 96;
-        const dx = Math.floor(this.x - destW / 2);
-        const dy = Math.floor(this.y - destH / 2 - 10);
-
-        const row = (this.state === 'cleave') ? 1 : 0;
-
-        window.spriteManager.draw(
-            ctx,
-            'hong',
-            this.animFrame,
-            row,
-            96, 96,
-            dx, dy, destW, destH,
-            false,
-            this.flashRedTimer > 0
-        );
-    }
-}
+// ==============================================================================
+// JEFES REBALANCEADOS CON COMBATE DESAFIANTE
+// ==============================================================================
 
 class BossLucian {
     constructor(x, y) {
         this.name = 'Sub-Jefe Lucian';
-        this.x = x;
-        this.y = y;
-        this.maxHp = 1850;
-        this.hp = 1850;
-        this.atk = 28;
-        this.width = 46;
-        this.height = 48;
-
-        this.state = 'stalk';
-        this.stateTimer = 0;
-        this.animFrame = 0;
-        this.direction = 0;
-        this.activated = false;
-        this.slowTimer = 0;
-
-        this.pounceVx = 0;
-        this.pounceVy = 0;
-        this.flashRedTimer = 0;
-        this.knockbackX = 0;
-        this.knockbackY = 0;
+        this.x = x; this.y = y;
+        this.maxHp = 3200; // Antes 1850
+        this.hp = 3200;
+        this.atk = 52;    // Antes 28
+        this.width = 46; this.height = 48;
+        this.state = 'stalk'; this.stateTimer = 0; this.animFrame = 0; this.activated = false; this.slowTimer = 0;
+        this.pounceVx = 0; this.pounceVy = 0; this.flashRedTimer = 0;
     }
 
     update(player, world, projectiles, particles) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
         if (this.slowTimer > 0) this.slowTimer--;
-
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
         if (!this.activated) {
             if (player.y < 16 * world.tileSize || dist < 240) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
-                if (window.soundEngine) window.soundEngine.startBgm(true);
-            } else {
-                return;
-            }
+            } else return;
         }
 
         this.stateTimer++;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-
-        if (Math.random() < 0.25) {
-            particles.push(new Particle(
-                this.x + (Math.random() - 0.5) * 36,
-                this.y + (Math.random() - 0.5) * 30,
-                (Math.random() - 0.5) * 0.4, -0.6,
-                '#9fe8ff', 3, 18
-            ));
-        }
 
         if (this.state === 'stalk') {
             const speed = (this.slowTimer > 0) ? 0.9 : 1.6;
             this.x += Math.cos(angle) * speed;
             this.y += Math.sin(angle) * speed;
-
-            if (this.stateTimer % 10 === 0) {
-                this.animFrame = (this.animFrame + 1) % 4;
-            }
+            if (this.stateTimer % 10 === 0) this.animFrame = (this.animFrame + 1) % 4;
 
             if (this.stateTimer > 110) {
                 this.stateTimer = 0;
-                this.animFrame = 0;
                 const roll = Math.random();
-
-                // Si el jugador está lejos (más de 110 px) o por tirada aleatoria, lanza el zarpazo a distancia
                 if (dist > 110 || roll < 0.35) {
                     this.state = 'ranged_slash';
                     window.soundEngine.playBossRoar();
@@ -1508,82 +941,34 @@ class BossLucian {
             }
         } else if (this.state === 'ranged_slash') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 7));
-
-            // En el fotograma 15 dispara ráfaga de 3 zarpazos en abanico
             if (this.stateTimer === 15) {
                 window.soundEngine.playSwordSlash();
-
-                const slashAngles = [-0.25, 0, 0.25];
-                slashAngles.forEach(offset => {
+                [-0.25, 0, 0.25].forEach(offset => {
                     const a = angle + offset;
-                    const slashSpeed = 5.8;
-                    projectiles.push(new Projectile(
-                        this.x, this.y,
-                        Math.cos(a) * slashSpeed,
-                        Math.sin(a) * slashSpeed,
-                        'slash',
-                        this.atk + 8,
-                        'enemy'
-                    ));
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 5.8, Math.sin(a) * 5.8, 'slash', this.atk + 12, 'enemy'));
                 });
             }
-
-            if (this.stateTimer > 35) {
-                this.state = 'stalk';
-                this.stateTimer = 0;
-            }
+            if (this.stateTimer > 35) { this.state = 'stalk'; this.stateTimer = 0; }
         } else if (this.state === 'howl') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 12));
-
-            if (this.stateTimer === 25) {
-                for (let i = 0; i < 16; i++) {
-                    const a = (i * Math.PI * 2) / 16;
-                    particles.push(new Particle(
-                        this.x, this.y,
-                        Math.cos(a) * 4.5, Math.sin(a) * 4.5,
-                        '#e8f4fc', 4, 22
-                    ));
-                }
-                if (dist < 120) {
-                    player.takeDamage(this.atk - 8, this.x, this.y);
-                }
-            }
-
-            if (this.stateTimer > 50) {
-                this.state = 'frenzy';
-                this.stateTimer = 0;
-            }
+            if (this.stateTimer === 25 && dist < 120) player.takeDamage(this.atk - 10, this.x, this.y);
+            if (this.stateTimer > 50) { this.state = 'frenzy'; this.stateTimer = 0; }
         } else if (this.state === 'pounce') {
             this.animFrame = Math.min(3, Math.floor(this.stateTimer / 8));
-            const nx = this.x + this.pounceVx;
-            const ny = this.y + this.pounceVy;
-
-            particles.push(new Particle(this.x, this.y + 16, -this.pounceVx * 0.2, -0.5, '#7f8c8d', 4, 16));
-
+            const nx = this.x + this.pounceVx; const ny = this.y + this.pounceVy;
             if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 28) {
-                this.state = 'stalk';
-                this.stateTimer = 0;
+                this.state = 'stalk'; this.stateTimer = 0;
             } else {
-                this.x = nx;
-                this.y = ny;
-                if (dist < 42) {
-                    player.takeDamage(this.atk + 14, this.x, this.y);
-                    this.state = 'frenzy';
-                    this.stateTimer = 0;
-                }
+                this.x = nx; this.y = ny;
+                if (dist < 42) { player.takeDamage(this.atk + 20, this.x, this.y); this.state = 'frenzy'; this.stateTimer = 0; }
             }
         } else if (this.state === 'frenzy') {
             this.animFrame = (Math.floor(this.stateTimer / 6)) % 4;
-
             if (this.stateTimer % 15 === 0 && dist < 55) {
                 window.soundEngine.playSwordSlash();
-                player.takeDamage(this.atk + 6, this.x, this.y);
+                player.takeDamage(this.atk + 10, this.x, this.y);
             }
-
-            if (this.stateTimer > 45) {
-                this.state = 'stalk';
-                this.stateTimer = 0;
-            }
+            if (this.stateTimer > 45) { this.state = 'stalk'; this.stateTimer = 0; }
         }
     }
 
@@ -1595,26 +980,164 @@ class BossLucian {
     }
 
     draw(ctx) {
-        const destW = 72;
-        const destH = 72;
-        const dx = Math.floor(this.x - destW / 2);
-        const dy = Math.floor(this.y - destH / 2 - 8);
-
         let row = 0;
         if (this.state === 'howl') row = 1;
         else if (this.state === 'pounce') row = 2;
         else if (this.state === 'frenzy' || this.state === 'ranged_slash') row = 3;
+        window.spriteManager.draw(ctx, 'lucian', this.animFrame, row, 72, 72, Math.floor(this.x - 36), Math.floor(this.y - 44), 72, 72, false, this.flashRedTimer > 0);
+    }
+}
 
-        window.spriteManager.draw(
-            ctx,
-            'lucian',
-            this.animFrame,
-            row,
-            72, 72,
-            dx, dy, destW, destH,
-            false,
-            this.flashRedTimer > 0
-        );
+class BossAbracadabra {
+    constructor(x, y) {
+        this.name = 'Sub-Jefe Abracadabra';
+        this.x = x; this.y = y;
+        this.maxHp = 5200; // Antes 2950
+        this.hp = 5200;
+        this.atk = 135;   // Antes 100
+        this.width = 44; this.height = 46;
+        this.state = 'walk'; this.stateTimer = 0; this.animFrame = 0; this.activated = false; this.slowTimer = 0;
+        this.chargeVx = 0; this.chargeVy = 0; this.flashRedTimer = 0;
+    }
+
+    update(player, world, projectiles, particles) {
+        if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        if (!this.activated) {
+            if (player.y < 16 * world.tileSize || dist < 240) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+            } else return;
+        }
+
+        this.stateTimer++;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+
+        if (this.state === 'walk') {
+            const speed = (this.slowTimer > 0) ? 0.8 : 1.3;
+            this.x += Math.cos(angle) * speed;
+            this.y += Math.sin(angle) * speed;
+            if (this.stateTimer % 12 === 0) this.animFrame = (this.animFrame + 1) % 4;
+            if (this.stateTimer > 160) {
+                this.state = 'swell';
+                this.stateTimer = 0;
+                window.soundEngine.playBossRoar();
+            }
+        } else if (this.state === 'swell') {
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 15));
+            if (this.stateTimer > 60) {
+                if (Math.random() < 0.5) {
+                    this.state = 'vomit';
+                    this.stateTimer = 0;
+                    [-0.4, -0.2, 0, 0.2, 0.4].forEach(offset => {
+                        const a = angle + offset;
+                        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 4.2, Math.sin(a) * 4.2, 'acid', this.atk + 40, 'enemy'));
+                    });
+                } else {
+                    this.state = 'charge';
+                    this.stateTimer = 0;
+                    this.chargeVx = Math.cos(angle) * 6.5;
+                    this.chargeVy = Math.sin(angle) * 6.5;
+                }
+            }
+        } else if (this.state === 'vomit') {
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 10));
+            if (this.stateTimer > 40) { this.state = 'exhausted'; this.stateTimer = 0; }
+        } else if (this.state === 'charge') {
+            const nx = this.x + this.chargeVx; const ny = this.y + this.chargeVy;
+            if (world.isSolid(nx - this.width / 2, ny - this.height / 2, this.width, this.height) || this.stateTimer > 35) {
+                this.state = 'exhausted'; this.stateTimer = 0;
+            } else {
+                this.x = nx; this.y = ny;
+                if (dist < 40) player.takeDamage(this.atk + 45, this.x, this.y);
+            }
+        } else if (this.state === 'exhausted') {
+            this.animFrame = 0;
+            if (this.stateTimer > 110) { this.state = 'walk'; this.stateTimer = 0; }
+        }
+    }
+
+    takeDamage(damage, sourceX, sourceY) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.flashRedTimer = 6;
+        window.soundEngine.playHit();
+        return this.hp <= 0;
+    }
+
+    draw(ctx) {
+        let row = 0;
+        if (this.state === 'swell') row = 1;
+        else if (this.state === 'vomit') row = 2;
+        else if (this.state === 'charge') row = 3;
+        window.spriteManager.draw(ctx, 'abracadabra', this.animFrame, row, 72, 72, Math.floor(this.x - 36), Math.floor(this.y - 44), 72, 72, false, this.flashRedTimer > 0);
+    }
+}
+
+class BossHong {
+    constructor(x, y) {
+        this.name = 'Hong Devorador de Hombres';
+        this.x = x; this.y = y;
+        this.maxHp = 7500; // Antes 3400
+        this.hp = 7500;
+        this.atk = 165;   // Antes 114
+        this.width = 60; this.height = 64;
+        this.state = 'idle'; this.stateTimer = 0; this.animFrame = 0; this.flashRedTimer = 0; this.activated = false; this.slowTimer = 0;
+    }
+
+    update(player, world, projectiles, particles) {
+        if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        if (!this.activated) {
+            if (player.y < 14 * world.tileSize || dist < 260) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+            } else return;
+        }
+
+        this.stateTimer++;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        if (this.stateTimer % 10 === 0) this.animFrame = (this.animFrame + 1) % 4;
+
+        if (this.state === 'idle') {
+            const speed = (this.slowTimer > 0) ? 0.8 : 1.4;
+            this.x += Math.cos(angle) * speed;
+            this.y += Math.sin(angle) * speed;
+            if (this.stateTimer > 120) {
+                this.stateTimer = 0;
+                this.state = Math.random() < 0.45 ? 'barrage' : 'cleave';
+                window.soundEngine.playBossRoar();
+            }
+        } else if (this.state === 'barrage') {
+            if (this.stateTimer === 30) {
+                for (let i = 0; i < 8; i++) {
+                    const a = (i * Math.PI * 2) / 8;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 3.8, Math.sin(a) * 3.8, 'void', this.atk + 40, 'enemy'));
+                }
+            }
+            if (this.stateTimer > 60) { this.state = 'idle'; this.stateTimer = 0; }
+        } else if (this.state === 'cleave') {
+            if (this.stateTimer === 25) {
+                window.soundEngine.playSwordSlash();
+                if (dist < 80) player.takeDamage(this.atk + 45, this.x, this.y);
+            }
+            if (this.stateTimer > 55) { this.state = 'idle'; this.stateTimer = 0; }
+        }
+    }
+
+    takeDamage(damage, sourceX, sourceY) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.flashRedTimer = 6;
+        window.soundEngine.playHit();
+        return this.hp <= 0;
+    }
+
+    draw(ctx) {
+        const row = (this.state === 'cleave') ? 1 : 0;
+        window.spriteManager.draw(ctx, 'hong', this.animFrame, row, 96, 96, Math.floor(this.x - 48), Math.floor(this.y - 58), 96, 96, false, this.flashRedTimer > 0);
     }
 }
 

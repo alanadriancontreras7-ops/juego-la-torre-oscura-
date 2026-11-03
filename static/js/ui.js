@@ -1,7 +1,5 @@
 /**
- * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES)
- * Controla el HUD, el inventario de 30 casillas, visualización del personaje,
- * el pergamino antiguo de lore y el salón de la fama.
+ * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES / TIENDA / HERRERO / MENÚ CONTEXTUAL)
  */
 
 class UIManager {
@@ -13,6 +11,9 @@ class UIManager {
 
     init() {
         this.bindEvents();
+        this.createShopModalDOM();
+        this.createBlacksmithModalDOM();
+        this.createContextMenuDOM();
     }
 
     bindEvents() {
@@ -34,9 +35,7 @@ class UIManager {
 
         document.getElementById('confirm-class-btn').addEventListener('click', () => {
             document.getElementById('class-select-modal').style.display = 'none';
-            if (window.game) {
-                window.game.startNewGame(this.selectedClass);
-            }
+            if (window.game) window.game.startNewGame(this.selectedClass);
         });
 
         document.getElementById('btn-hud-inv').addEventListener('click', () => this.toggleInventory());
@@ -46,15 +45,11 @@ class UIManager {
         const muteBtn = document.getElementById('btn-toggle-mute');
         if (muteBtn) {
             muteBtn.addEventListener('click', () => {
-                if (window.soundEngine) {
-                    window.soundEngine.toggleMute();
-                }
+                if (window.soundEngine) window.soundEngine.toggleMute();
             });
-            if (window.soundEngine) {
-                window.soundEngine.updateMuteButtonUI();
-            }
         }
 
+        // Cerrar menú contextual si haces clic en cualquier otro lado
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.item-context-menu')) {
                 this.hideContextMenu();
@@ -78,9 +73,357 @@ class UIManager {
         });
     }
 
+    createContextMenuDOM() {
+        if (document.getElementById('item-context-menu')) return;
+        const menu = document.createElement('div');
+        menu.id = 'item-context-menu';
+        menu.className = 'item-context-menu';
+        menu.style.display = 'none';
+        menu.style.position = 'absolute';
+        menu.style.zIndex = '1000';
+        document.body.appendChild(menu);
+    }
+
+    // =========================================================================
+    // MODAL DE KAELEN (TIENDA CON ICONOS: COMPRA Y VENTA)
+    // =========================================================================
+    createShopModalDOM() {
+        if (document.getElementById('shop-modal')) return;
+        const shopDiv = document.createElement('div');
+        shopDiv.id = 'shop-modal';
+        shopDiv.className = 'game-modal';
+        shopDiv.style.display = 'none';
+        shopDiv.innerHTML = `
+            <div class="modal-content" style="max-width:520px;background:#15111d;border:2px solid #f1c40f;padding:16px;color:#fff;border-radius:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h3 style="font-family:'Press Start 2P';font-size:11px;color:#f1c40f;">🛒 KAELEN EL RENEGADO</h3>
+                    <span id="shop-player-gold" style="font-family:'Press Start 2P';font-size:10px;color:#f1c40f;">0 G</span>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button id="shop-tab-buy" class="pixel-btn" style="font-size:9px;padding:6px 14px;">COMPRAR</button>
+                    <button id="shop-tab-sell" class="pixel-btn btn-gold" style="font-size:9px;padding:6px 14px;">VENDER</button>
+                </div>
+                <div id="shop-body-content" style="max-height:260px;overflow-y:auto;padding-right:4px;margin-bottom:12px;"></div>
+                <button class="pixel-btn close-modal-btn" style="font-size:9px;padding:6px 12px;">CERRAR (ESC)</button>
+            </div>
+        `;
+        document.body.appendChild(shopDiv);
+    }
+
+    showShopModal() {
+        this.createShopModalDOM();
+        const modal = document.getElementById('shop-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        if (window.game) window.game.pauseForModal();
+        this.renderShopTab('buy');
+
+        document.getElementById('shop-tab-buy').onclick = () => this.renderShopTab('buy');
+        document.getElementById('shop-tab-sell').onclick = () => this.renderShopTab('sell');
+        modal.querySelector('.close-modal-btn').onclick = () => this.closeShopModal();
+    }
+
+    closeShopModal() {
+        const modal = document.getElementById('shop-modal');
+        if (modal) modal.style.display = 'none';
+        if (window.game) window.game.resumeFromModal();
+    }
+
+    renderShopTab(tab) {
+        const container = document.getElementById('shop-body-content');
+        const player = window.game ? window.game.player : null;
+        if (!container || !player) return;
+        container.innerHTML = '';
+        document.getElementById('shop-player-gold').innerText = `${player.gold} G`;
+
+        if (tab === 'buy') {
+            const stock = [
+                { id: 'potion_health', price: 20 },
+                { id: 'potion_mana', price: 18 },
+                { id: 'potion_elixir', price: 65 },
+                { id: 'mat_bone', price: 25 },
+                { id: 'mat_pelt', price: 45 }
+            ];
+
+            stock.forEach(itemInfo => {
+                const item = window.ITEM_DATABASE[itemInfo.id];
+                if (!item) return;
+
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#241d30;padding:8px;margin-bottom:6px;border-radius:4px;border:1px solid #3d324d;';
+
+                const leftDiv = document.createElement('div');
+                leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+                const cvs = document.createElement('canvas');
+                cvs.width = 24; cvs.height = 24;
+                window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.innerHTML = `
+                    <div style="font-size:12px;font-weight:bold;color:#f5f6fa;">${item.name}</div>
+                    <div style="font-size:10px;color:#a4b0be;">${item.desc || ''}</div>
+                `;
+
+                leftDiv.appendChild(cvs);
+                leftDiv.appendChild(infoDiv);
+
+                const buyBtn = document.createElement('button');
+                buyBtn.className = 'pixel-btn btn-gold';
+                buyBtn.style.cssText = 'font-size:9px;padding:6px 10px;white-space:nowrap;';
+                buyBtn.innerText = `COMPRAR (${itemInfo.price} G)`;
+
+                buyBtn.onclick = () => {
+                    if (player.gold >= itemInfo.price) {
+                        const emptyIdx = player.inventory.findIndex(s => s === null);
+                        if (emptyIdx !== -1) {
+                            player.gold -= itemInfo.price;
+                            player.inventory[emptyIdx] = { ...item, qty: 1 };
+                            window.soundEngine.playItemPickup();
+                            this.renderShopTab('buy');
+                        } else {
+                            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡Inventario lleno!', '#ff4444'));
+                        }
+                    }
+                };
+
+                row.appendChild(leftDiv);
+                row.appendChild(buyBtn);
+                container.appendChild(row);
+            });
+        } else if (tab === 'sell') {
+            let hasItems = false;
+            player.inventory.forEach((item, idx) => {
+                if (!item) return;
+                hasItems = true;
+                const sellValue = Math.max(2, Math.floor((item.value || 10) * 0.6));
+
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#241d30;padding:8px;margin-bottom:6px;border-radius:4px;border:1px solid #3d324d;';
+
+                const leftDiv = document.createElement('div');
+                leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+                const cvs = document.createElement('canvas');
+                cvs.width = 24; cvs.height = 24;
+                window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
+
+                const countStr = (item.qty && item.qty > 1) ? ` (x${item.qty})` : '';
+                leftDiv.innerHTML = `
+                    <div style="font-size:12px;font-weight:bold;color:#f5f6fa;">${item.name}${countStr}</div>
+                `;
+                leftDiv.prepend(cvs);
+
+                const sellBtn = document.createElement('button');
+                sellBtn.className = 'pixel-btn';
+                sellBtn.style.cssText = 'font-size:9px;padding:6px 10px;white-space:nowrap;background:#27ae60;border-color:#2ecc71;';
+                sellBtn.innerText = `VENDER (+${sellValue} G)`;
+
+                sellBtn.onclick = () => {
+                    player.gold += sellValue;
+                    if (item.qty && item.qty > 1) {
+                        item.qty--;
+                    } else {
+                        player.inventory[idx] = null;
+                    }
+                    window.soundEngine.playItemPickup();
+                    this.renderShopTab('sell');
+                };
+
+                row.appendChild(leftDiv);
+                row.appendChild(sellBtn);
+                container.appendChild(row);
+            });
+
+            if (!hasItems) {
+                container.innerHTML = '<div style="color:#888;text-align:center;padding:20px;font-size:12px;">Tu inventario está vacío.</div>';
+            }
+        }
+    }
+
+    // =========================================================================
+    // MODAL DE GUNNAR EL HERRERO (FORJA DE EQUIPO Y MEJORAS)
+    // =========================================================================
+    createBlacksmithModalDOM() {
+        if (document.getElementById('blacksmith-modal')) return;
+        const bDiv = document.createElement('div');
+        bDiv.id = 'blacksmith-modal';
+        bDiv.className = 'game-modal';
+        bDiv.style.display = 'none';
+        bDiv.innerHTML = `
+            <div class="modal-content" style="max-width:540px;background:#181316;border:2px solid #e67e22;padding:16px;color:#fff;border-radius:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <h3 style="font-family:'Press Start 2P';font-size:11px;color:#e67e22;">🔨 FORJA DE GUNNAR</h3>
+                    <span id="forge-player-gold" style="font-family:'Press Start 2P';font-size:10px;color:#f1c40f;">0 G</span>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button id="forge-tab-craft" class="pixel-btn btn-gold" style="font-size:9px;padding:6px 14px;">FORJAR EQUIPO</button>
+                    <button id="forge-tab-upgrade" class="pixel-btn" style="font-size:9px;padding:6px 14px;">REFORZAR (+1)</button>
+                </div>
+                <div id="forge-body-content" style="max-height:260px;overflow-y:auto;padding-right:4px;margin-bottom:12px;"></div>
+                <button class="pixel-btn close-modal-btn" style="font-size:9px;padding:6px 12px;">CERRAR (ESC)</button>
+            </div>
+        `;
+        document.body.appendChild(bDiv);
+    }
+
+    showBlacksmithModal() {
+        this.createBlacksmithModalDOM();
+        const modal = document.getElementById('blacksmith-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        if (window.game) window.game.pauseForModal();
+        this.renderForgeTab('craft');
+
+        document.getElementById('forge-tab-craft').onclick = () => this.renderForgeTab('craft');
+        document.getElementById('forge-tab-upgrade').onclick = () => this.renderForgeTab('upgrade');
+        modal.querySelector('.close-modal-btn').onclick = () => this.closeBlacksmithModal();
+    }
+
+    closeBlacksmithModal() {
+        const modal = document.getElementById('blacksmith-modal');
+        if (modal) modal.style.display = 'none';
+        if (window.game) window.game.resumeFromModal();
+    }
+
+    renderForgeTab(tab) {
+        const container = document.getElementById('forge-body-content');
+        const player = window.game ? window.game.player : null;
+        if (!container || !player) return;
+        container.innerHTML = '';
+        document.getElementById('forge-player-gold').innerText = `${player.gold} G`;
+
+        if (tab === 'craft') {
+            const recipes = window.BLACKSMITH_RECIPES || [];
+            const pClass = player.characterClass;
+
+            recipes.forEach(recipe => {
+                const targetId = recipe.resultId[pClass];
+                const item = window.ITEM_DATABASE[targetId];
+                if (!item) return;
+
+                let canCraft = (player.gold >= recipe.costGold);
+                const matReqStrings = [];
+
+                recipe.materials.forEach(req => {
+                    let count = 0;
+                    player.inventory.forEach(invItem => {
+                        if (invItem && invItem.id === req.id) count += (invItem.qty || 1);
+                    });
+                    if (count < req.qty) canCraft = false;
+                    const matDef = window.ITEM_DATABASE[req.id];
+                    matReqStrings.push(`${count}/${req.qty} ${matDef ? matDef.name : req.id}`);
+                });
+
+                const row = document.createElement('div');
+                row.style.cssText = 'background:#261e22;padding:10px;margin-bottom:8px;border-radius:4px;border:1px solid #4a343b;display:flex;justify-content:space-between;align-items:center;';
+
+                const leftDiv = document.createElement('div');
+                leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+                const cvs = document.createElement('canvas');
+                cvs.width = 24; cvs.height = 24;
+                window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
+
+                leftDiv.innerHTML = `
+                    <div>
+                        <div style="font-size:12px;font-weight:bold;color:#f39c12;">${item.name}</div>
+                        <div style="font-size:10px;color:#aaa;margin-top:2px;">Materiales: ${matReqStrings.join(', ')}</div>
+                    </div>
+                `;
+                leftDiv.prepend(cvs);
+
+                const craftBtn = document.createElement('button');
+                craftBtn.className = canCraft ? 'pixel-btn btn-gold' : 'pixel-btn';
+                craftBtn.style.cssText = `font-size:9px;padding:6px 10px;white-space:nowrap;${canCraft ? '' : 'opacity:0.5;cursor:not-allowed;'}`;
+                craftBtn.innerText = `FORJAR (${recipe.costGold} G)`;
+
+                craftBtn.onclick = () => {
+                    if (canCraft) {
+                        const emptyIdx = player.inventory.findIndex(s => s === null);
+                        if (emptyIdx === -1) {
+                            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 25, '¡Inventario lleno!', '#ff4444'));
+                            return;
+                        }
+
+                        player.gold -= recipe.costGold;
+                        recipe.materials.forEach(req => {
+                            let needed = req.qty;
+                            player.inventory.forEach((invItem, i) => {
+                                if (invItem && invItem.id === req.id && needed > 0) {
+                                    if ((invItem.qty || 1) <= needed) {
+                                        needed -= (invItem.qty || 1);
+                                        player.inventory[i] = null;
+                                    } else {
+                                        invItem.qty -= needed;
+                                        needed = 0;
+                                    }
+                                }
+                            });
+                        });
+
+                        player.inventory[emptyIdx] = { ...item, qty: 1 };
+                        window.soundEngine.playLevelUp();
+                        window.game.floatingTexts.push(new FloatingText(player.x, player.y - 30, `¡${item.name} FORJADA!`, '#f1c40f', true));
+                        this.renderForgeTab('craft');
+                    }
+                };
+
+                row.appendChild(leftDiv);
+                row.appendChild(craftBtn);
+                container.appendChild(row);
+            });
+        } else if (tab === 'upgrade') {
+            ['weapon', 'armor'].forEach(slot => {
+                const item = player.equipment[slot];
+                if (!item) return;
+
+                const cost = ((item.upgradeLevel || 0) + 1) * 70;
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:#261e22;padding:10px;margin-bottom:8px;border-radius:4px;border:1px solid #4a343b;';
+
+                const leftDiv = document.createElement('div');
+                leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
+
+                const cvs = document.createElement('canvas');
+                cvs.width = 24; cvs.height = 24;
+                window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
+
+                leftDiv.innerHTML = `
+                    <div>
+                        <div style="font-size:12px;font-weight:bold;color:#f1c40f;">${item.name}</div>
+                        <div style="font-size:10px;color:#aaa;">Incrementa +4 de Estadística básica</div>
+                    </div>
+                `;
+                leftDiv.prepend(cvs);
+
+                const upBtn = document.createElement('button');
+                upBtn.className = 'pixel-btn btn-gold';
+                upBtn.style.cssText = 'font-size:9px;padding:6px 10px;white-space:nowrap;';
+                upBtn.innerText = `REFORZAR (${cost} G)`;
+
+                upBtn.onclick = () => {
+                    if (player.gold >= cost) {
+                        player.gold -= cost;
+                        item.upgradeLevel = (item.upgradeLevel || 0) + 1;
+                        item.name = `${item.name.replace(/\s\+\d+$/, '')} +${item.upgradeLevel}`;
+                        if (slot === 'weapon') item.atk = (item.atk || 0) + 4;
+                        else item.def = (item.def || 0) + 3;
+
+                        window.soundEngine.playItemPickup();
+                        this.renderForgeTab('upgrade');
+                    }
+                };
+
+                row.appendChild(leftDiv);
+                row.appendChild(upBtn);
+                container.appendChild(row);
+            });
+        }
+    }
+
     updateHUD(player, world) {
         if (!player) return;
-
         const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
         document.getElementById('hud-hp-fill').style.width = `${hpPct}%`;
         document.getElementById('hud-hp-text').innerText = `${Math.ceil(player.hp)} / ${player.maxHp}`;
@@ -96,16 +439,7 @@ class UIManager {
         document.getElementById('hud-player-name').innerText = `${player.name} (Nv. ${player.level})`;
         document.getElementById('hud-floor-num').innerText = `PISO ${world.floor} / 10`;
 
-        const floorNames = [
-            "El Umbral Olvidado", "Catacumbas del Despertar", "El Sepulcro de las Mil Telas",
-            "La Guardia Profanada", "Las Fauces de Azufre", "Altar de los Condenados",
-            "La Antesala Demoniaca", "Rotonda Virulenta: Abracadabra", "La Cúspide del Abismo",
-            "Trono de Hong Devorador de Hombres"
-        ];
-        document.getElementById('hud-floor-name').innerText = floorNames[world.floor - 1] || "Torre Oscura";
-
-        let hpPots = 0;
-        let mpPots = 0;
+        let hpPots = 0; let mpPots = 0;
         player.inventory.forEach(item => {
             if (item && item.id === 'potion_health') hpPots += (item.qty || 1);
             if (item && item.id === 'potion_mana') mpPots += (item.qty || 1);
@@ -130,7 +464,6 @@ class UIManager {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         const scaleX = canvas.width / world.cols;
         const scaleY = canvas.height / world.rows;
 
@@ -148,22 +481,19 @@ class UIManager {
             ctx.fillRect((world.stairs.x / world.tileSize) * scaleX, (world.stairs.y / world.tileSize) * scaleY, scaleX * 1.5, scaleY * 1.5);
         }
 
-        if (world.loreScroll) {
-            ctx.fillStyle = '#f1c40f';
-            ctx.fillRect((world.loreScroll.x / world.tileSize) * scaleX, (world.loreScroll.y / world.tileSize) * scaleY, scaleX, scaleY);
+        if (world.merchant) {
+            ctx.fillStyle = '#9b59b6';
+            ctx.fillRect((world.merchant.x / world.tileSize) * scaleX, (world.merchant.y / world.tileSize) * scaleY, scaleX * 1.5, scaleY * 1.5);
         }
 
-        if (window.game && window.game.enemies) {
-            ctx.fillStyle = '#e74c3c';
-            window.game.enemies.forEach(e => {
-                ctx.fillRect((e.x / world.tileSize) * scaleX, (e.y / world.tileSize) * scaleY, scaleX, scaleY);
-            });
+        if (world.blacksmith) {
+            ctx.fillStyle = '#e67e22';
+            ctx.fillRect((world.blacksmith.x / world.tileSize) * scaleX, (world.blacksmith.y / world.tileSize) * scaleY, scaleX * 1.5, scaleY * 1.5);
         }
 
-        if (window.game && window.game.activeBoss) {
-            ctx.fillStyle = '#ff0055';
-            const b = window.game.activeBoss;
-            ctx.fillRect((b.x / world.tileSize) * scaleX - 1, (b.y / world.tileSize) * scaleY - 1, scaleX * 2, scaleY * 2);
+        if (world.shrine) {
+            ctx.fillStyle = world.shrine.type === 'blood' ? '#e74c3c' : '#2ecc71';
+            ctx.fillRect((world.shrine.x / world.tileSize) * scaleX, (world.shrine.y / world.tileSize) * scaleY, scaleX * 1.5, scaleY * 1.5);
         }
 
         ctx.fillStyle = '#00d2d3';
@@ -187,7 +517,6 @@ class UIManager {
     renderInventory() {
         const player = window.game.player;
         if (!player) return;
-
         const grid = document.getElementById('inventory-grid-container');
         grid.innerHTML = '';
 
@@ -200,10 +529,8 @@ class UIManager {
                 slot.classList.add(rarityInfo.class);
 
                 const cvs = document.createElement('canvas');
-                cvs.width = 24;
-                cvs.height = 24;
-                const ctx = cvs.getContext('2d');
-                window.spriteManager.drawIcon(ctx, item.icon || 0, 0, 0, 24);
+                cvs.width = 24; cvs.height = 24;
+                window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
                 slot.appendChild(cvs);
 
                 if (item.qty && item.qty > 1) {
@@ -216,24 +543,24 @@ class UIManager {
                 slot.addEventListener('mouseenter', (e) => this.showTooltip(item, e));
                 slot.addEventListener('mousemove', (e) => this.updateTooltipPos(e));
                 slot.addEventListener('mouseleave', () => this.hideTooltip());
-                slot.addEventListener('click', (e) => {
+
+                slot.addEventListener('click', () => {
                     this.hideContextMenu();
                     this.handleSlotClick(index);
                 });
+
                 slot.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     this.showContextMenu(item, index, e);
                 });
             }
-
             grid.appendChild(slot);
         });
 
         this.renderEquipSlot('equip-slot-weapon', player.equipment.weapon, 'weapon');
         this.renderEquipSlot('equip-slot-armor', player.equipment.armor, 'armor');
         this.renderEquipSlot('equip-slot-acc', player.equipment.accessory, 'accessory');
-
         document.getElementById('inv-gold-count').innerText = `${player.gold} G`;
         this.renderPaperdoll(player);
     }
@@ -245,10 +572,8 @@ class UIManager {
 
         if (item) {
             const cvs = document.createElement('canvas');
-            cvs.width = 24;
-            cvs.height = 24;
-            const ctx = cvs.getContext('2d');
-            window.spriteManager.drawIcon(ctx, item.icon || 0, 0, 0, 24);
+            cvs.width = 24; cvs.height = 24;
+            window.spriteManager.drawIcon(cvs.getContext('2d'), item.icon || 0, 0, 0, 24);
             el.appendChild(cvs);
 
             el.onclick = () => {
@@ -270,119 +595,6 @@ class UIManager {
         }
     }
 
-
-
-    handleSlotClick(index) {
-        const player = window.game.player;
-        const item = player.inventory[index];
-        if (!item) return;
-
-        // 1. Pociones y consumibles
-        if (item.type === 'consumable') {
-            if (item.heal_hp) player.hp = Math.min(player.maxHp, player.hp + item.heal_hp);
-            if (item.heal_mp) player.mp = Math.min(player.maxMp, player.mp + item.heal_mp);
-            window.soundEngine.playPotion();
-
-            item.qty = (item.qty || 1) - 1;
-            if (item.qty <= 0) player.inventory[index] = null;
-            this.hideTooltip();
-            this.renderInventory();
-            return;
-        }
-
-        // 2. Equipamiento de Armas y Armaduras
-        if (item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory') {
-            // =========================================================
-            // RESTRICCIÓN DE CLASE
-            // =========================================================
-            if (item.classReq && item.classReq !== player.characterClass) {
-                const classNames = { warrior: 'Guerrero', archer: 'Arquero', mage: 'Mago' };
-                const reqName = classNames[item.classReq] || item.classReq;
-                if (window.soundEngine) {
-                    window.soundEngine.playTone(140, 'sawtooth', 0.2, 0.3);
-                }
-                if (window.game && window.game.floatingTexts) {
-                    window.game.floatingTexts.push(new FloatingText(
-                        player.x, player.y - 25,
-                        `¡Solo ${reqName}!`,
-                        '#ff4444',
-                        true
-                    ));
-                }
-                return; // Bloquea equipar
-            }
-
-            // Cada ítem va estrictamente a su ranura: weapon -> weapon, armor -> armor
-            const targetSlot = item.type;
-            const currentEquipped = player.equipment[targetSlot];
-
-            player.equipment[targetSlot] = item;
-            player.inventory[index] = currentEquipped;
-
-            window.soundEngine.playItemPickup();
-            this.hideTooltip();
-            this.renderInventory();
-        }
-    }
-
-    renderPaperdoll(player) {
-        const canvas = document.getElementById('dollCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Obtiene la clave de sprite exacta según el arma y armadura puestas (ej: player_warrior_w0_a0)
-        const sheetKey = player.getSpriteKey ? player.getSpriteKey() : `player_${player.characterClass}`;
-
-        window.spriteManager.draw(
-            ctx,
-            sheetKey,
-            0, 0,
-            48, 48,
-            0, 0, 96, 96
-        );
-    }
-    discardItem(index) {
-        const player = window.game.player;
-        if (!player || !player.inventory[index]) return;
-        const item = player.inventory[index];
-        const itemName = item.name;
-
-        // Se elimina directamente de la mochila SIN crear nada en el suelo
-        if (item.qty && item.qty > 1) {
-            item.qty--;
-            if (item.qty <= 0) player.inventory[index] = null;
-        } else {
-            player.inventory[index] = null;
-        }
-
-        // Sonido de destrucción
-        if (window.soundEngine) {
-            window.soundEngine.playTone(130, 'square', 0.15, 0.2);
-        }
-
-        // Aviso visual discreto de que el objeto fue destruido
-        if (window.game && window.game.floatingTexts) {
-            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 20, `-${itemName}`, '#a4b0be'));
-        }
-
-        // Pequeño efecto de ceniza/humo
-        if (window.game && window.game.particles) {
-            for (let i = 0; i < 6; i++) {
-                window.game.particles.push(new Particle(
-                    player.x, player.y,
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                    '#747d8c', 3, 15
-                ));
-            }
-        }
-
-        this.hideContextMenu();
-        this.hideTooltip();
-        this.renderInventory();
-    }
-
     showContextMenu(item, index, event) {
         this.hideTooltip();
         let menu = document.getElementById('item-context-menu');
@@ -390,13 +602,13 @@ class UIManager {
 
         const actionText = (item.type === 'consumable') ? '👉 Usar' : '⚔️ Equipar';
         menu.innerHTML = `
-            <div style="font-family:'Press Start 2P'; font-size:8px; color:var(--text-gold); padding:6px 8px; border-bottom:1px dashed #3a2a4c; margin-bottom:4px;">
+            <div style="font-family:'Press Start 2P'; font-size:8px; color:#f1c40f; padding:6px 8px; border-bottom:1px dashed #3a2a4c; margin-bottom:4px;">
                 ${item.name}
             </div>
-            <button class="item-context-btn" id="ctx-action-btn">
+            <button class="item-context-btn" id="ctx-action-btn" style="background:#241d30;border:1px solid #5a4270;color:#fff;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;margin-bottom:3px;">
                 <span>${actionText}</span>
             </button>
-            <button class="item-context-btn danger" id="ctx-discard-btn">
+            <button class="item-context-btn danger" id="ctx-discard-btn" style="background:#4a151b;border:1px solid #e74c3c;color:#ff7675;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;">
                 <span>🗑️ Destruir / Eliminar</span>
             </button>
         `;
@@ -413,6 +625,11 @@ class UIManager {
         };
 
         menu.style.display = 'flex';
+        menu.style.flexDirection = 'column';
+        menu.style.background = '#15111d';
+        menu.style.border = '2px solid #5a4270';
+        menu.style.padding = '4px';
+        menu.style.borderRadius = '4px';
 
         const container = document.getElementById('game-container') || document.body;
         const rect = container.getBoundingClientRect();
@@ -433,31 +650,106 @@ class UIManager {
         if (menu) menu.style.display = 'none';
     }
 
+    discardItem(index) {
+        const player = window.game.player;
+        if (!player || !player.inventory[index]) return;
+        const item = player.inventory[index];
+        const itemName = item.name;
+
+        if (item.qty && item.qty > 1) {
+            item.qty--;
+            if (item.qty <= 0) player.inventory[index] = null;
+        } else {
+            player.inventory[index] = null;
+        }
+
+        if (window.soundEngine) {
+            window.soundEngine.playTone(130, 'square', 0.15, 0.2);
+        }
+
+        if (window.game && window.game.floatingTexts) {
+            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 20, `-${itemName}`, '#a4b0be'));
+        }
+
+        if (window.game && window.game.particles) {
+            for (let i = 0; i < 6; i++) {
+                window.game.particles.push(new Particle(
+                    player.x, player.y,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    '#747d8c', 3, 15
+                ));
+            }
+        }
+
+        this.hideContextMenu();
+        this.hideTooltip();
+        this.renderInventory();
+    }
+
+    handleSlotClick(index) {
+        const player = window.game.player;
+        const item = player.inventory[index];
+        if (!item) return;
+
+        if (item.type === 'consumable') {
+            if (item.heal_hp) player.hp = Math.min(player.maxHp, player.hp + item.heal_hp);
+            if (item.heal_mp) player.mp = Math.min(player.maxMp, player.mp + item.heal_mp);
+            window.soundEngine.playPotion();
+            item.qty = (item.qty || 1) - 1;
+            if (item.qty <= 0) player.inventory[index] = null;
+            this.hideTooltip();
+            this.renderInventory();
+            return;
+        }
+
+        if (item.type === 'weapon' || item.type === 'armor') {
+            if (item.classReq && item.classReq !== player.characterClass) return;
+
+            const targetSlot = item.type;
+            const currentEquipped = player.equipment[targetSlot];
+            player.equipment[targetSlot] = item;
+            player.inventory[index] = currentEquipped;
+
+            window.soundEngine.playItemPickup();
+            this.hideTooltip();
+            this.renderInventory();
+        }
+    }
+
+    renderPaperdoll(player) {
+        const canvas = document.getElementById('dollCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        window.spriteManager.draw(ctx, player.getSpriteKey(), 0, 0, 48, 48, 0, 0, 96, 96);
+    }
+
     showTooltip(item, event) {
         const tt = this.tooltip;
         if (!tt) return;
         const rarity = window.ITEM_RARITIES[item.rarity] || window.ITEM_RARITIES.COMMON;
         const player = window.game ? window.game.player : null;
 
-        const classLabels = {
-            warrior: '⚔️ Solo Guerrero',
-            archer: '🏹 Solo Arquero',
-            mage: '🔮 Solo Mago'
-        };
-
-        let reqHtml = '';
-        if (item.classReq) {
-            const isCompatible = player && player.characterClass === item.classReq;
-            const labelColor = isCompatible ? '#2ecc71' : '#e74c3c';
-            reqHtml = `<div style="color:${labelColor}; font-size:11px; margin-bottom:4px; font-weight:bold;">
-                ${classLabels[item.classReq] || item.classReq}
-            </div>`;
+        let compHtml = '';
+        if (player && (item.type === 'weapon' || item.type === 'armor')) {
+            const equipped = player.equipment[item.type];
+            if (equipped && equipped.id !== item.id) {
+                const diffAtk = (item.atk || 0) - (equipped.atk || 0);
+                const diffDef = (item.def || 0) - (equipped.def || 0);
+                compHtml = `
+                    <div style="margin-top:6px;padding-top:4px;border-top:1px dashed #555;font-size:10px;">
+                        <div style="color:#aaa;margin-bottom:2px;">vs Equipado actualmente:</div>
+                        ${diffAtk !== 0 ? `<div style="color:${diffAtk > 0 ? '#2ecc71' : '#e74c3c'};">${diffAtk > 0 ? '+' : ''}${diffAtk} Ataque</div>` : ''}
+                        ${diffDef !== 0 ? `<div style="color:${diffDef > 0 ? '#2ecc71' : '#e74c3c'};">${diffDef > 0 ? '+' : ''}${diffDef} Defensa</div>` : ''}
+                    </div>
+                `;
+            }
         }
 
         tt.innerHTML = `
             <div class="tooltip-title" style="color:${rarity.color}">${item.name}</div>
             <div class="tooltip-type">${rarity.name} - ${item.type.toUpperCase()}</div>
-            ${reqHtml}
             <div class="tooltip-stats">
                 ${item.atk ? `<div>+${item.atk} Daño de Ataque</div>` : ''}
                 ${item.def ? `<div>+${item.def} Defensa Física</div>` : ''}
@@ -465,13 +757,12 @@ class UIManager {
                 ${item.dex ? `<div>+${item.dex} Destreza</div>` : ''}
                 ${item.mag ? `<div>+${item.mag} Magia</div>` : ''}
                 ${item.con ? `<div>+${item.con} Constitución</div>` : ''}
-                ${item.heal_hp ? `<div>Restaura ${item.heal_hp} PV</div>` : ''}
-                ${item.heal_mp ? `<div>Restaura ${item.heal_mp} PM</div>` : ''}
             </div>
+            ${compHtml}
             <div class="tooltip-lore">${item.desc || ''}</div>
-            <div style="font-size:13px;color:#f1c40f;margin-top:6px;display:flex;justify-content:space-between;">
+            <div style="font-size:12px;color:#f1c40f;margin-top:6px;display:flex;justify-content:space-between;">
                 <span>Valor: ${item.value || 0} G</span>
-                <span style="font-size:10px;color:#ff7675;">[Clic: Equipar / Usar]</span>
+                <span style="font-size:9px;color:#aaa;">[Clic Der: Opciones]</span>
             </div>
         `;
         tt.style.display = 'block';
@@ -481,22 +772,11 @@ class UIManager {
     updateTooltipPos(event) {
         const tt = this.tooltip;
         if (!tt || tt.style.display === 'none') return;
-
         const container = document.getElementById('game-container') || document.body;
         const rect = container.getBoundingClientRect();
-        const ttWidth = 250;
-        const ttHeight = tt.offsetHeight || 180;
-
         let posX = event.clientX - rect.left + 16;
         let posY = event.clientY - rect.top + 16;
-
-        if (posX + ttWidth > rect.width - 10) {
-            posX = event.clientX - rect.left - ttWidth - 12;
-        }
-        if (posY + ttHeight > rect.height - 10) {
-            posY = event.clientY - rect.top - ttHeight - 12;
-        }
-
+        if (posX + 250 > rect.width - 10) posX = event.clientX - rect.left - 260;
         tt.style.left = `${Math.max(10, posX)}px`;
         tt.style.top = `${Math.max(10, posY)}px`;
     }
@@ -520,19 +800,26 @@ class UIManager {
     renderStatsModal() {
         const player = window.game.player;
         if (!player) return;
-
         const total = player.getTotalStats();
+
         document.getElementById('stat-level-val').innerText = player.level;
         document.getElementById('stat-pts-val').innerText = player.attributePoints;
-
         document.getElementById('stat-str-val').innerText = `${player.strength} (Total: ${total.str})`;
         document.getElementById('stat-dex-val').innerText = `${player.dexterity} (Total: ${total.dex})`;
         document.getElementById('stat-mag-val').innerText = `${player.magic} (Total: ${total.mag})`;
         document.getElementById('stat-con-val').innerText = `${player.constitution} (Total: ${total.con})`;
-
         document.getElementById('stat-atk-total').innerText = total.atk;
         document.getElementById('stat-def-total').innerText = total.def;
         document.getElementById('stat-crit-total').innerText = `${total.critChance}%`;
+
+        let setEl = document.getElementById('set-bonus-indicator');
+        if (!setEl) {
+            setEl = document.createElement('div');
+            setEl.id = 'set-bonus-indicator';
+            setEl.style.cssText = 'color:#f1c40f;font-size:10px;margin-top:8px;font-family:"Press Start 2P";';
+            document.getElementById('stats-modal').querySelector('.modal-content').appendChild(setEl);
+        }
+        setEl.innerText = total.setBonus || 'Sin bono de conjunto';
 
         const hasPoints = player.attributePoints > 0;
         ['str', 'dex', 'mag', 'con'].forEach(attr => {
@@ -543,17 +830,9 @@ class UIManager {
                     if (player.attributePoints > 0) {
                         if (attr === 'str') player.strength++;
                         if (attr === 'dex') player.dexterity++;
-                        if (attr === 'mag') {
-                            player.magic++;
-                            player.maxMp += 5;
-                        }
-                        if (attr === 'con') {
-                            player.constitution++;
-                            player.maxHp += 10;
-                            player.hp = Math.min(player.maxHp, player.hp + 10);
-                        }
+                        if (attr === 'mag') { player.magic++; player.maxMp += 5; }
+                        if (attr === 'con') { player.constitution++; player.maxHp += 10; player.hp += 10; }
                         player.attributePoints--;
-                        window.soundEngine.playItemPickup();
                         this.renderStatsModal();
                     }
                 };
@@ -567,9 +846,7 @@ class UIManager {
         document.getElementById('parchment-author').innerText = `- ${loreData.author}`;
         document.getElementById('parchment-content').innerText = loreData.content;
         document.getElementById('parchment-tip').innerText = loreData.combat_tip;
-
         modal.style.display = 'flex';
-        window.soundEngine.playTone(400, 'sine', 0.2, 0.2);
     }
 
     closeLoreModal() {
@@ -580,90 +857,60 @@ class UIManager {
     async showHallOfFame() {
         const modal = document.getElementById('hall-of-fame-modal');
         modal.style.display = 'flex';
-
         try {
             const res = await fetch('/api/hall_of_fame');
             const data = await res.json();
             const tbody = document.getElementById('hof-table-body');
             tbody.innerHTML = '';
-
             data.forEach((r, idx) => {
                 const tr = document.createElement('tr');
-                const badgeClass = r.outcome === 'VICTORY' ? 'outcome-victory' : 'outcome-defeat';
                 tr.innerHTML = `
                     <td>#${idx + 1}</td>
                     <td>${r.player_name}</td>
-                    <td>${r.character_class.toUpperCase()} (Nv. ${r.level})</td>
+                    <td>${r.character_class.toUpperCase()}</td>
                     <td>Piso ${r.floor_reached}</td>
                     <td>${r.enemies_killed}</td>
                     <td>${r.gold} G</td>
-                    <td><span class="outcome-badge ${badgeClass}">${r.outcome}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { }
     }
 
     async showSavesModal() {
         const modal = document.getElementById('saves-modal');
         modal.style.display = 'flex';
         if (window.game) window.game.pauseForModal();
-
         try {
             const res = await fetch('/api/saves');
             const saves = await res.json();
             const container = document.getElementById('saves-slots-container');
             container.innerHTML = '';
-
             [1, 2, 3].forEach(slotNum => {
                 const save = saves.find(s => s.slot === slotNum);
                 const slotDiv = document.createElement('div');
-                slotDiv.className = 'save-slot-card';
                 slotDiv.style.cssText = 'background:#1a1324;border:2px solid #5a4270;border-radius:4px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;';
-
-                if (save) {
-                    slotDiv.innerHTML = `
-                        <div>
-                            <div style="font-family:'Press Start 2P';font-size:11px;color:#f1c40f;">SLOT ${slotNum}: ${save.player_name}</div>
-                            <div style="font-size:15px;color:#aaa;margin-top:4px;">Clase: ${save.character_class.toUpperCase()} | Nivel: ${save.level} | Piso: ${save.floor_reached} / 10</div>
-                            <div style="font-size:12px;color:#666;">Guardado: ${save.updated_at || ''}</div>
-                        </div>
-                        <div style="display:flex;gap:8px;">
-                            <button class="pixel-btn" id="load-slot-${slotNum}" style="font-size:10px;padding:6px 10px;">CARGAR</button>
-                            <button class="pixel-btn btn-gold" id="save-slot-${slotNum}" style="font-size:10px;padding:6px 10px;">GUARDAR</button>
-                        </div>
-                    `;
-                } else {
-                    slotDiv.innerHTML = `
-                        <div>
-                            <div style="font-family:'Press Start 2P';font-size:11px;color:#888;">SLOT ${slotNum}: [VACÍO]</div>
-                            <div style="font-size:15px;color:#555;">Sin datos de partida</div>
-                        </div>
-                        <button class="pixel-btn btn-gold" id="save-slot-${slotNum}" style="font-size:10px;padding:6px 10px;">GUARDAR AQUÍ</button>
-                    `;
-                }
-
+                slotDiv.innerHTML = save ? `
+                    <div>
+                        <div style="font-family:'Press Start 2P';font-size:11px;color:#f1c40f;">SLOT ${slotNum}: ${save.player_name}</div>
+                        <div style="font-size:13px;color:#aaa;">Piso: ${save.floor_reached} / 10 | Nivel: ${save.level}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="pixel-btn" id="load-slot-${slotNum}">CARGAR</button>
+                        <button class="pixel-btn btn-gold" id="save-slot-${slotNum}">GUARDAR</button>
+                    </div>
+                ` : `
+                    <div style="color:#888;">SLOT ${slotNum}: [VACÍO]</div>
+                    <button class="pixel-btn btn-gold" id="save-slot-${slotNum}">GUARDAR</button>
+                `;
                 container.appendChild(slotDiv);
 
                 const saveBtn = document.getElementById(`save-slot-${slotNum}`);
-                if (saveBtn) {
-                    saveBtn.onclick = () => {
-                        if (window.game) window.game.saveGame(slotNum);
-                    };
-                }
-
+                if (saveBtn) saveBtn.onclick = () => window.game && window.game.saveGame(slotNum);
                 const loadBtn = document.getElementById(`load-slot-${slotNum}`);
-                if (loadBtn) {
-                    loadBtn.onclick = () => {
-                        if (window.game) window.game.loadGame(slotNum);
-                    };
-                }
+                if (loadBtn) loadBtn.onclick = () => window.game && window.game.loadGame(slotNum);
             });
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { }
     }
 }
 
