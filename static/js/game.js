@@ -46,6 +46,26 @@ class DarkTowerGame {
             this.mousePos.x = e.clientX - rect.left + this.camera.x;
             this.mousePos.y = e.clientY - rect.top + this.camera.y;
         });
+        // Abrir el libro de crónicas
+        const loreBookBtn = document.getElementById('btn-lore-book');
+        if (loreBookBtn) {
+            loreBookBtn.addEventListener('click', () => {
+                window.soundEngine.init();
+                window.uiManager.showLoreBook();
+            });
+        }
+
+        // Botones de pasar página dentro del libro
+        const nextBtn = document.getElementById('btn-next-page');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => window.uiManager.nextLorePage());
+        }
+
+        const prevBtn = document.getElementById('btn-prev-page');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => window.uiManager.prevLorePage());
+        }
+
 
         this.canvas.addEventListener('mousedown', (e) => {
             if (this.state === this.STATE_PLAYING && this.player && e.button === 0) {
@@ -73,11 +93,18 @@ class DarkTowerGame {
             document.getElementById('how-to-play-modal').style.display = 'flex';
         });
 
+
         window.spriteManager.loadAll(() => {
             window.uiManager.init();
+
+            // Comprobar si el jugador ya completó el juego antes:
+            if (window.uiManager.updateBookUnlockStatus) {
+                window.uiManager.updateBookUnlockStatus();
+            }
+
             this.lastTime = performance.now();
             requestAnimationFrame((time) => this.loop(time));
-        });
+        })
     }
 
     resize() {
@@ -424,8 +451,14 @@ class DarkTowerGame {
         this.state = this.STATE_VICTORY;
         window.soundEngine.stopBgm();
         window.soundEngine.playLevelUp();
+
+        // ¡DESBLOQUEAR EL LIBRO DE CRÓNICAS PARA SIEMPRE!
+        localStorage.setItem('dark_tower_game_cleared', 'true');
+        if (window.uiManager) window.uiManager.updateBookUnlockStatus();
+
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'flex';
+        // ... (resto de tu código de victoria)
     }
 
     returnToTitle() {

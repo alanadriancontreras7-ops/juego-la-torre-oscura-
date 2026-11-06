@@ -23,10 +23,16 @@ db.init_app(app)
 LORE_DATA = [
     {
         "floor": 1,
-        "title": "Diario del Centinela Caído - Entrada I",
-        "author": "Capitán Roderick",
-        "content": "Hemos cruzado el umbral de La Torre Oscura. La atmósfera pesa como plomo y las criptas inferiores huelen a muerte antigua. Bandidos armados con dagas melladas han tomado las antecámaras. No son hombres cuerdos; sus ojos vacíos miran al abismo.",
-        "combat_tip": "Consejo: Los bandidos son rápidos pero carecen de armadura pesada. Bloquea o retrocede tras sus golpes para contraatacar con seguridad."
+        "title": "EL NACE DE LAS LLAMAS SOMBRÍAS",
+        "author": "Antiguos Escritos del Guardián",
+        "content": (
+            "Antes de que la Torre fuera erigida, existía un ente engendrado en el corazón "
+            "de las llamas sombras: el Señor Oscuro. No es un simple demonio, sino una fuerza "
+            "primordial de fuego negro y penumbra absoluta. Tan inmenso es su poder que incluso "
+            "los Dioses del Panteón libraron guerras contra él y fracasaron en destruirlo, "
+            "logrando únicamente sellar su esencia en las profundidades de este abismo."
+        ),
+        "combat_tip": "Aprovecha los primeros pisos para subir de nivel y familiarizarte con los ataques básicos."
     },
     {
         "floor": 2,
@@ -53,7 +59,7 @@ LORE_DATA = [
         "floor": 5,
         "title": "Códice de la Bestia Ancestral: Lucian",
         "author": "Cazador Imperial Brand",
-        "content": "En las profundidades de las Fauces de Azufre no habita una manada ordinaria, sino su patriarca: Lucian, el primer hombre lobo engendrado por la Torre Oscura. Su pelaje no es cenizo sino de un blanco espectral, y su tamaño empequeñece a cualquier bestia conocida. Sus aullidos resuenan por la roca viva con una furia gélida.",
+        "content": "En las profundidades de las Fauces de Azufre no habita un lobo ordinario, sino su patriarca: Lucian, el primer hombre lobo creado  por el señor oscuro. Su pelaje no es cenizo sino de un blanco espectral, y su tamaño empequeñece a cualquier bestia conocida. Sus aullidos resuenan por la roca viva con una furia gélida.",
         "combat_tip": "¡ALERTA DE SUB-JEFE!: Lucian es mucho más rápido y agresivo que cualquier enemigo normal. Cuando eche su cabeza hacia atrás para aullar, prepárate: desatará una onda de choque y luego una embestida con garras salvajes. Atácalo tras esquivar su salto mortal."
     },
 
@@ -61,7 +67,7 @@ LORE_DATA = [
         "floor": 6,
         "title": "Piel Marcada con Garras - Entrada VI",
         "author": "Cazador Brand",
-        "content": "Hombres lobo... Bestias musculosas cubiertas de pelaje cenizo y ojos amarillos hambrientos. No temen al dolor ni a las espadas comunes. Atacan con una furia desquiciada.",
+        "content": "Hombres lobo... Bestias musculosas cubiertas de pelaje cenizo y ojos amarillos hambrientos. No temen al dolor ni a las espadas comunes solo a su progenitor lucian . Atacan con una furia desquiciada.",
         "combat_tip": "Consejo: Cuando el Hombre Lobo flexione sus patas traseras para abalanzarse, rueda hacia un lado. Sus zarpazos dejan una breve ventana de vulnerabilidad."
     },
    {
@@ -97,10 +103,16 @@ LORE_DATA = [
     },
     {
         "floor": 9,
-        "title": "Fragmento del Abismo - Entrada IX",
-        "author": "Último Paladín",
-        "content": "El aire es gélido y el cielo se rasga en una tormenta eterna. La Cúspide de la Torre flota sobre el vacío cósmico. Las estrellas parecen apagarse ante la mirada del Gran Ojo ardiente. Hong reina más arriba.",
-        "combat_tip": "Consejo: Las runas astrales del suelo aumentan tu velocidad si las pisas. Aprovéchalas para sortear a los demonios guardianes."
+        "title": "EL ARTE DEL ENGAÑO",
+        "author": "Pergamino de las Almas Perdidas",
+        "content": (
+            "Imposibilitado para destruir el mundo con su propia fuerza mientras permanece "
+            "sellado, el Señor Oscuro perfected el arte de la manipulación. Conoce las "
+            "debilidades, los celos y los vacíos del corazón humano. Busca a aquellos con "
+            "espíritus quebrantados o ambiciosos que le sean de utilidad, ofreciéndoles falso "
+            "poder y consuelo a cambio de sus almas, convirtiéndolos en peones para alimentar su liberación."
+        ),
+        "combat_tip": "Atento a los enemigos a distancia; elimina primero a los tiradores antes de enfrentarte al cuerpo a cuerpo."
     },
     {
         "floor": 10,

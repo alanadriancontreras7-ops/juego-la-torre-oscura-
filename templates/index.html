@@ -38,18 +38,13 @@
             </div>
 
             <div class="title-menu">
-                <button class="pixel-btn btn-gold" id="btn-new-game">
-                    <span>⚔️</span> NUEVA PARTIDA
-                </button>
-                <button class="pixel-btn" id="btn-load-game">
-                    <span>📜</span> CARGAR PARTIDA
-                </button>
-                <button class="pixel-btn" id="btn-hall-of-fame">
-                    <span>🏆</span> SALÓN DE LA FAMA
-                </button>
-                <button class="pixel-btn" id="btn-how-to-play">
-                    <span>📖</span> CÓMO JUGAR
-                </button>
+                <!-- En el menú de inicio: -->
+                <button id="btn-new-game" class="pixel-btn btn-gold">⚔️ NUEVA PARTIDA</button>
+                <button id="btn-load-game" class="pixel-btn">📜 CARGAR PARTIDA</button>
+                <button id="btn-hall-of-fame" class="pixel-btn">🏆 SALÓN DE LA FAMA</button>
+                <button id="btn-lore-book" class="pixel-btn btn-gold" style="display: none;">📖 CRÓNICAS
+                    (DESBLOQUEADO)</button>
+                <button id="btn-how-to-play" class="pixel-btn">🎮 CÓMO JUGAR</button>
             </div>
 
             <div style="font-family:'Press Start 2P'; font-size:9px; color:#c99e38; text-shadow:1px 1px 0 #000;">
@@ -211,6 +206,49 @@
                 <div style="padding: 0 24px 20px; display:flex; justify-content:center;">
                     <button class="pixel-btn btn-gold" id="confirm-class-btn" style="width:260px;">COMENZAR
                         AVENTURA</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DEL LIBRO ILUSTRADO -->
+        <div id="lore-book-modal" class="game-modal" style="display: none;">
+            <div class="ancient-book-container">
+                <div class="book-cover">
+                    <div class="book-pages">
+                        <!-- Página Izquierda (Texto del relato) -->
+                        <div class="book-page left-page">
+                            <div class="page-header" id="book-chap-title-left">Capítulo I</div>
+                            <div class="page-content" id="book-text-left"></div>
+                            <div class="page-footer" id="book-page-num-left">1</div>
+                        </div>
+
+                        <!-- Lomo central -->
+                        <div class="book-spine-line"></div>
+
+                        <!-- Página Derecha (Foto de referencia / Ilustración) -->
+                        <div class="book-page right-page" style="align-items: center; justify-content: space-between;">
+                            <div class="page-header" id="book-chap-title-right">Ilustración</div>
+
+                            <!-- Marco dorado para la foto del jefe/héroe -->
+                            <div class="book-illustration-frame">
+                                <img id="book-illu-img" src="" alt="Ilustración"
+                                    style="max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; border-radius: 4px;">
+                            </div>
+
+                            <div class="page-content" id="book-text-right"
+                                style="font-size: 13px; margin-top: 8px; text-align: center;"></div>
+                            <div class="page-footer" id="book-page-num-right">2</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="book-controls">
+                    <button id="btn-prev-page" class="pixel-btn">◀ ANTERIOR</button>
+                    <span id="book-progress-label"
+                        style="font-family:'Press Start 2P'; font-size:10px; color:#f1c40f;">1 / 6</span>
+                    <button id="btn-next-page" class="pixel-btn btn-gold">SIGUIENTE ▶</button>
+                    <button class="pixel-btn close-modal-btn" style="background:#c0392b; margin-left:14px;">CERRAR
+                        (ESC)</button>
                 </div>
             </div>
         </div>

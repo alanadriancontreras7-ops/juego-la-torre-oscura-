@@ -604,21 +604,23 @@ const ITEM_DATABASE = {
         desc: 'Llave dorada que desbloquea la puerta reforzada de la sala del tesoro.'
     },
 
-    // EQUIPO DE HUESO (ICONOS 26 a 29)
+    // EQUIPO DE HUESO (ICONOS 26 a 29; armaduras por clase: 29, 34, 35)
+    // `skin` = apariencia en el sprite del héroe (3 = hueso, 4 = lobo). Es independiente de `look`,
+    // que sigue controlando los bonus de set y el diseño del arma.
     sword_bone: { id: 'sword_bone', name: 'Machete Dentado de Hueso', type: 'weapon', weaponType: 'sword', classReq: 'warrior', look: 0, rarity: 'RARE', icon: 26, atk: 20, str: 5, value: 90, desc: 'Forjada con fémures afilados. Causa heridas desgarradoras.' },
     bow_bone: { id: 'bow_bone', name: 'Arco Compuesto de Hueso', type: 'weapon', weaponType: 'bow', classReq: 'archer', look: 0, rarity: 'RARE', icon: 27, atk: 18, dex: 6, value: 85, desc: 'Tallado en vértebras de bestia con gran tensión de tiro.' },
     staff_bone: { id: 'staff_bone', name: 'Cetro del Nigromante', type: 'weapon', weaponType: 'staff', classReq: 'mage', look: 0, rarity: 'RARE', icon: 28, atk: 22, mag: 8, value: 95, desc: 'Coronado por un cráneo que canaliza maná espectral.' },
-    armor_bone_warrior: { id: 'armor_bone_warrior', name: 'Coraza de Costillas Reforzadas', type: 'armor', armorType: 'plate', classReq: 'warrior', look: 0, rarity: 'RARE', icon: 29, def: 16, con: 6, value: 100, desc: 'Caja torácica endurecida que cubre el torso.' },
-    armor_bone_archer: { id: 'armor_bone_archer', name: 'Pechera de Cuero Óseo', type: 'armor', armorType: 'leather', classReq: 'archer', look: 0, rarity: 'RARE', icon: 29, def: 11, dex: 5, con: 3, value: 95, desc: 'Placas de hueso cosidas sobre cuero flexible.' },
-    armor_bone_mage: { id: 'armor_bone_mage', name: 'Manto de Calaveras del Osario', type: 'armor', armorType: 'robe', classReq: 'mage', look: 0, rarity: 'RARE', icon: 29, def: 9, mag: 7, con: 4, value: 95, desc: 'Seda ritual con fragmentos óseos protectores.' },
+    armor_bone_warrior: { id: 'armor_bone_warrior', name: 'Coraza de Costillas Reforzadas', type: 'armor', armorType: 'plate', classReq: 'warrior', look: 0, skin: 3, rarity: 'RARE', icon: 29, def: 16, con: 6, value: 100, desc: 'Caja torácica endurecida que cubre el torso.' },
+    armor_bone_archer: { id: 'armor_bone_archer', name: 'Pechera de Cuero Óseo', type: 'armor', armorType: 'leather', classReq: 'archer', look: 0, skin: 3, rarity: 'RARE', icon: 34, def: 11, dex: 5, con: 3, value: 95, desc: 'Placas de hueso cosidas sobre cuero flexible.' },
+    armor_bone_mage: { id: 'armor_bone_mage', name: 'Manto de Calaveras del Osario', type: 'armor', armorType: 'robe', classReq: 'mage', look: 0, skin: 3, rarity: 'RARE', icon: 35, def: 9, mag: 7, con: 4, value: 95, desc: 'Seda ritual con fragmentos óseos protectores.' },
 
     // EQUIPO DE LOBO (ICONOS 30 a 33)
     sword_wolf: { id: 'sword_wolf', name: 'Mandoble Colmillo de Lobo', type: 'weapon', weaponType: 'sword', classReq: 'warrior', look: 1, rarity: 'EPIC', icon: 30, atk: 30, str: 9, con: 4, value: 230, desc: 'Hoja dentada con colmillos de lobo alfa que desgarran armaduras.' },
     bow_wolf: { id: 'bow_wolf', name: 'Arco de Tendón de Lobo Ártico', type: 'weapon', weaponType: 'bow', classReq: 'archer', look: 1, rarity: 'EPIC', icon: 31, atk: 28, dex: 10, value: 220, desc: 'Tensado con tendones de lobo feral. Disparos rápidos y cortantes.' },
     staff_wolf: { id: 'staff_wolf', name: 'Báculo del Chamán Aullador', type: 'weapon', weaponType: 'staff', classReq: 'mage', look: 1, rarity: 'EPIC', icon: 32, atk: 30, mag: 12, value: 235, desc: 'Madera oscura adornada con garras y runas de lobos espectrales.' },
-    armor_wolf_warrior: { id: 'armor_wolf_warrior', name: 'Coraza de Piel Feral Alfa', type: 'armor', armorType: 'plate', classReq: 'warrior', look: 1, rarity: 'EPIC', icon: 33, def: 24, con: 9, str: 4, value: 240, desc: 'Pieles de bestia acolchadas bajo placas de acero.' },
-    armor_wolf_archer: { id: 'armor_wolf_archer', name: 'Jubón del Cazador de Manada', type: 'armor', armorType: 'leather', classReq: 'archer', look: 1, rarity: 'EPIC', icon: 33, def: 17, dex: 8, con: 4, value: 230, desc: 'Manto de piel de lobo que otorga sigilo y agilidad.' },
-    armor_wolf_mage: { id: 'armor_wolf_mage', name: 'Túnica de Piel Invernal', type: 'armor', armorType: 'robe', classReq: 'mage', look: 1, rarity: 'EPIC', icon: 33, def: 14, mag: 10, con: 5, value: 230, desc: 'Tejido rúnico forrado en piel que aísla de cualquier daño elemental.' },
+    armor_wolf_warrior: { id: 'armor_wolf_warrior', name: 'Coraza de Piel Feral Alfa', type: 'armor', armorType: 'plate', classReq: 'warrior', look: 1, skin: 4, rarity: 'EPIC', icon: 33, def: 24, con: 9, str: 4, value: 240, desc: 'Pieles de bestia acolchadas bajo placas de acero.' },
+    armor_wolf_archer: { id: 'armor_wolf_archer', name: 'Jubón del Cazador de Manada', type: 'armor', armorType: 'leather', classReq: 'archer', look: 1, skin: 4, rarity: 'EPIC', icon: 36, def: 17, dex: 8, con: 4, value: 230, desc: 'Manto de piel de lobo que otorga sigilo y agilidad.' },
+    armor_wolf_mage: { id: 'armor_wolf_mage', name: 'Túnica de Piel Invernal', type: 'armor', armorType: 'robe', classReq: 'mage', look: 1, skin: 4, rarity: 'EPIC', icon: 37, def: 14, mag: 10, con: 5, value: 230, desc: 'Tejido rúnico forrado en piel que aísla de cualquier daño elemental.' },
 
     // =========================================================================
     // OBJETOS VARIOS Y CONSUMIBLES

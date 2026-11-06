@@ -487,8 +487,22 @@ class Player {
         return (itemDef.look !== undefined) ? itemDef.look : 0;
     }
 
+    /**
+     * Apariencia de la armadura en el sprite: 0 común, 1 oscura, 2 legendaria, 3 hueso, 4 lobo.
+     * Usa `skin` del ítem si lo tiene; si no, su `look`. (Los bonus de set siguen usando getArmorLook().)
+     */
+    getArmorSkin() {
+        const nativeArmor = { warrior: 'plate', archer: 'leather', mage: 'robe' }[this.characterClass];
+        const a = this.equipment && this.equipment.armor;
+        if (!a) return 0;
+        const itemDef = window.ITEM_DATABASE[a.id] || a;
+        if (itemDef.armorType && itemDef.armorType !== nativeArmor) return 0;
+        if (itemDef.skin !== undefined) return itemDef.skin;
+        return (itemDef.look !== undefined) ? itemDef.look : 0;
+    }
+
     getSpriteKey() {
-        return `player_${this.characterClass}_w${this.getWeaponLook()}_a${this.getArmorLook()}`;
+        return `player_${this.characterClass}_w${this.getWeaponLook()}_a${this.getArmorSkin()}`;
     }
 
     update(keys, world, projectiles, particles) {

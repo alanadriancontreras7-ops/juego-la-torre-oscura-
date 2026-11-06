@@ -913,5 +913,124 @@ class UIManager {
         } catch (e) { }
     }
 }
+// =============================================================================
+// LIBRO DE CRÓNICAS ILUSTRADO (SOLO TRAS LA VICTORIA)
+// =============================================================================
+
+const LORE_CHAPTERS = [
+    {
+        num: 1,
+        titleLeft: "VI. La Guerra de los Mil Años",
+        image: "/static/assets/lore/Batalla.png",
+        textLeft: "<p>Durante <b>mil años</b>, las distintas razas del mundo lucharon contra el <b>Señor Oscuro</b> y sus legiones de oscuridad. Humanos, elfos, enanos,  y magos dejaron de lado sus diferencias para formar una alianza y enfrentar una amenaza que parecía imposible de derrotar. Reinos fueron destruidos, bosques consumidos y montañas reducidas a cenizas. y finalmente, los Dioses decidieron bajar y derroatar al señor oscuro pero no pudieron elimanarlo asi que construyeron una <b>Torre</b> sobre el abismo y sellaron en sus profundidades la esencia del Señor Oscuro. La guerra terminó, pero el mal jamás fue destruido.</p>",
+        titleRight: "La Guerra de los Mil Años",
+        textRight: "<i>«Mil años de sangre para una victoria que nunca fue completa. El Señor Oscuro no murió... solo fue sellado.»</i>",
+    },
+    {
+        num: 2,
+        titleLeft: "II. La Gran Alianza",
+        image: "/static/assets/lore/Alianza.jpg",
+        textLeft: "<p>Cuando la humanidad desfallecía, tres campeones bendecidos con reliquias divinas encabezaron el asedio final:</p><p>El <b>Paladín Solar</b> de coraza dorada alada, la <b>Arquera Silvana del Ocaso</b> y la <b>Archimaga Celeste</b>. Juntos doblegaron las legiones del abismo y sellaron al Señor Oscuro.</p>",
+        titleRight: "Los Tres Héroes",
+        textRight: "<i>«Aquellos que sacrificaron su propia luz para aprisionar la oscuridad.»</i>",
+
+    },
+    {
+        num: 3,
+        titleLeft: "III. La Caída de Lucian",
+        image: "/static/assets/lore/lucian.png",
+        textLeft: "<p>En el <b>Piso 5</b> aguarda <b>Lucian</b>. Antaño fue el paladín más leal de la vanguardia, encomendado a custodiar las puertas intermedias.</p><p>Envenenado por los susurros de la torre, sucumbió a la maldición de la luna ártica, convirtiéndose en el <b>Primer Hombre Lobo</b>.</p>",
+        titleRight: "Sub-Jefe Lucian (Piso 5)",
+        textRight: "<i>«La bestia feral que desgarra con zarpazos de escarcha a los intrusos.»</i>",
+
+    },
+    {
+        num: 4,
+        titleLeft: "IV. Los Dioses Primordiales",
+        image: "/static/assets/lore/Guardianes.png",
+        textLeft: "<p>En la era del caos, cuatro Seres Supremos descendieron del firmamento sagrado: <b>kataida</b> (tormenta), <b>Valeria</b> (Vida Astral), <b>Aethelgard</b> (Tierra Inmutable) y <b>Kaelen</b> (Marea Ancestral).</p><p>Al ver que los dioses menores caían ante el avance del Señor Oscuro, unieron sus elementos divinos para doblegarlo, despojarlo de su forma física y encadenar su esencia en el abismo de La Torre Oscura.</p>",
+        titleRight: "Los Cuatro Arcontes Supremos",
+        textRight: "<i>«Los pilares divinos que erigieron la prisión eterna y sellaron a la oscuridad .»</i>"
+    },
+    {
+        num: 5,
+        titleLeft: "V. El Señor Oscuro",
+        image: "/static/assets/lore/señor oscuro.png",
+        textLeft: "<p>Antes de que la <b>Torre</b> fuera erigida, existía un ente engendrado en el corazón de las <b>llamas sombrías</b>: el <b>Señor Oscuro</b>.</p><p>No es un simple demonio, sino una fuerza primordial de <b>fuego negro y penumbra absoluta</b>. Tan inmenso es su poder que incluso los <b>Dioses del Panteón</b> libraron guerras contra él y fracasaron en destruirlo, logrando únicamente sellar su esencia en las profundidades de este abismo.</p>",
+        titleRight: "El Señor Oscuro",
+        textRight: "<i>«Una fuerza primordial nacida de las llamas sombrías. Ni siquiera los Dioses pudieron destruirlo; solo pudieron sellarlo.»</i>",
+    },
+    {
+        num: 6,
+        titleLeft: "VI. El Campeón Coronado",
+        image: "/static/images/lore/victoria.png",    // <--- TU FOTO FINAL
+        textLeft: "<p>Hong ha caído. El Ojo Carmesí se apaga en cenizas y los muros de la torre se desmoronan bajo la luz del nuevo amanecer.</p><p>Tu nombre ha sido inscrito con letras de oro en las Crónicas Eternas. ¡El reino está a salvo gracias a ti, héroe!</p>",
+        titleRight: "Victoria Eterna",
+        textRight: "<i>«Has vencido a la Torre Oscura. Eres leyenda.»</i>",
+
+    }
+];
+
+UIManager.prototype.currentLorePage = 0;
+
+UIManager.prototype.updateBookUnlockStatus = function () {
+    const isCleared = localStorage.getItem('dark_tower_game_cleared') === 'true';
+    const btn = document.getElementById('btn-lore-book');
+    if (btn) {
+        btn.style.display = isCleared ? 'block' : 'none';
+    }
+};
+
+UIManager.prototype.showLoreBook = function () {
+    const modal = document.getElementById('lore-book-modal');
+    if (!modal) return;
+    this.currentLorePage = 0;
+    this.renderLoreBookPage();
+    modal.style.display = 'flex';
+    if (window.soundEngine) window.soundEngine.playTone(320, 'sine', 0.2, 0.25);
+};
+
+UIManager.prototype.renderLoreBookPage = function () {
+    const chap = LORE_CHAPTERS[this.currentLorePage];
+    if (!chap) return;
+
+    document.getElementById('book-chap-title-left').innerText = chap.titleLeft;
+    document.getElementById('book-text-left').innerHTML = chap.textLeft;
+    document.getElementById('book-page-num-left').innerText = (this.currentLorePage * 2 + 1);
+
+    document.getElementById('book-chap-title-right').innerText = chap.titleRight;
+    document.getElementById('book-text-right').innerHTML = chap.textRight;
+    document.getElementById('book-page-num-right').innerText = (this.currentLorePage * 2 + 2);
+    document.getElementById('book-progress-label').innerText = `${chap.num} / ${LORE_CHAPTERS.length}`;
+
+    // CARGAR TU FOTO PERSONALIZADA:
+    const imgEl = document.getElementById('book-illu-img');
+    if (imgEl && chap.image) {
+        imgEl.src = chap.image;
+    }
+
+    document.getElementById('btn-prev-page').style.opacity = this.currentLorePage === 0 ? "0.4" : "1";
+    document.getElementById('btn-prev-page').disabled = this.currentLorePage === 0;
+
+    const isLast = this.currentLorePage === LORE_CHAPTERS.length - 1;
+    document.getElementById('btn-next-page').style.opacity = isLast ? "0.4" : "1";
+    document.getElementById('btn-next-page').disabled = isLast;
+};
+
+UIManager.prototype.nextLorePage = function () {
+    if (this.currentLorePage < LORE_CHAPTERS.length - 1) {
+        this.currentLorePage++;
+        this.renderLoreBookPage();
+        if (window.soundEngine) window.soundEngine.playTone(280, 'sine', 0.12, 0.2);
+    }
+};
+
+UIManager.prototype.prevLorePage = function () {
+    if (this.currentLorePage > 0) {
+        this.currentLorePage--;
+        this.renderLoreBookPage();
+        if (window.soundEngine) window.soundEngine.playTone(240, 'sine', 0.12, 0.2);
+    }
+};
 
 window.uiManager = new UIManager();

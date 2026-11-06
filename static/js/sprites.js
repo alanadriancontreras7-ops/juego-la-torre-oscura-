@@ -28,14 +28,14 @@ class SpriteManager {
             tiles_acid: '/static/assets/sprites/tileset_acid.png?v=4',
             tiles_apex: '/static/assets/sprites/tileset_apex.png?v=4',
             props: '/static/assets/sprites/props.png?v=4',
-            icons: '/static/assets/sprites/icons.png?v=5'
+            icons: '/static/assets/sprites/icons.png?v=7'
         };
 
-        // Registrar dinámicamente las 9 variantes visuales (arma x armadura) de cada héroe
+        // Registrar dinámicamente las 15 variantes visuales (3 armas x 5 armaduras) de cada héroe
 
         ['warrior', 'archer', 'mage'].forEach(cls => {
             for (let w = 0; w < 3; w++) {
-                for (let a = 0; a < 3; a++) {
+                for (let a = 0; a < 5; a++) {
                     const key = `player_${cls}_w${w}_a${a}`;
                     this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=5`;
                 }

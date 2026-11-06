@@ -1,4 +1,3 @@
-
 """
 Generador de Sprites Pixel Art 16-Bit para 'La Torre Oscura'
 Héroes con variantes de armas/armaduras, monstruos/jefes detallados, tilesets, props e iconos.
@@ -93,20 +92,37 @@ P_LUCIAN_MANE  = [(215, 225, 240), (160, 175, 200), (110, 125, 150), (70, 82, 10
 P_LUCIAN_EYE   = (40, 230, 255, 255)
 P_BLOOD        = [(255, 90, 90), (210, 30, 45), (145, 15, 25), (90, 8, 15), (50, 4, 8)]
 
+# Paletas de las apariencias de armadura de hueso y de lobo
+P_OLDBONE  = [(240, 228, 200), (214, 198, 164), (176, 158, 126), (128, 112, 90), (84, 72, 60)]
+P_HIDE     = [(150, 108, 84), (116, 78, 60), (86, 56, 44), (60, 38, 32), (38, 24, 24)]
+P_DARKROBE = [(110, 96, 120), (78, 66, 92), (54, 44, 68), (38, 30, 50), (24, 18, 34)]
+P_PELT     = [(238, 240, 248), (200, 204, 222), (158, 162, 186), (112, 114, 140), (72, 72, 98)]
+P_FURI     = [(255, 255, 255), (240, 246, 254), (208, 220, 240), (164, 180, 214), (116, 128, 172)]
+P_FANG     = [(255, 255, 246), (246, 242, 224), (216, 208, 182), (170, 160, 136), (118, 108, 92)]
+P_WSLATE   = [(128, 140, 164), (92, 104, 132), (64, 74, 102), (44, 52, 76), (28, 34, 54)]
+EYE_ORANGE = (255, 170, 60, 255)
+EYE_CYAN   = (90, 230, 255, 255)
+
 WARRIOR_ARMOR = [
     dict(S=P_STEEL,   G=P_GOLD,    C=P_BLUE,       R=P_RED,    eye=EYE_N),
     dict(S=P_OBSID,   G=P_CRIMSON, C=P_BLOODCAPE,  R=P_PURPLE, eye=EYE_RED),
     dict(S=P_PALADIN, G=P_GOLD,    C=P_CELESTE,    R=P_GOLD,   eye=EYE_BLUE),
+    dict(S=P_OLDBONE, G=P_CRIMSON, C=P_HIDE,       R=P_OLDBONE, eye=EYE_ORANGE),   # 3 = hueso
+    dict(S=P_WSLATE,  G=P_AQUA,    C=P_PELT,       R=P_FURI,   eye=EYE_CYAN),      # 4 = lobo
 ]
 ARCHER_ARMOR = [
     dict(G=P_GREEN, T=P_LEATHER,      PANTS=P_PANTS,        eye=EYE_N,    trim=P_GOLD),
     dict(G=P_NIGHT, T=P_BLACKLEATHER, PANTS=P_BLACKLEATHER, eye=EYE_RED,  trim=P_CRIMSON),
     dict(G=P_ELVEN, T=P_GOLDLEATHER,  PANTS=P_CREAM,        eye=EYE_BLUE, trim=P_GOLD),
+    dict(G=P_HIDE,  T=P_OLDBONE,      PANTS=P_BLACKLEATHER, eye=EYE_ORANGE, trim=P_CRIMSON),   # 3 = hueso
+    dict(G=P_PELT,  T=P_WSLATE,       PANTS=P_WSLATE,       eye=EYE_CYAN,   trim=P_AQUA),      # 4 = lobo
 ]
 MAGE_ARMOR = [
     dict(M=P_PURPLE,    G=P_GOLD,    eye=EYE_N),
     dict(M=P_NIGHTROBE, G=P_CRIMSON, eye=EYE_RED),
     dict(M=P_CELESTE,   G=P_GOLD,    eye=EYE_BLUE),
+    dict(M=P_DARKROBE,  G=P_OLDBONE, eye=EYE_ORANGE),   # 3 = hueso
+    dict(M=P_WSLATE,    G=P_FURI,    eye=EYE_CYAN),     # 4 = lobo
 ]
 
 def _dn(R):
@@ -398,7 +414,7 @@ def _warrior_extra(dr, b, ak):
     if ak == 0:
         return None, None
     behind, front = _L(), _L()
-    if ak == 2:
+    if ak == 2:   # alas en el casco + gema en el peto
         wl_ = [(17, 13 + b), (10, 9 + b), (8, 12 + b), (11, 13 + b), (9, 16 + b), (13, 16 + b), (17, 17 + b)]
         ws_ = [(26, 13 + b), (33, 9 + b), (35, 12 + b), (32, 13 + b), (34, 16 + b), (30, 16 + b), (26, 17 + b)]
         for w in ([ws_] if dr == 1 else [wl_, _mir(wl_)]):
@@ -409,7 +425,7 @@ def _warrior_extra(dr, b, ak):
         if dr == 0:
             front.rect(23, 24 + b, 24, 25 + b, P_AQUA[MD])
             front.px(23, 24 + b, P_AQUA[HI])
-    else:
+    elif ak == 1:  # cuernos + hombreras con púas + runa
         hl = [(18, 11 + b), (14, 9 + b), (13, 3 + b), (16, 7 + b), (19, 9 + b)]
         hs = [(25, 10 + b), (25, 3 + b), (29, 7 + b), (28, 10 + b)]
         sl = [(15, 21 + b), (13, 16 + b), (18, 20 + b)]
@@ -422,41 +438,119 @@ def _warrior_extra(dr, b, ak):
             front.px(sp[1][0], sp[1][1], P_LAVA[MD])
         if dr == 0:
             front.px(23, 24 + b, P_LAVA[MD]); front.px(24, 25 + b, P_LAVA[MD]); front.px(23, 26 + b, P_LAVA[LT])
+    elif ak == 3:  # HUESO: cuernos curvos, hombreras de espina y costillas en el peto
+        B = P_OLDBONE
+        hl = [(18, 11 + b), (14, 9 + b), (13, 3 + b), (16, 7 + b), (19, 9 + b)]
+        hs = [(25, 10 + b), (25, 3 + b), (29, 7 + b), (28, 10 + b)]
+        sl = [(15, 21 + b), (13, 16 + b), (18, 20 + b)]
+        ss = [(24, 20 + b), (22, 15 + b), (27, 20 + b)]
+        for h in ([hs] if dr == 1 else [hl, _mir(hl)]):
+            front.poly(h, B[LT]); front.line([h[1], h[2]], B[HI]); front.px(h[2][0], h[2][1], B[DK])
+        for sp in ([ss] if dr == 1 else [sl, _mir(sl)]):
+            front.poly(sp, B[MD]); front.px(sp[1][0], sp[1][1], B[HI])
+        if dr == 0:
+            front.rect(20, 22 + b, 27, 27 + b, P_HIDE[DP])
+            for y in (23, 25, 27):
+                front.line([(20, y + b), (27, y + b)], B[LT])
+            front.line([(23, 22 + b), (23, 27 + b)], B[MD]); front.line([(24, 22 + b), (24, 27 + b)], B[DK])
+        elif dr == 1:
+            front.rect(21, 22 + b, 27, 27 + b, P_HIDE[DP])
+            for y in (23, 25, 27):
+                front.line([(21, y + b), (27, y + b)], B[LT])
+        else:
+            front.rect(23, 22 + b, 24, 27 + b, P_HIDE[DP])
+            for y in (22, 24, 26):
+                front.px(23, y + b, B[HI]); front.px(24, y + b, B[LT])
+    else:          # ak == 4, LOBO: orejas de lobo, hombros de piel y runa celeste
+        E, F = P_PELT, P_FURI
+        el = [(19, 9 + b), (17, 2 + b), (23, 7 + b)]
+        es = [(23, 8 + b), (22, 1 + b), (28, 7 + b)]
+        for e in ([es] if dr == 1 else [el, _mir(el)]):
+            front.poly(e, E[MD]); front.line([e[0], e[1]], E[HI]); front.px(e[1][0], e[1][1], E[DK])
+        spans = [(19, 28)] if dr == 1 else [(12, 20), (27, 35)]
+        for (x0, x1) in spans:
+            front.ell(x0, 19 + b, x1, 26 + b, F[DK]); front.ell(x0, 19 + b, x1 - 1, 25 + b, F[MD]); front.ell(x0 + 1, 19 + b, x1 - 3, 23 + b, F[LT])
+            for k in range(x0 + 1, x1 - 1, 2):
+                front.poly([(k, 25 + b), (k + 1, 28 + b), (k + 2, 25 + b)], F[LT])
+        if dr == 0:
+            for (x, y) in ((22, 24), (25, 24), (23, 26), (24, 26)):
+                front.px(x, y + b, P_AQUA[MD])
     return behind, front
 
 def _archer_extra(dr, b, ak):
     if ak == 0:
         return None
     L = _L()
-    if ak == 1:
+    if ak == 1:    # púas en los hombros
         sl = [(17, 21 + b), (14, 17 + b), (19, 20 + b)]
         ss = [(23, 21 + b), (21, 17 + b), (26, 21 + b)]
         for sp in ([ss] if dr == 1 else [sl, _mir(sl)]):
             L.poly(sp, P_NIGHT[LT])
             L.px(sp[1][0], sp[1][1], P_CRIMSON[MD])
-    else:
+    elif ak == 2:  # pluma dorada en la capucha
         pts = [(30, 5 + b), (36, 2 + b), (37, 6 + b), (32, 8 + b)] if dr == 1 else [(28, 4 + b), (34, 1 + b), (36, 5 + b), (31, 6 + b)]
         L.poly(pts, P_WHITE[LT])
         L.line([pts[0], pts[2]], P_GOLD[MD])
+    elif ak == 3:  # HUESO: cuernos en la capucha y hombreras de hueso
+        B = P_OLDBONE
+        hl = [(19, 9 + b), (15, 6 + b), (14, 1 + b), (18, 5 + b), (21, 8 + b)]
+        hs = [(24, 9 + b), (25, 2 + b), (29, 6 + b), (28, 10 + b)]
+        for h in ([hs] if dr == 1 else [hl, _mir(hl)]):
+            L.poly(h, B[LT]); L.line([h[1], h[2]], B[HI]); L.px(h[2][0], h[2][1], B[DK])
+        for (x0, x1) in ([(20, 28)] if dr == 1 else [(13, 19), (28, 34)]):
+            L.ell(x0, 19 + b, x1, 24 + b, B[DK]); L.ell(x0, 19 + b, x1 - 1, 23 + b, B[MD]); L.ell(x0 + 1, 19 + b, x1 - 3, 21 + b, B[LT])
+            L.px(x0 + 1, 20 + b, B[HI])
+    else:           # ak == 4, LOBO: orejas en la capucha y collar de pelo
+        E, F = P_PELT, P_FURI
+        el = [(19, 9 + b), (17, 2 + b), (23, 7 + b)]
+        es = [(23, 8 + b), (22, 1 + b), (28, 7 + b)]
+        for e in ([es] if dr == 1 else [el, _mir(el)]):
+            L.poly(e, E[MD]); L.line([e[0], e[1]], E[HI]); L.px(e[1][0], e[1][1], E[DK])
+        x0, x1 = (20, 28) if dr == 1 else (18, 29)
+        L.ell(x0, 19 + b, x1, 24 + b, F[DK]); L.ell(x0, 19 + b, x1 - 1, 23 + b, F[MD]); L.ell(x0 + 1, 19 + b, x1 - 3, 21 + b, F[LT])
+        for k in range(x0 + 1, x1 - 1, 2):
+            L.poly([(k, 23 + b), (k + 1, 26 + b), (k + 2, 23 + b)], F[LT])
     return L
 
 def _mage_extra(dr, b, ak):
     if ak == 0:
         return None
     L = _L()
-    if ak == 1:
+    if ak == 1:    # cuernos de hueso en el ala del sombrero
         hl = [(15, 11 + b), (12, 5 + b), (18, 9 + b)]
         hs = [(29, 11 + b), (32, 5 + b), (26, 9 + b)]
         for h in ([hs] if dr == 1 else [hl, _mir(hl)]):
             L.poly(h, P_BONE2[LT])
             L.px(h[1][0], h[1][1], P_CRIMSON[MD])
-    else:
+    elif ak == 2:  # estrella en el sombrero y estrellas en la túnica
         if dr != 3:
             for dx, dy in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
                 L.px(24 + dx, 8 + b + dy, P_GOLD[HI])
         if dr == 0:
             for x, y in ((20, 33), (27, 34), (24, 36)):
                 L.px(x, y, P_GOLD[HI])
+    elif ak == 3:  # HUESO: hombreras de hueso y calavera en el sombrero
+        B = P_OLDBONE
+        for (x0, x1) in ([(21, 28)] if dr == 1 else [(13, 19), (28, 34)]):
+            L.ell(x0, 19 + b, x1, 24 + b, B[DK]); L.ell(x0, 19 + b, x1 - 1, 23 + b, B[MD]); L.ell(x0 + 1, 19 + b, x1 - 3, 21 + b, B[LT])
+            L.px(x0 + 1, 20 + b, B[HI])
+        if dr != 3:
+            cx = 22 if dr == 1 else 24
+            L.ell(cx - 2, 6 + b, cx + 2, 10 + b, B[MD]); L.ell(cx - 2, 6 + b, cx + 1, 9 + b, B[LT])
+            L.px(cx - 1, 8 + b, (24, 18, 32, 255)); L.px(cx + 1, 8 + b, (24, 18, 32, 255)); L.px(cx, 10 + b, B[DK])
+    else:           # ak == 4, LOBO: orejas en el sombrero, hombros de piel y runas
+        E, F = P_PELT, P_FURI
+        hl = [(15, 12 + b), (13, 6 + b), (19, 10 + b)]
+        hs = [(29, 11 + b), (31, 5 + b), (26, 9 + b)]
+        for h in ([hs] if dr == 1 else [hl, _mir(hl)]):
+            L.poly(h, E[MD]); L.line([h[0], h[1]], E[HI]); L.px(h[1][0], h[1][1], E[DK])
+        for (x0, x1) in ([(20, 29)] if dr == 1 else [(12, 20), (27, 35)]):
+            L.ell(x0, 19 + b, x1, 25 + b, F[DK]); L.ell(x0, 19 + b, x1 - 1, 24 + b, F[MD]); L.ell(x0 + 1, 19 + b, x1 - 3, 22 + b, F[LT])
+            for k in range(x0 + 1, x1 - 1, 2):
+                L.poly([(k, 24 + b), (k + 1, 27 + b), (k + 2, 24 + b)], F[LT])
+        if dr == 0:
+            for x, y in ((20, 33), (27, 34), (24, 36)):
+                L.px(x, y, P_AQUA[MD])
     return L
 
 SWORD = {
@@ -693,8 +787,9 @@ def _archer_layers(dr, p, ai, wl=0, ak=0):
     if dr == 0:
         L.ell(17, 7 + b, 30, 20 + b, G[MD])
         L.ell(18, 8 + b, 27, 16 + b, G[LT])
-        L.poly([(22, 9 + b), (27, 2 + b), (30, 6 + b), (29, 11 + b)], G[MD])
-        L.line([(23, 8 + b), (27, 3 + b)], G[HI])
+        if ak not in (3, 4):
+            L.poly([(22, 9 + b), (27, 2 + b), (30, 6 + b), (29, 11 + b)], G[MD])
+            L.line([(23, 8 + b), (27, 3 + b)], G[HI])
         L.rect(20, 13 + b, 27, 20 + b, K[MD])
         L.line([(20, 20 + b), (27, 20 + b)], K[DK])
         L.rect(20, 13 + b, 27, 14 + b, H[MD])
@@ -706,15 +801,17 @@ def _archer_layers(dr, p, ai, wl=0, ak=0):
     elif dr == 3:
         L.ell(17, 7 + b, 30, 21 + b, G[MD])
         L.ell(18, 8 + b, 27, 17 + b, G[LT])
-        L.poly([(22, 9 + b), (27, 2 + b), (30, 6 + b), (29, 11 + b)], G[MD])
-        L.line([(23, 8 + b), (27, 3 + b)], G[HI])
+        if ak not in (3, 4):
+            L.poly([(22, 9 + b), (27, 2 + b), (30, 6 + b), (29, 11 + b)], G[MD])
+            L.line([(23, 8 + b), (27, 3 + b)], G[HI])
         L.line([(18, 18 + b), (29, 18 + b)], G[DK])
         L.rect(20, 19 + b, 27, 21 + b, G[DK])
     else:
         L.ell(17, 7 + b, 29, 20 + b, G[MD])
         L.ell(18, 8 + b, 26, 16 + b, G[LT])
-        L.poly([(24, 9 + b), (31, 4 + b), (33, 10 + b), (29, 14 + b)], G[MD])
-        L.line([(25, 8 + b), (31, 5 + b)], G[HI])
+        if ak not in (3, 4):
+            L.poly([(24, 9 + b), (31, 4 + b), (33, 10 + b), (29, 14 + b)], G[MD])
+            L.line([(25, 8 + b), (31, 5 + b)], G[HI])
         L.rect(17, 13 + b, 22, 20 + b, K[MD])
         L.line([(17, 20 + b), (22, 20 + b)], K[DK])
         L.rect(17, 13 + b, 22, 14 + b, H[MD])
@@ -2337,21 +2434,456 @@ def _icon_robe(look):
             L.px(x, y, P_GOLD[HI])
     return [L]
 
+# ==============================================================================
+# ICONOS 22-33 REDISEÑADOS (24x24): materiales, llave y equipo de hueso / lobo.
+# Mismo estilo que el resto de iconos: 5 tonos por material, contorno automático
+# y brillo (capas sin contorno) para lo mágico.
+#  22 seda   23 piel de lobo   24 cuerno   25 llave
+#  26 machete de hueso  27 arco de hueso  28 cetro calavera  29 coraza de costillas
+#  30 espada de lobo    31 arco de lobo   32 báculo aullador 33 armadura de lobo
+# ==============================================================================
+import math
+from PIL import ImageChops
+
+P_SILK     = [(255, 255, 255), (241, 240, 253), (212, 210, 238), (170, 166, 210), (124, 118, 170)]
+P_HORN     = [(236, 150, 112), (184, 84, 72), (122, 44, 54), (76, 24, 40), (42, 12, 26)]
+P_WSTEEL   = [(238, 244, 254), (188, 200, 220), (136, 150, 178), (90, 102, 132), (54, 62, 86)]
+P_WOLFWOOD = [(160, 170, 192), (116, 126, 150), (82, 90, 114), (56, 62, 84), (36, 40, 58)]
+CYAN_GLOW  = (90, 225, 255)
+
+
+def _bez(p0, p1, p2, n=26):
+    """Curva de Bézier cuadrática como lista de puntos."""
+    pts = []
+    for i in range(n):
+        t = i / (n - 1.0)
+        pts.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+                    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]))
+    return pts
+
+
+def _band(L, pts, r0, r1, R):
+    """Banda curva que se afina (cuernos, garras, colmillos) con sombra y luz."""
+    n = len(pts)
+    rad = [r0 + (r1 - r0) * i / (n - 1.0) for i in range(n)]
+    for (x, y), r in zip(pts, rad):
+        L.ell(x - r + 0.8, y - r + 0.8, x + r + 0.8, y + r + 0.8, R[DK])
+    for (x, y), r in zip(pts, rad):
+        L.ell(x - r, y - r, x + r, y + r, R[MD])
+    for (x, y), r in zip(pts, rad):
+        q = r * 0.5
+        L.ell(x - q - r * 0.35, y - q - r * 0.35, x + q - r * 0.35, y + q - r * 0.35, R[LT])
+
+
+def _clip_ellipse(L, box):
+    mask = Image.new('L', (L.w, L.h), 0)
+    ImageDraw.Draw(mask).ellipse(box, fill=255)
+    L.im.putalpha(ImageChops.multiply(L.im.getchannel('A'), mask))
+
+
+def _axis(hand, tip):
+    ln = math.hypot(tip[0] - hand[0], tip[1] - hand[1]) or 1
+    u = ((tip[0] - hand[0]) / ln, (tip[1] - hand[1]) / ln)
+    n = (-u[1], u[0])
+    pt = lambda t, s=0: (hand[0] + u[0] * t + n[0] * s, hand[1] + u[1] * t + n[1] * s)
+    return u, n, pt
+
+
+# ------------------------------------------------------------------ 22 SEDA
+def _icon_silk():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    ball = _L(size=24)
+    _ball(ball, 3, 4, 20, 19, P_SILK)
+    for k in range(-16, 26, 5):                       # vueltas del hilo
+        ball.line([(k, 3), (k + 15, 20)], P_SILK[DK], 1)
+        ball.line([(k + 2, 3), (k + 17, 20)], P_SILK[HI], 1)
+    for k in range(-6, 26, 7):
+        ball.line([(k + 15, 3), (k, 20)], P_SILK[LT], 1)
+    _clip_ellipse(ball, (3, 4, 20, 19))
+    L.im.alpha_composite(ball.im)
+    L.line([(15, 18), (17, 21), (20, 21), (21, 19)], P_SILK[LT], 1)    # hebras sueltas
+    L.line([(7, 18), (6, 21), (9, 22)], P_SILK[MD], 1)
+    L.ell(10, 1, 14, 5, P_SILK[MD])                                   # atadura
+    L.px(11, 2, P_SILK[HI])
+    fx.ell(3, 4, 20, 19, (70, 60, 130, 70))                           # sombra de esfera (media luna)
+    fx.ell(2, 3, 18, 17, (0, 0, 0, 0))
+    fx.ell(1, 2, 22, 21, (170, 200, 255, 26))                         # brillo pegajoso
+    fx.px(7, 8, (200, 230, 255, 235)); fx.px(16, 9, (200, 230, 255, 235))
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 23 PIEL DE LOBO
+def _icon_pelt():
+    P = P_PELT
+    L = _L(size=24)
+    L.ell(4, 5, 20, 20, P[DK])                                                       # torso
+    for (x0, y0, x1, y1) in ((1, 3, 8, 10), (16, 3, 23, 10), (1, 15, 8, 22), (16, 15, 23, 22)):   # patas
+        L.ell(x0, y0, x1, y1, P[DK])
+    L.ell(8, 0, 16, 8, P[DK])                                                        # cabeza
+    L.poly([(8, 3), (8, 0), (11, 2)], P[DK]); L.poly([(16, 3), (16, 0), (13, 2)], P[DK])      # orejas
+    for (x0, y0, x1, y1) in ((4, 5, 19, 19), (1, 3, 7, 9), (16, 3, 22, 9), (1, 15, 7, 21), (16, 15, 22, 21), (8, 0, 15, 7)):
+        L.ell(x0, y0, x1, y1, P[MD])
+    L.ell(6, 6, 17, 17, P[LT]); L.ell(8, 8, 13, 13, P[HI])
+    _band(L, _bez((12, 19), (14, 24), (19, 22), 8), 1.9, 0.7, P)                     # cola
+    for (x, y) in ((8, 10), (14, 9), (10, 14), (15, 13), (7, 14)):                   # mechones
+        L.line([(x, y), (x + 1, y + 2)], P[DK])
+    for (x, y) in ((5, 12), (19, 12)):
+        L.poly([(x, y - 1), (x + (2 if x > 12 else -2), y + 1), (x, y + 2)], P[LT])    # flecos
+    for (x, y, dx) in ((1, 6, 1), (22, 6, -1), (2, 20, 1), (21, 20, -1)):             # garras
+        L.px(x, y, P_BONE[HI]); L.px(x + dx, y + 1, P_BONE[MD])
+    L.px(10, 3, (30, 24, 40, 255)); L.px(14, 3, (30, 24, 40, 255))
+    L.px(12, 5, (70, 50, 60, 255)); L.px(11, 6, (70, 50, 60, 255)); L.px(13, 6, (70, 50, 60, 255))   # hocico
+    return [L]
+
+
+# ------------------------------------------------------------------ 24 CUERNO
+def _icon_horn():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    pts = _bez((7, 20), (1, 7), (20, 3), 32)
+    _band(L, pts, 5.0, 0.8, P_HORN)
+    L.ell(3, 17, 11, 23, P_HORN[DP]); L.ell(4, 18, 10, 22, P_BONE[MD]); L.ell(5, 19, 9, 21, (48, 22, 30, 255))   # base cortada
+    for i in (7, 11, 15, 19, 23):                                                    # estrías
+        x, y = pts[i]
+        dx, dy = pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]
+        ln = math.hypot(dx, dy) or 1
+        nx, ny = -dy / ln, dx / ln
+        r = 5.0 + (0.8 - 5.0) * i / 31.0
+        L.line([(x - nx * r * 0.9, y - ny * r * 0.9), (x + nx * r * 0.9, y + ny * r * 0.9)], P_HORN[DP])
+        L.px(int(x + nx * r * 0.5), int(y + ny * r * 0.5), P_LAVA[MD])                # brasa en cada estría
+    for i in range(10, 29, 3):                                                       # vena de fuego interior
+        x, y = pts[i]
+        L.px(int(x + 1), int(y + 1), P_LAVA[LT])
+    L.px(int(pts[-1][0]), int(pts[-1][1]), P_LAVA[HI]); L.px(int(pts[-2][0]), int(pts[-2][1]), P_LAVA[MD])
+    fx.ell(12, -1, 24, 11, (255, 110, 40, 60))
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 25 LLAVE
+def _icon_key():
+    G = P_GOLD
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    _ball(L, 1, 1, 12, 12, G)
+    L.d.ellipse([4, 4, 9, 9], fill=(0, 0, 0, 0))                                     # hueco del aro
+    L.px(6, 3, G[HI]); L.px(3, 6, G[HI])
+    for (x, y) in ((6, 0), (0, 6)):                                                  # adornos del aro
+        L.ell(x - 1, y - 1, x + 1, y + 1, G[LT])
+    L.ell(10, 10, 12, 12, P_RED[MD]); L.px(10, 10, P_RED[HI])                       # gema
+    L.line([(12, 12), (20, 20)], G[DK], 4)
+    L.line([(11, 11), (19, 19)], G[MD], 3)
+    L.line([(10, 11), (18, 19)], G[HI], 1)
+    for (x, y) in ((14, 14), (17, 17)):                                              # anillos del vástago
+        L.line([(x - 1, y + 2), (x + 2, y - 1)], G[DP], 1)
+    L.rect(16, 19, 17, 22, G[MD]); L.rect(19, 20, 20, 23, G[MD]); L.rect(21, 18, 22, 21, G[DK])   # dientes
+    L.line([(16, 19), (16, 22)], G[HI])
+    fx.ell(0, 0, 14, 14, (255, 220, 90, 40))
+    fx.px(2, 4, (255, 255, 220, 240))
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 26 MACHETE DE HUESO
+def _icon_sword_bone():
+    B = P_BONE
+    L = _L(size=24)
+    hand, tip = (6, 18), (21, 3)
+    u, n, pt = _axis(hand, tip)
+    L.line([pt(-2), pt(3)], P_LEATHER[DK], 4)                                        # empuñadura de cuero
+    L.line([pt(-2), pt(3)], P_LEATHER[MD], 3)
+    for t in (-1, 1, 3):
+        L.line([pt(t, -2), pt(t, 2)], P_LEATHER[DP], 1)                              # vendas
+    for s in (-1, 1):                                                                # nudillos del pomo
+        x, y = pt(-3.5, s * 2)
+        L.ell(x - 1.8, y - 1.8, x + 1.8, y + 1.8, B[MD]); L.px(int(x - 1), int(y - 1), B[HI])
+    L.line([pt(4, -4), pt(4, 4)], B[MD], 2)                                          # guarda de hueso
+    L.px(int(pt(4, -4)[0]), int(pt(4, -4)[1]), B[HI]); L.px(int(pt(4, 4)[0]), int(pt(4, 4)[1]), B[DK])
+    L.line([pt(5), pt(18)], B[DK], 5)                                                # hoja
+    L.line([pt(5), pt(18)], B[MD], 4)
+    L.line([pt(5, -1.5), pt(18, -1.5)], B[HI], 1)
+    for t in (8, 11, 14):                                                            # dientes del filo
+        a, b2, c = pt(t, 2.4), pt(t + 2, 2.4), pt(t + 0.4, 5)
+        L.poly([a, b2, c], B[LT])
+        L.px(int(c[0]), int(c[1]), P_BLOOD[MD])
+    L.poly([pt(16, 2), pt(20, 0), pt(17, -2.5)], B[LT]); L.px(int(pt(20)[0]), int(pt(20)[1]), B[HI])   # punta
+    L.px(int(pt(10, 0)[0]), int(pt(10, 0)[1]), P_BLOOD[LT]); L.px(int(pt(13, 1)[0]), int(pt(13, 1)[1]), P_BLOOD[MD])
+    return [L]
+
+
+# ------------------------------------------------------------------ 27 ARCO DE HUESO
+def _bow_arc_pts(cx, cy, rx, ry, a0=100, a1=260, step=8):
+    return [(cx + rx * math.cos(math.radians(a)), cy + ry * math.sin(math.radians(a))) for a in range(a0, a1 + 1, step)]
+
+
+def _icon_bow_bone():
+    B = P_BONE
+    L = _L(size=24)
+    pts = _bow_arc_pts(14, 12, 7, 10)
+    L.line([(x + 1, y) for x, y in pts], B[DK], 3)
+    L.line(pts, B[MD], 3)
+    L.line([(x - 1, y) for x, y in pts], B[HI], 1)
+    for a in (118, 146, 180, 214, 242):                                              # vértebras
+        x, y = _bow_arc_pts(14, 12, 7, 10, a, a)[0]
+        L.ell(x - 2, y - 2, x + 2, y + 2, B[LT]); L.px(int(x - 1), int(y - 1), B[HI]); L.px(int(x + 1), int(y + 1), B[DK])
+    e0, e1 = pts[0], pts[-1]
+    for e in (e0, e1):
+        L.px(int(e[0]), int(e[1]), P_CRIMSON[MD]); L.px(int(e[0]) - 1, int(e[1]), P_CRIMSON[DK])   # cordel rojo
+    string = (226, 208, 172, 255)
+    L.line([e0, (18, 12), e1], string, 1)
+    L.line([(4, 12), (18, 12)], P_WOOD[LT], 1)                                       # flecha
+    L.poly([(1, 12), (5, 10), (5, 14)], B[LT]); L.px(2, 12, B[HI])
+    L.px(16, 11, P_RED[MD]); L.px(17, 11, P_RED[MD]); L.px(16, 13, P_RED[MD]); L.px(17, 13, P_RED[MD])
+    return [L]
+
+
+# ------------------------------------------------------------------ 28 CETRO CALAVERA
+def _icon_staff_bone():
+    B = P_BONE
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    L.line([(3, 22), (14, 11)], P_WOOD[DK], 3)
+    L.line([(3, 21), (13, 11)], P_WOOD[MD], 2)
+    for (x, y) in ((6, 18), (9, 15)):                                                # anillos de hueso
+        L.line([(x - 1, y + 1), (x + 1, y - 1)], B[LT], 3)
+        L.line([(x - 1, y + 2), (x + 2, y - 1)], B[DK], 1)
+    _ball(L, 11, 1, 22, 11, B)
+    for ex in (13, 18):
+        L.rect(ex, 5, ex + 2, 7, (24, 18, 32, 255)); L.px(ex + 1, 6, (70, 235, 255, 255))   # cuencas con luz
+    L.px(16, 8, (40, 30, 44, 255)); L.px(17, 8, (40, 30, 44, 255))
+    L.rect(13, 10, 20, 12, B[MD]); L.line([(13, 12), (20, 12)], B[DK])
+    for x in (14, 16, 18):
+        L.line([(x, 10), (x, 12)], B[DP])
+    L.line([(15, 2), (19, 2)], B[HI])
+    fx.ell(8, 0, 25, 14, (70, 235, 255, 40))
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 29 CORAZA DE COSTILLAS
+def _icon_armor_bone():
+    B = P_BONE
+    L = _L(size=24)
+    L.poly([(7, 5), (17, 5), (19, 10), (17, 21), (7, 21), (5, 10)], P_LEATHER[DK])
+    L.line([(7, 5), (5, 10)], P_LEATHER[MD]); L.line([(17, 5), (19, 10), (17, 21)], P_LEATHER[DP])
+    for y in (8, 11, 14, 17):                                                        # costillas
+        L.line([(11, y), (8, y + 2), (6, y + 1)], B[DK], 3)
+        L.line([(11, y), (8, y + 2), (6, y + 1)], B[MD], 2)
+        L.line([(12, y), (15, y + 2), (17, y + 1)], B[DK], 3)
+        L.line([(12, y), (15, y + 2), (17, y + 1)], B[MD], 2)
+        L.px(8, y + 1, B[HI]); L.px(15, y + 1, B[LT])
+    L.rect(11, 5, 12, 20, B[LT]); L.line([(11, 5), (11, 20)], B[HI]); L.line([(12, 6), (12, 20)], B[DK])   # esternón
+    L.rect(7, 19, 17, 20, P_LEATHER[DP])
+    for (x0, x1) in ((1, 8), (16, 23)):                                              # hombreras de vértebras
+        _ball(L, x0, 3, x1, 9, B)
+        L.px((x0 + x1) // 2, 4, B[HI]); L.px(x0 + 1, 8, P_CRIMSON[MD])
+    L.px(11, 3, B[LT]); L.px(12, 3, B[LT])
+    L.px(6, 12, P_CRIMSON[MD]); L.px(17, 12, P_CRIMSON[MD])                          # cosidos rojos
+    return [L]
+
+
+# ------------------------------------------------------------------ 30 ESPADA DE LOBO
+def _icon_sword_wolf():
+    S = P_WSTEEL
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    hand, tip = (6, 18), (21, 3)
+    u, n, pt = _axis(hand, tip)
+    fx.line([pt(5), pt(18)], CYAN_GLOW + (30,), 9)
+    L.line([pt(-2), pt(3)], P_WOLFWOOD[DK], 4)                                       # empuñadura
+    L.line([pt(-2), pt(3)], P_WOLFWOOD[MD], 3)
+    for t in (-1.5, 0.5, 2.5):                                                       # pelo de lobo
+        a = pt(t, -2); b2 = pt(t + 1, 2.5)
+        L.poly([a, (a[0] - 1, a[1] + 1.5), b2], P_FURI[LT])
+    x, y = pt(-3.5)
+    L.ell(x - 2, y - 2, x + 2, y + 2, P_AQUA[DK]); L.px(int(x - 1), int(y - 1), P_AQUA[HI])           # pomo con gema
+    for s in (-1, 1):                                                                # guarda: dos colmillos
+        base = pt(3.5)
+        mid = pt(2, s * 5)
+        end = pt(6.5, s * 5.5)
+        _band(L, [base, mid, end][:1] + _bez(base, mid, end, 8), 1.7, 0.5, P_FANG)
+    L.line([pt(5), pt(18)], S[DK], 5)                                                # hoja ancha
+    L.line([pt(5), pt(18)], S[MD], 4)
+    L.line([pt(5, -1.5), pt(18, -1.5)], S[HI], 1)
+    L.line([pt(6), pt(17)], P_AQUA[MD], 1)                                           # canal rúnico
+    for t in (8, 11, 14):                                                            # dientes en forma de colmillo
+        a, b2, c = pt(t, 2.4), pt(t + 2.2, 2.4), pt(t + 0.3, 5.2)
+        L.poly([a, b2, c], S[LT]); L.px(int(c[0]), int(c[1]), S[HI])
+    L.poly([pt(16, 2), pt(20.5, 0), pt(17, -2.5)], S[LT]); L.px(int(pt(20.5)[0]), int(pt(20.5)[1]), S[HI])
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 31 ARCO DE LOBO
+def _icon_bow_wolf():
+    W = P_WOLFWOOD
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    pts = _bow_arc_pts(14, 12, 7, 10, 98, 262, 7)
+    L.line([(x + 1, y) for x, y in pts], W[DP], 3)
+    L.line(pts, W[MD], 3)
+    L.line([(x - 1, y) for x, y in pts], W[HI], 1)
+    for (x, y) in ((8, 8), (7, 11), (7, 14), (8, 17)):                              # empuñadura de pelo
+        L.poly([(x, y), (x - 2, y + 1.5), (x + 1.5, y + 3)], P_FURI[LT])
+    L.poly([(9, 9), (6, 10), (9, 13), (6, 14), (9, 16)], P_FURI[MD])
+    e0, e1 = pts[0], pts[-1]
+    L.poly([(e0[0], e0[1]), (e0[0] - 4, e0[1] - 1), (e0[0] - 1, e0[1] + 3)], P_FANG[LT])     # colmillos en las puntas
+    L.poly([(e1[0], e1[1]), (e1[0] - 4, e1[1] + 1), (e1[0] - 1, e1[1] - 3)], P_FANG[LT])
+    string = CYAN_GLOW + (255,)
+    L.line([e0, (18, 12), e1], string, 1)
+    L.line([(4, 12), (18, 12)], P_WSTEEL[MD], 1)
+    L.poly([(1, 12), (5, 10), (5, 14)], P_FANG[LT]); L.px(2, 12, P_FANG[HI])
+    L.px(16, 11, P_FURI[LT]); L.px(17, 11, P_FURI[MD]); L.px(16, 13, P_FURI[LT]); L.px(17, 13, P_FURI[MD])
+    fx.line([e0, (18, 12), e1], CYAN_GLOW + (60,), 3)
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 32 BÁCULO AULLADOR
+def _icon_staff_wolf():
+    W = P_WOLFWOOD
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    L.line([(3, 22), (15, 10)], W[DP], 3)
+    L.line([(3, 21), (14, 10)], W[MD], 2)
+    L.line([(2, 21), (13, 10)], W[LT], 1)
+    for (x, y) in ((7, 17), (10, 14)):                                               # pelo atado
+        L.poly([(x, y - 2), (x + 3, y), (x - 1, y + 2)], P_FURI[LT])
+    L.line([(5, 19), (4, 22)], P_FANG[MD], 1); L.px(4, 22, P_FANG[HI])               # colmillo colgante
+    for pts in (_bez((14, 12), (9, 8), (11, 2), 12), _bez((20, 12), (24, 8), (22, 2), 12),
+                _bez((17, 13), (17, 13), (17, 13), 2)):
+        if pts[0] != pts[-1]:
+            _band(L, pts, 1.7, 0.5, P_FANG)                                          # garras que sostienen el orbe
+    _ball(L, 14, 3, 21, 10, P_AQUA)
+    L.px(15, 4, P_AQUA[HI])
+    fx.ell(9, -1, 26, 14, CYAN_GLOW + (45,))
+    fx.px(18, 6, (255, 255, 255, 240))
+    return [fx, L]
+
+
+# ------------------------------------------------------------------ 33 ARMADURA DE LOBO
+def _icon_armor_wolf():
+    S = P_WSLATE
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    L.poly([(6, 7), (18, 7), (19, 12), (17, 21), (7, 21), (5, 12)], S[MD])
+    L.line([(6, 7), (5, 12)], S[LT]); L.line([(8, 9), (8, 19)], S[LT]); L.line([(18, 7), (19, 12), (17, 21)], S[DK])
+    for y in (12, 18):
+        L.line([(6, y), (18, y)], S[DK])
+    L.rect(7, 15, 17, 17, P_LEATHER[DP]); L.line([(7, 15), (17, 15)], P_LEATHER[MD])
+    L.poly([(10, 15), (14, 15), (12, 20)], P_FANG[LT]); L.px(11, 16, P_FANG[HI])      # hebilla de colmillo
+    for (x, y) in ((11, 9), (12, 10), (11, 11), (13, 11), (13, 9)):                  # runa
+        L.px(x, y, P_AQUA[MD])
+    for (x0, x1) in ((0, 8), (16, 24)):                                              # hombreras de pelaje
+        L.ell(x0, 4, x1, 11, P_FURI[DK]); L.ell(x0, 4, x1 - 1, 10, P_FURI[MD]); L.ell(x0 + 1, 4, x1 - 3, 8, P_FURI[LT])
+        for k in range(x0 + 1, x1 - 1, 2):
+            L.poly([(k, 10), (k + 1, 13), (k + 2, 10)], P_FURI[LT])
+        L.px(x0 + 2, 5, P_FURI[HI])
+    L.ell(6, 2, 18, 9, P_FURI[DK]); L.ell(6, 2, 17, 8, P_FURI[MD]); L.ell(7, 2, 14, 6, P_FURI[LT])   # aro de pelo del cuello
+    L.ell(9, 3, 15, 7, S[DP])                                                        # abertura del cuello
+    L.line([(9, 6), (15, 6)], S[DK])
+    for k in range(7, 17, 2):
+        L.poly([(k, 8), (k + 1, 11), (k + 2, 8)], P_FURI[LT])
+    L.px(7, 3, P_FURI[HI]); L.px(8, 2, P_FURI[HI])
+    fx.px(12, 10, CYAN_GLOW + (200,))
+    return [fx, L]
+
+# ------------------------------------------------------------------ 34-37: ARMADURAS POR CLASE (hueso y lobo)
+def _icon_armor_bone_archer():
+    B = P_OLDBONE
+    L = _L(size=24)
+    L.poly([(4, 4), (20, 4), (21, 10), (12, 14), (3, 10)], P_HIDE[MD])                 # capucha caída
+    L.line([(4, 4), (20, 4)], P_HIDE[LT]); L.line([(3, 10), (12, 14), (21, 10)], P_HIDE[DK])
+    L.poly([(7, 8), (17, 8), (18, 21), (6, 21)], P_LEATHER[MD])                        # jubón
+    L.line([(7, 8), (6, 21)], P_LEATHER[LT]); L.line([(17, 8), (18, 21)], P_LEATHER[DK])
+    for y in (10, 13, 16):                                                             # placas de costilla
+        L.line([(8, y), (16, y)], B[DK], 2); L.line([(8, y), (16, y)], B[MD], 1); L.px(8, y, B[HI])
+    L.line([(12, 9), (12, 17)], B[LT])
+    L.rect(6, 18, 18, 19, P_LEATHER[DP]); L.px(12, 18, B[HI]); L.px(12, 19, B[LT])
+    for (x0, x1) in ((1, 8), (16, 23)):                                                # hombreras de hueso
+        _ball(L, x0, 3, x1, 9, B)
+    for pts in ([(5, 4), (2, 0), (7, 3)], [(19, 4), (22, 0), (17, 3)]):                # cuernos
+        L.poly(pts, B[LT]); L.px(pts[1][0], pts[1][1], P_CRIMSON[MD])
+    return [L]
+
+
+def _icon_armor_bone_mage():
+    B = P_OLDBONE; M = P_DARKROBE
+    L = _L(size=24)
+    L.poly([(9, 4), (15, 4), (21, 21), (3, 21)], M[MD])
+    L.line([(9, 4), (3, 21)], M[LT]); L.line([(15, 4), (21, 21)], M[DK])
+    L.poly([(9, 7), (3, 9), (1, 16), (6, 15)], M[MD]); L.poly([(15, 7), (21, 9), (23, 16), (18, 15)], M[MD])
+    L.line([(1, 16), (6, 15)], B[MD]); L.line([(23, 16), (18, 15)], B[MD])
+    L.rect(3, 19, 21, 21, B[MD]); L.line([(3, 19), (21, 19)], B[HI])                  # dobladillo de hueso
+    for x in range(5, 21, 3):
+        L.px(x, 20, B[DK])
+    L.rect(8, 12, 16, 13, B[DK])
+    _ball(L, 8, 1, 16, 8, M)
+    _ball(L, 10, 9, 14, 13, B)                                                        # calavera en el pecho
+    L.px(11, 11, (24, 18, 32, 255)); L.px(13, 11, (24, 18, 32, 255)); L.px(12, 13, B[DK])
+    for (x0, x1) in ((2, 8), (16, 22)):                                               # hombreras de hueso
+        L.ell(x0, 7, x1, 11, B[DK]); L.ell(x0, 7, x1 - 1, 10, B[MD]); L.px(x0 + 1, 8, B[HI])
+    return [L]
+
+
+def _icon_armor_wolf_archer():
+    S = P_WSLATE
+    L = _L(size=24)
+    L.poly([(7, 9), (17, 9), (18, 21), (6, 21)], S[MD])                                # jubón de cuero oscuro
+    L.line([(7, 9), (6, 21)], S[LT]); L.line([(17, 9), (18, 21)], S[DK])
+    L.rect(6, 16, 18, 17, P_LEATHER[DP]); L.rect(11, 16, 13, 17, P_AQUA[MD]); L.px(11, 16, P_AQUA[HI])
+    for y in (12, 19):
+        L.line([(7, y), (17, y)], S[DK])
+    for (x0, x1) in ((0, 8), (16, 24)):                                               # hombros de pelo
+        L.ell(x0, 7, x1, 14, P_FURI[DK]); L.ell(x0, 7, x1 - 1, 13, P_FURI[MD]); L.ell(x0 + 1, 7, x1 - 3, 11, P_FURI[LT])
+    _ball(L, 6, 2, 18, 11, P_PELT)                                                    # capucha de lobo
+    L.poly([(7, 5), (6, 0), (11, 3)], P_PELT[MD]); L.poly([(17, 5), (18, 0), (13, 3)], P_PELT[MD])   # orejas
+    L.ell(9, 6, 15, 11, S[DP])                                                        # abertura de la capucha
+    L.px(10, 8, P_AQUA[MD]); L.px(14, 8, P_AQUA[MD])
+    for k in range(7, 17, 2):
+        L.poly([(k, 11), (k + 1, 14), (k + 2, 11)], P_FURI[LT])                       # collar
+    return [L]
+
+
+def _icon_armor_wolf_mage():
+    S = P_WSLATE
+    L = _L(size=24)
+    L.poly([(9, 4), (15, 4), (21, 21), (3, 21)], S[MD])
+    L.line([(9, 4), (3, 21)], S[LT]); L.line([(15, 4), (21, 21)], S[DK])
+    L.poly([(9, 7), (3, 9), (1, 16), (6, 15)], S[MD]); L.poly([(15, 7), (21, 9), (23, 16), (18, 15)], S[MD])
+    for (x, y) in ((1, 16), (23, 16)):                                                # puños de pelo
+        L.ell(x - 3, y - 2, x + 3, y + 2, P_FURI[MD]); L.px(x - 1, y - 1, P_FURI[HI])
+    L.rect(3, 18, 21, 21, P_FURI[MD]); L.line([(3, 18), (21, 18)], P_FURI[HI])        # dobladillo de pelo
+    for k in range(3, 20, 2):
+        L.poly([(k, 20), (k + 1, 23), (k + 2, 20)], P_FURI[LT])
+    L.rect(8, 12, 16, 13, P_LEATHER[DP])
+    for (x, y) in ((11, 15), (12, 16), (11, 17), (13, 17), (13, 15)):                  # runas
+        L.px(x, y, P_AQUA[MD])
+    _ball(L, 8, 1, 16, 8, S)
+    L.poly([(8, 3), (6, 0), (11, 2)], P_PELT[MD]); L.poly([(16, 3), (18, 0), (13, 2)], P_PELT[MD])   # orejas
+    L.ell(6, 5, 18, 10, P_FURI[DK]); L.ell(6, 5, 17, 9, P_FURI[MD]); L.ell(7, 5, 13, 8, P_FURI[LT])  # collar
+    L.ell(9, 6, 15, 9, S[DP])
+    return [L]
+
+
 ICON_BUILDERS = [
     lambda: _icon_sword(0), lambda: _icon_sword(1), lambda: _icon_bow(0), lambda: _icon_staff(0),
     lambda: _icon_plate(0), lambda: _icon_robe(0), None, None, None, None,
     lambda: _icon_sword(2), lambda: _icon_bow(1), lambda: _icon_bow(2), lambda: _icon_staff(1),
     lambda: _icon_staff(2), lambda: _icon_plate(1), lambda: _icon_plate(2), lambda: _icon_leather(0),
     lambda: _icon_leather(1), lambda: _icon_leather(2), lambda: _icon_robe(1), lambda: _icon_robe(2),
+    # 22-33: materiales, llave y equipo de hueso / lobo
+    lambda: _icon_silk(), lambda: _icon_pelt(), lambda: _icon_horn(), lambda: _icon_key(),
+    lambda: _icon_sword_bone(), lambda: _icon_bow_bone(), lambda: _icon_staff_bone(), lambda: _icon_armor_bone(),
+    lambda: _icon_sword_wolf(), lambda: _icon_bow_wolf(), lambda: _icon_staff_wolf(), lambda: _icon_armor_wolf(),
+    # 34-37: armaduras de hueso y de lobo para arquero y mago (guerrero usa 29 y 33)
+    lambda: _icon_armor_bone_archer(), lambda: _icon_armor_bone_mage(),
+    lambda: _icon_armor_wolf_archer(), lambda: _icon_armor_wolf_mage(),
 ]
 
 # ==============================================================================
-# GENERACIÓN DE ICONOS 24x24 (MATERIALES, LLAVE Y EQUIPO DE HUESO/LOBO)
+# GENERACIÓN DE ICONOS 24x24 (índices 0 a 33)
 # ==============================================================================
 
 def generate_icons():
-    # 34 iconos en total (0 a 33)
-    n = 34
+    # 38 iconos en total (0 a 37)
+    n = 38
     icons = create_canvas(24 * n, 24)
     d = ImageDraw.Draw(icons)
 
@@ -2394,109 +2926,7 @@ def generate_icons():
     ellipse(d, ox + 10, 6, 10, 10, (255, 225, 75, 255), OUTLINE)
     d.point((ox + 13, 9), fill=(255, 255, 200, 255))
 
-    # --- NUEVOS MATERIALES Y LLAVE (22 a 25) ---
-
-    # 22: SEDA DE ARAÑA GIGANTE (mat_silk)
-    ox = 22 * 24
-    ellipse(d, ox + 5, 5, 14, 14, (240, 248, 255, 255), OUTLINE)
-    # Patrón de tela/madeja tejida
-    d.line([(ox + 6, 8), (ox + 17, 16)], fill=(160, 210, 255, 255), width=2)
-    d.line([(ox + 8, 17), (ox + 16, 7)], fill=(160, 210, 255, 255), width=2)
-    d.line([(ox + 12, 5), (ox + 12, 19)], fill=(255, 255, 255, 255), width=1)
-    d.point((ox + 10, 10), fill=(255, 255, 255, 255))
-
-    # 23: PIEL DE HOMBRE LOBO (mat_pelt)
-    ox = 23 * 24
-    # Cuero de pelaje gris desollado con garras
-    pelt_pts = [(ox + 6, 4), (ox + 17, 4), (ox + 19, 9), (ox + 18, 18), (ox + 12, 20), (ox + 5, 18), (ox + 4, 9)]
-    d.polygon(pelt_pts, fill=(115, 110, 125, 255), outline=OUTLINE)
-    d.polygon([(ox + 7, 6), (ox + 16, 6), (ox + 14, 16), (ox + 9, 16)], fill=(155, 150, 165, 255))
-    # Mechones de pelo
-    d.line([(ox + 10, 8), (ox + 11, 13)], fill=(230, 235, 245, 255), width=1)
-    d.line([(ox + 13, 9), (ox + 14, 14)], fill=(230, 235, 245, 255), width=1)
-
-    # 24: CUERNO DE DEMONIO (mat_horn)
-    ox = 24 * 24
-    # Cuerno curvado de obsidiana y fuego
-    horn_pts = [(ox + 6, 18), (ox + 11, 18), (ox + 18, 12), (ox + 19, 5), (ox + 15, 5), (ox + 10, 12)]
-    d.polygon(horn_pts, fill=(45, 20, 30, 255), outline=OUTLINE)
-    d.line([(ox + 8, 16), (ox + 16, 7)], fill=(215, 45, 55, 255), width=2)
-    d.line([(ox + 10, 17), (ox + 17, 8)], fill=(255, 140, 40, 255), width=1)
-    d.point((ox + 18, 5), fill=(255, 220, 120, 255))
-
-    # 25: LLAVE DE MAZMORRA (dungeon_key)
-    ox = 25 * 24
-    # Aro dorado superior calado
-    ellipse(d, ox + 5, 3, 9, 9, (245, 195, 40, 255), OUTLINE)
-    ellipse(d, ox + 7, 5, 5, 5, (20, 15, 25, 255)) # Hueco de la llave
-    # Espiga recta y dientes
-    d.line([(ox + 13, 11), (ox + 19, 17)], fill=(245, 195, 40, 255), width=3)
-    d.line([(ox + 13, 11), (ox + 19, 17)], fill=(255, 240, 140, 255), width=1)
-    d.line([(ox + 18, 16), (ox + 16, 18)], fill=(245, 195, 40, 255), width=2)
-    d.line([(ox + 20, 18), (ox + 18, 20)], fill=(245, 195, 40, 255), width=2)
-
-    # --- EQUIPO DE HUESO (26 a 29) ---
-
-    # 26: MACHETE DE HUESO (sword_bone)
-    ox = 26 * 24
-    d.line([(ox + 5, 19), (ox + 8, 16)], fill=(120, 85, 60, 255), width=3) # Mango cuero
-    blade_bone = [(ox + 8, 16), (ox + 18, 4), (ox + 20, 7), (ox + 12, 18)]
-    d.polygon(blade_bone, fill=(245, 240, 225, 255), outline=OUTLINE)
-    # Dientes en el filo
-    for t in (10, 13, 16):
-        d.point((ox + t, 24 - t), fill=(180, 40, 50, 255))
-
-    # 27: ARCO DE HUESO (bow_bone)
-    ox = 27 * 24
-    d.arc((ox + 5, 3, ox + 18, 20), 90, 270, fill=(240, 235, 220, 255), width=3)
-    d.line([(ox + 12, 3), (ox + 12, 20)], fill=(180, 170, 155, 255), width=1) # Cuerda
-    d.point((ox + 11, 4), fill=(140, 40, 40, 255))
-    d.point((ox + 11, 19), fill=(140, 40, 40, 255))
-
-    # 28: BÁCULO DE CALAVERA (staff_bone)
-    ox = 28 * 24
-    d.line([(ox + 6, 19), (ox + 16, 8)], fill=(90, 60, 45, 255), width=2)
-    ellipse(d, ox + 13, 3, 8, 8, (245, 240, 225, 255), OUTLINE)
-    d.point((ox + 15, 6), fill=(40, 210, 255, 255)) # Ojos turquesa mágicos
-    d.point((ox + 18, 6), fill=(40, 210, 255, 255))
-
-    # 29: ARMADURA DE COSTILLAS (armor_bone)
-    ox = 29 * 24
-    rect(d, ox + 6, 7, 12, 13, (110, 85, 65, 255), OUTLINE)
-    for ry in (9, 12, 15):
-        d.line([(ox + 7, ry), (ox + 16, ry)], fill=(245, 240, 225, 255), width=2)
-    d.line([(ox + 11, 7), (ox + 11, 19)], fill=(200, 195, 180, 255), width=1)
-
-    # --- EQUIPO DE LOBO FERAL (30 a 33) ---
-
-    # 30: ESPADA COLMILLO DE LOBO (sword_wolf)
-    ox = 30 * 24
-    d.line([(ox + 5, 19), (ox + 8, 16)], fill=(60, 50, 70, 255), width=3)
-    d.line([(ox + 7, 15), (ox + 20, 4)], fill=(180, 190, 205, 255), width=3)
-    d.line([(ox + 8, 14), (ox + 19, 5)], fill=(255, 255, 255, 255), width=1)
-    # Colmillos adosados a la empuñadura
-    d.polygon([(ox + 7, 18), (ox + 10, 15), (ox + 6, 14)], fill=(245, 245, 230, 255))
-
-    # 31: ARCO DE TENDÓN DE LOBO (bow_wolf)
-    ox = 31 * 24
-    d.arc((ox + 5, 3, ox + 18, 20), 90, 270, fill=(80, 75, 90, 255), width=3)
-    d.line([(ox + 12, 3), (ox + 12, 20)], fill=(70, 220, 255, 255), width=1) # Cuerda de tendón cian
-    ellipse(d, ox + 9, 2, 4, 4, fill=(150, 140, 160, 255))
-    ellipse(d, ox + 9, 18, 4, 4, fill=(150, 140, 160, 255))
-
-    # 32: BÁCULO DE LOBO (staff_wolf)
-    ox = 32 * 24
-    d.line([(ox + 6, 19), (ox + 16, 7)], fill=(70, 65, 80, 255), width=2)
-    ellipse(d, ox + 14, 4, 7, 7, (130, 140, 155, 255), OUTLINE)
-    d.point((ox + 16, 6), fill=(40, 230, 255, 255)) # Gema cian de lobo
-
-    # 33: JUBÓN / ARMADURA DE LOBO (armor_wolf)
-    ox = 33 * 24
-    d.polygon([(ox + 6, 6), (ox + 17, 6), (ox + 19, 19), (ox + 5, 19)], fill=(100, 95, 110, 255), outline=OUTLINE)
-    # Cuello de pelaje blanco de lobo ártico
-    d.ellipse([(ox + 7, 5), (ox + 16, 10)], fill=(235, 242, 250, 255))
-    d.line([(ox + 6, 13), (ox + 17, 13)], fill=(50, 45, 60, 255), width=2) # Correa con hebilla
-    d.point((ox + 11, 13), fill=(245, 195, 40, 255))
+    # (iconos 22 a 33: ahora se dibujan con ICON_BUILDERS, arriba)
 
     icons.save(os.path.join(ASSETS_DIR, 'icons.png'))
     print(f"Creado: icons.png ({n} iconos de alta resolución 24x24)")
@@ -2517,7 +2947,7 @@ def build_all_spritesheets():
     ]
     for cls, drawer in classes:
         for wl in range(3):
-            for ak in range(3):
+            for ak in range(5):   # 0 común, 1 oscura, 2 legendaria, 3 hueso, 4 lobo
                 sheet = create_canvas(48 * 7, 48 * 4)
                 for direction in range(4):
                     for frame in range(4):
