@@ -963,7 +963,16 @@ const LORE_CHAPTERS = [
     {
         num: 6,
         titleLeft: "VI. El Campeón Coronado",
-        image: "/static/images/lore/victoria.png",    // <--- TU FOTO FINAL
+        image: "/static/assets/lore/simarion.png",
+        textLeft: "<p>Hong ha caído. El Ojo Carmesí se apaga en cenizas y los muros de la torre se desmoronan bajo la luz del nuevo amanecer.</p><p>Tu nombre ha sido inscrito con letras de oro en las Crónicas Eternas. ¡El reino está a salvo gracias a ti, héroe!</p>",
+        titleRight: "Victoria Eterna",
+        textRight: "<i>«Has vencido a la Torre Oscura. Eres leyenda.»</i>",
+
+    },
+    {
+        num: 7,
+        titleLeft: "VII. los antes de la caida",
+        image: "/static/assets/lore/Asamblea.png",
         textLeft: "<p>Hong ha caído. El Ojo Carmesí se apaga en cenizas y los muros de la torre se desmoronan bajo la luz del nuevo amanecer.</p><p>Tu nombre ha sido inscrito con letras de oro en las Crónicas Eternas. ¡El reino está a salvo gracias a ti, héroe!</p>",
         titleRight: "Victoria Eterna",
         textRight: "<i>«Has vencido a la Torre Oscura. Eres leyenda.»</i>",
@@ -975,9 +984,9 @@ UIManager.prototype.currentLorePage = 0;
 
 UIManager.prototype.updateBookUnlockStatus = function () {
     const isCleared = localStorage.getItem('dark_tower_game_cleared') === 'true';
-    const btn = document.getElementById('btn-lore-book');
-    if (btn) {
-        btn.style.display = isCleared ? 'block' : 'none';
+    const bookWidget = document.getElementById('btn-lore-book');
+    if (bookWidget) {
+        bookWidget.style.display = isCleared ? 'flex' : 'none';
     }
 };
 
@@ -999,11 +1008,15 @@ UIManager.prototype.renderLoreBookPage = function () {
     document.getElementById('book-page-num-left').innerText = (this.currentLorePage * 2 + 1);
 
     document.getElementById('book-chap-title-right').innerText = chap.titleRight;
-    document.getElementById('book-text-right').innerHTML = chap.textRight;
+
+    // Subtítulo debajo de la foto:
+    const captionEl = document.getElementById('book-text-right');
+    if (captionEl) captionEl.innerHTML = chap.textRight;
+
     document.getElementById('book-page-num-right').innerText = (this.currentLorePage * 2 + 2);
     document.getElementById('book-progress-label').innerText = `${chap.num} / ${LORE_CHAPTERS.length}`;
 
-    // CARGAR TU FOTO PERSONALIZADA:
+    // Cargar la imagen del capítulo:
     const imgEl = document.getElementById('book-illu-img');
     if (imgEl && chap.image) {
         imgEl.src = chap.image;
