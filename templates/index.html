@@ -28,6 +28,19 @@
              1. PANTALLA DE TÍTULO PRINCIPAL
              ================================================================ -->
         <div id="title-screen">
+            <!-- Barra de usuario en la pantalla de inicio -->
+            <div class="auth-bar-top">
+                <div id="auth-logged-out" style="display: flex; gap: 8px;">
+                    <button id="btn-open-login" class="pixel-btn" style="font-size: 8px; padding: 6px 10px;">👤 INICIAR
+                        SESIÓN</button>
+                </div>
+                <div id="auth-logged-in" style="display: none; align-items: center; gap: 10px;">
+                    <span id="auth-username-label"
+                        style="font-family:'Press Start 2P'; font-size:9px; color:#f1c40f;"></span>
+                    <button id="btn-logout" class="pixel-btn"
+                        style="font-size: 8px; padding: 4px 8px; background:#c0392b;">SALIR</button>
+                </div>
+            </div>
             <!-- Canvas del Ojo de Sauron Animado en la Cúspide -->
             <canvas id="titleEyeCanvas" width="120" height="80"
                 style="position:absolute; top:70px; left:50%; transform:translateX(-50%); pointer-events:none;"></canvas>
@@ -40,6 +53,8 @@
             <div class="title-menu">
                 <!-- En el menú de inicio: -->
                 <button id="btn-new-game" class="pixel-btn btn-gold">⚔️ NUEVA PARTIDA</button>
+                <button id="btn-select-floor" class="pixel-btn btn-gold" style="display: none;">🏰 SELECCIONAR
+                    PISO</button> <!-- SOLO PARA VENCEDORES -->
                 <button id="btn-load-game" class="pixel-btn">📜 CARGAR PARTIDA</button>
                 <button id="btn-hall-of-fame" class="pixel-btn">🏆 SALÓN DE LA FAMA</button>
                 <button id="btn-how-to-play" class="pixel-btn">🎮 CÓMO JUGAR</button>
@@ -521,6 +536,89 @@
 
             </div>
 
+        </div>
+        <!-- ========================================================================= -->
+        <!-- MODAL DE INICIO DE SESIÓN / REGISTRO                                      -->
+        <!-- ========================================================================= -->
+        <div id="login-modal" class="game-modal" style="display: none;">
+            <div class="modal-window" style="width: 380px; padding: 20px;">
+                <h3 id="auth-modal-title"
+                    style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:14px;">INICIAR
+                    SESIÓN</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+                    <input type="text" id="auth-input-user" placeholder="Nombre de usuario"
+                        style="background:#0a0710; border:2px solid #5a4270; color:#fff; padding:8px; font-family:'Press Start 2P'; font-size:10px;">
+                    <input type="password" id="auth-input-pass" placeholder="Contraseña"
+                        style="background:#0a0710; border:2px solid #5a4270; color:#fff; padding:8px; font-family:'Press Start 2P'; font-size:10px;">
+                </div>
+                <div id="auth-error-msg"
+                    style="color:#e74c3c; font-size:12px; margin-bottom:10px; display:none; text-align:center;"></div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="btn-auth-submit" class="pixel-btn btn-gold">ENTRAR</button>
+                    <button id="btn-toggle-auth-mode" class="pixel-btn" style="font-size:8px;">¿No tienes cuenta?
+                        Regístrate</button>
+                    <button class="pixel-btn close-modal-btn"
+                        style="background:#4a151b; font-size:8px;">CANCELAR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- MODAL SELECTOR DE PISOS (POST-VICTORIA)                                   -->
+        <!-- ========================================================================= -->
+        <div id="floor-select-modal" class="game-modal" style="display: none;">
+            <div class="modal-window" style="width: 580px; padding: 20px;">
+                <h3 style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:8px;">🏰 SALA DE
+                    PORTALES</h3>
+                <p style="font-size:13px; color:#aaa; text-align:center; margin-bottom:14px;">Elige el piso al que
+                    deseas descender y tu héroe:</p>
+
+                <!-- Selección de Héroe -->
+                <div style="margin-bottom: 14px;">
+                    <div style="font-family:'Press Start 2P'; font-size:9px; color:#f1c40f; margin-bottom:8px;">1.
+                        SELECCIONA TU CLASE:</div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="floor-hero-choice selected" data-class="warrior">
+                            <span>⚔️ GUERRERO</span>
+                            <span class="hero-status-tag" id="status-tag-warrior">⚪ BÁSICO</span>
+                        </div>
+                        <div class="floor-hero-choice" data-class="archer">
+                            <span>🏹 ARQUERO</span>
+                            <span class="hero-status-tag" id="status-tag-archer">⚪ BÁSICO</span>
+                        </div>
+                        <div class="floor-hero-choice" data-class="mage">
+                            <span>🔮 MAGO</span>
+                            <span class="hero-status-tag" id="status-tag-mage">⚪ BÁSICO</span>
+                        </div>
+                    </div>
+                    <div id="floor-hero-summary"
+                        style="font-size:11px; color:#38ef7d; margin-top:8px; text-align:center;"></div>
+                </div>
+
+                <!-- Selección de Piso (1 al 10) -->
+                <div style="margin-bottom: 16px;">
+                    <div style="font-family:'Press Start 2P'; font-size:9px; color:#f1c40f; margin-bottom:8px;">2.
+                        SELECCIONA EL PISO:</div>
+                    <div class="floor-grid-buttons"
+                        style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px;">
+                        <button class="floor-pick-btn selected" data-floor="1">PISO 1</button>
+                        <button class="floor-pick-btn" data-floor="2">PISO 2</button>
+                        <button class="floor-pick-btn" data-floor="3">PISO 3</button>
+                        <button class="floor-pick-btn" data-floor="4">PISO 4</button>
+                        <button class="floor-pick-btn" data-floor="5" style="border-color:#e74c3c;">PISO 5 🐺</button>
+                        <button class="floor-pick-btn" data-floor="6">PISO 6</button>
+                        <button class="floor-pick-btn" data-floor="7">PISO 7</button>
+                        <button class="floor-pick-btn" data-floor="8" style="border-color:#2ecc71;">PISO 8 🧪</button>
+                        <button class="floor-pick-btn" data-floor="9">PISO 9</button>
+                        <button class="floor-pick-btn" data-floor="10" style="border-color:#f1c40f;">PISO 10 👑</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; gap:10px;">
+                    <button id="btn-launch-floor" class="pixel-btn btn-gold" style="flex:1;">ABRIR PORTAL</button>
+                    <button class="pixel-btn close-modal-btn" style="background:#4a151b;">CERRAR</button>
+                </div>
+            </div>
         </div>
 
         <!-- Scripts del Motor y Lógica del Videojuego -->

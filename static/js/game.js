@@ -452,13 +452,82 @@ class DarkTowerGame {
         window.soundEngine.stopBgm();
         window.soundEngine.playLevelUp();
 
-        // ¡DESBLOQUEAR EL LIBRO DE CRÓNICAS PARA SIEMPRE!
+        // Enviar al backend los datos exactos del héroe vencedor para guardarlo en la cuenta
+        fetch('/api/record_victory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                character_class: this.player.characterClass,
+                level: this.player.level,
+                hp: this.player.hp,
+                max_hp: this.player.maxHp,
+                mp: this.player.mp,
+                max_mp: this.player.maxMp,
+                strength: this.player.strength,
+                dexterity: this.player.dexterity,
+                magic: this.player.magic,
+                constitution: this.player.constitution,
+                gold: this.player.gold,
+                equipment: this.player.equipment,
+                inventory: this.player.inventory
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && window.uiManager.currentUser) {
+                    window.uiManager.currentUser.cleared_heroes = data.cleared_heroes;
+                    window.uiManager.updateAuthUI(true, window.uiManager.currentUser.username);
+                }
+            });
+
+        // Desbloquear Libro de Crónicas
         localStorage.setItem('dark_tower_game_cleared', 'true');
         if (window.uiManager) window.uiManager.updateBookUnlockStatus();
 
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'flex';
-        // ... (resto de tu código de victoria)
+    }
+    startCustomFloorRun(characterClass, floorNumber) {
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('game-hud').style.display = 'block';
+
+        const currentUser = window.uiManager.currentUser;
+        const cleared = (currentUser && currentUser.cleared_heroes) || {};
+        const savedHero = cleared[characterClass];
+
+        // 1. Crear el jugador
+        this.player = new Player(characterClass, currentUser ? currentUser.username : 'Héroe');
+
+        // 2. Comprobar si esta clase específica ya completó el juego
+        if (savedHero) {
+            // ¡CARGAR SU INVENTARIO Y EQUIPO DE VICTORIA!
+            this.player.level = savedHero.level;
+            this.player.hp = savedHero.max_hp;
+            this.player.maxHp = savedHero.max_hp;
+            this.player.mp = savedHero.max_mp;
+            this.player.maxMp = savedHero.max_mp;
+            this.player.strength = savedHero.strength;
+            this.player.dexterity = savedHero.dexterity;
+            this.player.magic = savedHero.magic;
+            this.player.constitution = savedHero.constitution;
+            this.player.gold = savedHero.gold;
+
+            const refresh = window.refreshItem || (it => it);
+            this.player.inventory = (savedHero.inventory || []).map(refresh);
+            this.player.equipment = Object.fromEntries(
+                Object.entries(savedHero.equipment || {}).map(([s, it]) => [s, refresh(it)])
+            );
+
+            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 50, '¡HÉROE VENCEDOR CARGADO!', '#f1c40f', true));
+        } else {
+            // No ha ganado con esta clase: empieza limpio con equipo básico
+            this.player.giveInitialEquipment();
+            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 50, 'NUEVO HÉROE (EQUIPO BÁSICO)', '#a4b0be', true));
+        }
+
+        // 3. Cargar el piso elegido
+        this.loadFloor(floorNumber);
+        this.state = this.STATE_PLAYING;
     }
 
     returnToTitle() {

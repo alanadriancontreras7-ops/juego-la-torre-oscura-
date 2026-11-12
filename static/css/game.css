@@ -482,17 +482,19 @@ canvas {
    MODALES (Centrado global en pantalla completa)
    ========================================================================== */
 .game-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(4, 3, 6, 0.85);
-  backdrop-filter: blur(4px);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(8, 6, 12, 0.96) !important;
+  /* Más oscuro para que no se traspase el menú */
+  backdrop-filter: blur(6px);
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 200;
+  z-index: 9999 !important;
+  /* Máxima prioridad sobre la pantalla de título */
   animation: fadeIn 0.2s ease;
 }
 
@@ -1375,4 +1377,74 @@ canvas {
   letter-spacing: 1px;
   text-shadow: 0 0 6px rgba(241, 196, 15, 0.6);
   white-space: nowrap;
+}
+
+/* Barra de estado de usuario superior */
+.auth-bar-top {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  z-index: 100;
+}
+
+/* Tarjetas de selección de héroe para Selector de Pisos */
+.floor-hero-choice {
+  flex: 1;
+  background: #1c1426;
+  border: 2px solid #5a4270;
+  border-radius: 4px;
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.floor-hero-choice.selected {
+  border-color: #f1c40f;
+  background: #39284d;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.4);
+}
+
+.hero-status-tag {
+  font-size: 7px;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.status-victorious {
+  color: #f1c40f;
+  background: rgba(241, 196, 15, 0.2);
+  border: 1px solid #f1c40f;
+}
+
+.status-fresh {
+  color: #a4b0be;
+  background: rgba(164, 176, 190, 0.1);
+}
+
+/* Botones de piso 1 al 10 */
+.floor-pick-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 10px 4px;
+  background: #1c1426;
+  border: 2px solid #5a4270;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.floor-pick-btn:hover,
+.floor-pick-btn.selected {
+  background: #39284d;
+  border-color: #f1c40f;
+  color: #f1c40f;
+  transform: scale(1.05);
 }

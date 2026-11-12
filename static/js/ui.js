@@ -1,5 +1,5 @@
 /**
- * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES / TIENDA / HERRERO / MENÚ CONTEXTUAL)
+ * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES / TIENDA / HERRERO / MENÚ CONTEXTUAL / SESIONES)
  */
 
 class UIManager {
@@ -7,6 +7,11 @@ class UIManager {
         this.selectedClass = 'warrior';
         this.selectedInventorySlot = null;
         this.tooltip = document.getElementById('item-tooltip');
+
+        this.currentUser = null;
+        this.authMode = 'login'; // 'login' o 'register'
+        this.selectedPortalClass = 'warrior';
+        this.selectedPortalFloor = 1;
     }
 
     init() {
@@ -14,6 +19,9 @@ class UIManager {
         this.createShopModalDOM();
         this.createBlacksmithModalDOM();
         this.createContextMenuDOM();
+        this.createAuthModalDOM();         // Crea el modal de Login si no existe
+        this.createFloorSelectModalDOM();  // Crea el selector de pisos si no existe
+        this.initAuthSystem();             // <-- ¡AQUÍ SE CONECTAN LOS BOTONES!
     }
 
     bindEvents() {
@@ -49,7 +57,6 @@ class UIManager {
             });
         }
 
-        // Cerrar menú contextual si haces clic en cualquier otro lado
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.item-context-menu')) {
                 this.hideContextMenu();
@@ -73,6 +80,274 @@ class UIManager {
         });
     }
 
+    // =========================================================================
+    // CREACIÓN GARANTIZADA DE MODALES DE AUTENTICACIÓN Y SELECTOR DE PISOS
+    // =========================================================================
+    createAuthModalDOM() {
+        if (document.getElementById('login-modal')) return;
+        const div = document.createElement('div');
+        div.id = 'login-modal';
+        div.className = 'game-modal';
+        div.style.display = 'none';
+        div.innerHTML = `
+            <div class="modal-window" style="width: 380px; padding: 20px; background: #140f1c; border: 3px solid #f1c40f; border-radius: 6px;">
+                <h3 id="auth-modal-title" style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:14px;">INICIAR SESIÓN</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+                    <input type="text" id="auth-input-user" placeholder="Nombre de usuario" style="background:#0a0710; border:2px solid #5a4270; color:#fff; padding:8px; font-family:'Press Start 2P'; font-size:10px;">
+                    <input type="password" id="auth-input-pass" placeholder="Contraseña" style="background:#0a0710; border:2px solid #5a4270; color:#fff; padding:8px; font-family:'Press Start 2P'; font-size:10px;">
+                </div>
+                <div id="auth-error-msg" style="color:#e74c3c; font-size:12px; margin-bottom:10px; display:none; text-align:center;"></div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button id="btn-auth-submit" class="pixel-btn btn-gold">ENTRAR</button>
+                    <button id="btn-toggle-auth-mode" class="pixel-btn" style="font-size:8px;">¿No tienes cuenta? Regístrate</button>
+                    <button class="pixel-btn close-modal-btn" style="background:#4a151b; font-size:8px;">CANCELAR</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    createFloorSelectModalDOM() {
+        if (document.getElementById('floor-select-modal')) return;
+        const div = document.createElement('div');
+        div.id = 'floor-select-modal';
+        div.className = 'game-modal';
+        div.style.display = 'none';
+        div.innerHTML = `
+            <div class="modal-window" style="width: 580px; padding: 20px; background: #140f1c; border: 3px solid #f1c40f; border-radius: 6px;">
+                <h3 style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:8px;">🏰 SALA DE PORTALES</h3>
+                <p style="font-size:13px; color:#aaa; text-align:center; margin-bottom:14px;">Elige el piso al que deseas descender y tu héroe:</p>
+
+                <div style="margin-bottom: 14px;">
+                    <div style="font-family:'Press Start 2P'; font-size:9px; color:#f1c40f; margin-bottom:8px;">1. SELECCIONA TU CLASE:</div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="floor-hero-choice selected" data-class="warrior">
+                            <span>⚔️ GUERRERO</span>
+                            <span class="hero-status-tag" id="status-tag-warrior">⚪ BÁSICO</span>
+                        </div>
+                        <div class="floor-hero-choice" data-class="archer">
+                            <span>🏹 ARQUERO</span>
+                            <span class="hero-status-tag" id="status-tag-archer">⚪ BÁSICO</span>
+                        </div>
+                        <div class="floor-hero-choice" data-class="mage">
+                            <span>🔮 MAGO</span>
+                            <span class="hero-status-tag" id="status-tag-mage">⚪ BÁSICO</span>
+                        </div>
+                    </div>
+                    <div id="floor-hero-summary" style="font-size:11px; color:#38ef7d; margin-top:8px; text-align:center;"></div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <div style="font-family:'Press Start 2P'; font-size:9px; color:#f1c40f; margin-bottom:8px;">2. SELECCIONA EL PISO:</div>
+                    <div class="floor-grid-buttons" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px;">
+                        <button class="floor-pick-btn selected" data-floor="1">PISO 1</button>
+                        <button class="floor-pick-btn" data-floor="2">PISO 2</button>
+                        <button class="floor-pick-btn" data-floor="3">PISO 3</button>
+                        <button class="floor-pick-btn" data-floor="4">PISO 4</button>
+                        <button class="floor-pick-btn" data-floor="5" style="border-color:#e74c3c;">PISO 5 🐺</button>
+                        <button class="floor-pick-btn" data-floor="6">PISO 6</button>
+                        <button class="floor-pick-btn" data-floor="7">PISO 7</button>
+                        <button class="floor-pick-btn" data-floor="8" style="border-color:#2ecc71;">PISO 8 🧪</button>
+                        <button class="floor-pick-btn" data-floor="9">PISO 9</button>
+                        <button class="floor-pick-btn" data-floor="10" style="border-color:#f1c40f;">PISO 10 👑</button>
+                    </div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; gap:10px;">
+                    <button id="btn-launch-floor" class="pixel-btn btn-gold" style="flex:1;">ABRIR PORTAL</button>
+                    <button class="pixel-btn close-modal-btn" style="background:#4a151b;">CERRAR</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
+    // =========================================================================
+    // INICIALIZADOR DEL SISTEMA DE SESIÓN
+    // =========================================================================
+    initAuthSystem() {
+        // 1. Comprobar si hay sesión iniciada al cargar
+        fetch('/api/me')
+            .then(res => res.json())
+            .then(data => {
+                if (data.logged_in) {
+                    this.currentUser = data;
+                    this.updateAuthUI(true, data.username);
+                } else {
+                    this.updateAuthUI(false);
+                }
+            })
+            .catch(() => this.updateAuthUI(false));
+
+        // 2. Conectar botón de Abrir Login
+        const openLoginBtn = document.getElementById('btn-open-login');
+        if (openLoginBtn) {
+            openLoginBtn.onclick = () => {
+                const modal = document.getElementById('login-modal');
+                if (modal) modal.style.display = 'flex';
+            };
+        }
+
+        // 3. Alternar entre Entrar y Registrarse
+        const toggleBtn = document.getElementById('btn-toggle-auth-mode');
+        if (toggleBtn) {
+            toggleBtn.onclick = () => {
+                this.authMode = (this.authMode === 'login') ? 'register' : 'login';
+                document.getElementById('auth-modal-title').innerText = (this.authMode === 'login') ? 'INICIAR SESIÓN' : 'REGISTRARSE';
+                document.getElementById('btn-auth-submit').innerText = (this.authMode === 'login') ? 'ENTRAR' : 'CREAR CUENTA';
+                toggleBtn.innerText = (this.authMode === 'login') ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión';
+                document.getElementById('auth-error-msg').style.display = 'none';
+            };
+        }
+
+        // 4. Enviar formulario
+        const submitBtn = document.getElementById('btn-auth-submit');
+        if (submitBtn) {
+            submitBtn.onclick = () => this.handleAuthSubmit();
+        }
+
+        // 5. Cerrar sesión
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn) {
+            logoutBtn.onclick = () => {
+                fetch('/api/logout', { method: 'POST' }).then(() => {
+                    this.currentUser = null;
+                    this.updateAuthUI(false);
+                    location.reload();
+                });
+            };
+        }
+
+        // 6. Botón selector de pisos
+        const selectFloorBtn = document.getElementById('btn-select-floor');
+        if (selectFloorBtn) {
+            selectFloorBtn.onclick = () => this.showFloorSelectModal();
+        }
+    }
+
+    handleAuthSubmit() {
+        const user = document.getElementById('auth-input-user').value.trim();
+        const pass = document.getElementById('auth-input-pass').value.trim();
+        const errBox = document.getElementById('auth-error-msg');
+
+        if (!user || !pass) {
+            errBox.innerText = 'Rellena todos los campos';
+            errBox.style.display = 'block';
+            return;
+        }
+
+        const endpoint = (this.authMode === 'login') ? '/api/login' : '/api/register';
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    this.currentUser = data;
+                    document.getElementById('login-modal').style.display = 'none';
+                    this.updateAuthUI(true, data.username);
+                } else {
+                    errBox.innerText = data.message || 'Error al autenticar';
+                    errBox.style.display = 'block';
+                }
+            })
+            .catch(() => {
+                errBox.innerText = 'Error al conectar con el servidor';
+                errBox.style.display = 'block';
+            });
+    }
+
+    updateAuthUI(isLoggedIn, username = '') {
+        const loggedOutDiv = document.getElementById('auth-logged-out');
+        const loggedInDiv = document.getElementById('auth-logged-in');
+        const floorSelectBtn = document.getElementById('btn-select-floor');
+
+        if (isLoggedIn) {
+            if (loggedOutDiv) loggedOutDiv.style.display = 'none';
+            if (loggedInDiv) loggedInDiv.style.display = 'flex';
+            const userLabel = document.getElementById('auth-username-label');
+            if (userLabel) userLabel.innerText = `👤 ${username}`;
+
+            const cleared = (this.currentUser && this.currentUser.cleared_heroes) || {};
+            const hasWonAny = Object.keys(cleared).length > 0;
+            if (floorSelectBtn) floorSelectBtn.style.display = hasWonAny ? 'block' : 'none';
+        } else {
+            if (loggedOutDiv) loggedOutDiv.style.display = 'flex';
+            if (loggedInDiv) loggedInDiv.style.display = 'none';
+            if (floorSelectBtn) floorSelectBtn.style.display = 'none';
+        }
+    }
+
+    showFloorSelectModal() {
+        const modal = document.getElementById('floor-select-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        const cleared = (this.currentUser && this.currentUser.cleared_heroes) || {};
+
+        ['warrior', 'archer', 'mage'].forEach(cls => {
+            const tag = document.getElementById(`status-tag-${cls}`);
+            if (tag) {
+                if (cleared[cls]) {
+                    tag.innerText = '⭐ VENCEDOR';
+                    tag.className = 'hero-status-tag status-victorious';
+                } else {
+                    tag.innerText = '⚪ BÁSICO';
+                    tag.className = 'hero-status-tag status-fresh';
+                }
+            }
+        });
+
+        this.updatePortalSummary();
+
+        document.querySelectorAll('.floor-hero-choice').forEach(card => {
+            card.onclick = () => {
+                document.querySelectorAll('.floor-hero-choice').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.selectedPortalClass = card.getAttribute('data-class');
+                this.updatePortalSummary();
+            };
+        });
+
+        document.querySelectorAll('.floor-pick-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.floor-pick-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                this.selectedPortalFloor = parseInt(btn.getAttribute('data-floor'), 10);
+            };
+        });
+
+        const launchBtn = document.getElementById('btn-launch-floor');
+        if (launchBtn) {
+            launchBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (window.game) {
+                    window.game.startCustomFloorRun(this.selectedPortalClass, this.selectedPortalFloor);
+                }
+            };
+        }
+    }
+
+    updatePortalSummary() {
+        const summary = document.getElementById('floor-hero-summary');
+        if (!summary) return;
+        const cleared = (this.currentUser && this.currentUser.cleared_heroes) || {};
+        const heroData = cleared[this.selectedPortalClass];
+
+        if (heroData) {
+            summary.innerHTML = `⭐ <b>${this.selectedPortalClass.toUpperCase()} VENCEDOR:</b> Iniciarás con tu equipo legendario, nivel ${heroData.level} y ${heroData.gold} G.`;
+            summary.style.color = '#f1c40f';
+        } else {
+            summary.innerHTML = `⚪ <b>${this.selectedPortalClass.toUpperCase()} NO COMPLETADO:</b> Aún no has ganado con esta clase. Iniciarás desde nivel 1 con equipo básico.`;
+            summary.style.color = '#a4b0be';
+        }
+    }
+
+    // =========================================================================
+    // MENÚ CONTEXTUAL (CLIC DERECHO PARA DESTRUIR)
+    // =========================================================================
     createContextMenuDOM() {
         if (document.getElementById('item-context-menu')) return;
         const menu = document.createElement('div');
@@ -80,12 +355,90 @@ class UIManager {
         menu.className = 'item-context-menu';
         menu.style.display = 'none';
         menu.style.position = 'absolute';
-        menu.style.zIndex = '1000';
+        menu.style.zIndex = '10000';
         document.body.appendChild(menu);
     }
 
+    showContextMenu(item, index, event) {
+        this.hideTooltip();
+        let menu = document.getElementById('item-context-menu');
+        if (!menu) return;
+
+        const actionText = (item.type === 'consumable') ? '👉 Usar' : '⚔️ Equipar';
+        menu.innerHTML = `
+            <div style="font-family:'Press Start 2P'; font-size:8px; color:#f1c40f; padding:6px 8px; border-bottom:1px dashed #3a2a4c; margin-bottom:4px;">
+                ${item.name}
+            </div>
+            <button class="item-context-btn" id="ctx-action-btn" style="background:#241d30;border:1px solid #5a4270;color:#fff;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;margin-bottom:3px;">
+                <span>${actionText}</span>
+            </button>
+            <button class="item-context-btn danger" id="ctx-discard-btn" style="background:#4a151b;border:1px solid #e74c3c;color:#ff7675;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;">
+                <span>🗑️ Destruir / Eliminar</span>
+            </button>
+        `;
+
+        document.getElementById('ctx-action-btn').onclick = (e) => {
+            e.stopPropagation();
+            this.handleSlotClick(index);
+            this.hideContextMenu();
+        };
+
+        document.getElementById('ctx-discard-btn').onclick = (e) => {
+            e.stopPropagation();
+            this.discardItem(index);
+        };
+
+        menu.style.display = 'flex';
+        menu.style.flexDirection = 'column';
+        menu.style.background = '#15111d';
+        menu.style.border = '2px solid #5a4270';
+        menu.style.padding = '4px';
+        menu.style.borderRadius = '4px';
+
+        const container = document.getElementById('game-container') || document.body;
+        const rect = container.getBoundingClientRect();
+        let x = event.clientX - rect.left + 5;
+        let y = event.clientY - rect.top + 5;
+
+        const menuW = 160;
+        const menuH = 100;
+        if (x + menuW > rect.width) x = rect.width - menuW - 10;
+        if (y + menuH > rect.height) y = rect.height - menuH - 10;
+
+        menu.style.left = `${Math.max(10, x)}px`;
+        menu.style.top = `${Math.max(10, y)}px`;
+    }
+
+    hideContextMenu() {
+        const menu = document.getElementById('item-context-menu');
+        if (menu) menu.style.display = 'none';
+    }
+
+    discardItem(index) {
+        const player = window.game.player;
+        if (!player || !player.inventory[index]) return;
+        const item = player.inventory[index];
+        const itemName = item.name;
+
+        if (item.qty && item.qty > 1) {
+            item.qty--;
+            if (item.qty <= 0) player.inventory[index] = null;
+        } else {
+            player.inventory[index] = null;
+        }
+
+        if (window.soundEngine) window.soundEngine.playTone(130, 'square', 0.15, 0.2);
+        if (window.game && window.game.floatingTexts) {
+            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 20, `-${itemName}`, '#a4b0be'));
+        }
+
+        this.hideContextMenu();
+        this.hideTooltip();
+        this.renderInventory();
+    }
+
     // =========================================================================
-    // MODAL DE KAELEN (TIENDA CON ICONOS: COMPRA Y VENTA)
+    // TIENDA DE KAELEN
     // =========================================================================
     createShopModalDOM() {
         if (document.getElementById('shop-modal')) return;
@@ -242,7 +595,7 @@ class UIManager {
     }
 
     // =========================================================================
-    // MODAL DE GUNNAR EL HERRERO (FORJA DE EQUIPO Y MEJORAS)
+    // FORJA DE GUNNAR
     // =========================================================================
     createBlacksmithModalDOM() {
         if (document.getElementById('blacksmith-modal')) return;
@@ -422,6 +775,9 @@ class UIManager {
         }
     }
 
+    // =========================================================================
+    // HUD Y MINIMAPA
+    // =========================================================================
     updateHUD(player, world) {
         if (!player) return;
         const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
@@ -500,6 +856,9 @@ class UIManager {
         ctx.fillRect((player.x / world.tileSize) * scaleX - 1, (player.y / world.tileSize) * scaleY - 1, scaleX * 2, scaleY * 2);
     }
 
+    // =========================================================================
+    // INVENTARIO
+    // =========================================================================
     toggleInventory() {
         const modal = document.getElementById('inventory-modal');
         this.hideContextMenu();
@@ -593,98 +952,6 @@ class UIManager {
             el.innerHTML = '<span style="color:#555;font-size:10px;">Vacío</span>';
             el.onclick = null;
         }
-    }
-
-    showContextMenu(item, index, event) {
-        this.hideTooltip();
-        let menu = document.getElementById('item-context-menu');
-        if (!menu) return;
-
-        const actionText = (item.type === 'consumable') ? '👉 Usar' : '⚔️ Equipar';
-        menu.innerHTML = `
-            <div style="font-family:'Press Start 2P'; font-size:8px; color:#f1c40f; padding:6px 8px; border-bottom:1px dashed #3a2a4c; margin-bottom:4px;">
-                ${item.name}
-            </div>
-            <button class="item-context-btn" id="ctx-action-btn" style="background:#241d30;border:1px solid #5a4270;color:#fff;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;margin-bottom:3px;">
-                <span>${actionText}</span>
-            </button>
-            <button class="item-context-btn danger" id="ctx-discard-btn" style="background:#4a151b;border:1px solid #e74c3c;color:#ff7675;font-family:'Press Start 2P';font-size:8px;padding:6px;width:100%;text-align:left;cursor:pointer;">
-                <span>🗑️ Destruir / Eliminar</span>
-            </button>
-        `;
-
-        document.getElementById('ctx-action-btn').onclick = (e) => {
-            e.stopPropagation();
-            this.handleSlotClick(index);
-            this.hideContextMenu();
-        };
-
-        document.getElementById('ctx-discard-btn').onclick = (e) => {
-            e.stopPropagation();
-            this.discardItem(index);
-        };
-
-        menu.style.display = 'flex';
-        menu.style.flexDirection = 'column';
-        menu.style.background = '#15111d';
-        menu.style.border = '2px solid #5a4270';
-        menu.style.padding = '4px';
-        menu.style.borderRadius = '4px';
-
-        const container = document.getElementById('game-container') || document.body;
-        const rect = container.getBoundingClientRect();
-        let x = event.clientX - rect.left + 5;
-        let y = event.clientY - rect.top + 5;
-
-        const menuW = 160;
-        const menuH = 100;
-        if (x + menuW > rect.width) x = rect.width - menuW - 10;
-        if (y + menuH > rect.height) y = rect.height - menuH - 10;
-
-        menu.style.left = `${Math.max(10, x)}px`;
-        menu.style.top = `${Math.max(10, y)}px`;
-    }
-
-    hideContextMenu() {
-        const menu = document.getElementById('item-context-menu');
-        if (menu) menu.style.display = 'none';
-    }
-
-    discardItem(index) {
-        const player = window.game.player;
-        if (!player || !player.inventory[index]) return;
-        const item = player.inventory[index];
-        const itemName = item.name;
-
-        if (item.qty && item.qty > 1) {
-            item.qty--;
-            if (item.qty <= 0) player.inventory[index] = null;
-        } else {
-            player.inventory[index] = null;
-        }
-
-        if (window.soundEngine) {
-            window.soundEngine.playTone(130, 'square', 0.15, 0.2);
-        }
-
-        if (window.game && window.game.floatingTexts) {
-            window.game.floatingTexts.push(new FloatingText(player.x, player.y - 20, `-${itemName}`, '#a4b0be'));
-        }
-
-        if (window.game && window.game.particles) {
-            for (let i = 0; i < 6; i++) {
-                window.game.particles.push(new Particle(
-                    player.x, player.y,
-                    (Math.random() - 0.5) * 2,
-                    (Math.random() - 0.5) * 2,
-                    '#747d8c', 3, 15
-                ));
-            }
-        }
-
-        this.hideContextMenu();
-        this.hideTooltip();
-        this.renderInventory();
     }
 
     handleSlotClick(index) {
@@ -913,70 +1180,144 @@ class UIManager {
         } catch (e) { }
     }
 }
+
 // =============================================================================
 // LIBRO DE CRÓNICAS ILUSTRADO (SOLO TRAS LA VICTORIA)
 // =============================================================================
-
 const LORE_CHAPTERS = [
     {
         num: 1,
-        titleLeft: "VI. La Guerra de los Mil Años",
-        image: "/static/assets/lore/Batalla.png",
-        textLeft: "<p>Durante <b>mil años</b>, las distintas razas del mundo lucharon contra el <b>Señor Oscuro</b> y sus legiones de oscuridad. Humanos, elfos, enanos,  y magos dejaron de lado sus diferencias para formar una alianza y enfrentar una amenaza que parecía imposible de derrotar. Reinos fueron destruidos, bosques consumidos y montañas reducidas a cenizas. y finalmente, los Dioses decidieron bajar y derroatar al señor oscuro pero no pudieron elimanarlo asi que construyeron una <b>Torre</b> sobre el abismo y sellaron en sus profundidades la esencia del Señor Oscuro. La guerra terminó, pero el mal jamás fue destruido.</p>",
-        titleRight: "La Guerra de los Mil Años",
-        textRight: "<i>«Mil años de sangre para una victoria que nunca fue completa. El Señor Oscuro no murió... solo fue sellado.»</i>",
+        titleLeft: "I. El Origen y la Gran Sinfonía",
+        image: "/static/assets/lore/Ainor.jpg",
+        textLeft: `
+            <h4>El Dios Absoluto Ainor</h4>
+            <p>En el principio, cuando solo existía la nada y la oscuridad absoluta, habitaba un ser supremo: el Dios Absoluto <b>Ainor</b>. Poseía el poder primordial de dar origen a la vida y destruirla a voluntad, y morando en la inmensidad del vacío concibió el gran plan de la existencia.</p>
+            <h4>Los Cinco Eonaris</h4>
+            <p>Deseando compañía para la eternidad y para ejecutar su designio divino, Ainor dio forma a <b>cinco seres de luz pura</b> llamados los <b>Eonaris</b>, manantiales incandescentes de poder divino manifestados en el vacío sin cuerpo físico.</p>
+            <h4>La Gran Sinfonía de la Creación</h4>
+            <p>Ainor y los Eonaris alzaron su voz en un canto sagrado. Mientras la voz de Ainor moldeaba planetas y estrellas, la resonancia de los Eonaris daba origen a cada uno de los conceptos y aspectos del universo en expansión.</p>
+        `,
+        titleRight: "El Canto del Cosmos",
+        textRight: "<i>«Antes del tiempo y de la luz, toda la realidad nació de la armonía entre Ainor y el canto de los cinco Eonaris.»</i>"
     },
     {
         num: 2,
-        titleLeft: "II. La Gran Alianza",
-        image: "/static/assets/lore/Alianza.jpg",
-        textLeft: "<p>Cuando la humanidad desfallecía, tres campeones bendecidos con reliquias divinas encabezaron el asedio final:</p><p>El <b>Paladín Solar</b> de coraza dorada alada, la <b>Arquera Silvana del Ocaso</b> y la <b>Archimaga Celeste</b>. Juntos doblegaron las legiones del abismo y sellaron al Señor Oscuro.</p>",
-        titleRight: "Los Tres Héroes",
-        textRight: "<i>«Aquellos que sacrificaron su propia luz para aprisionar la oscuridad.»</i>",
-
+        titleLeft: "II. Los Soles, la Tierra y los Primogénitos",
+        image: "/static/assets/lore/Batalla.png",
+        textLeft: `
+            <h4>El Eonari de los Soles</h4>
+            <p>Entre los cinco seres divinos, uno sobresalía con singular resplandor: su canto era tan cálido e intenso que con cada nota lograba dar origen a soles resplandecientes en la oscuridad, avivando el calor de la existencia.</p>
+            <h4>La Creación de la Tierra</h4>
+            <p>Tras incontables milenios, Ainor moldeó un mundo con sus propias manos y lo pobló con ríos, montañas y criaturas vivientes. Sin embargo, al contemplar su obra sintió un vacío: los animales no bastaban para llenar el mundo.</p>
+            <h4>Las Cuatro Razas y los Espíritus</h4>
+            <p>Buscando superar esa soledad, Ainor experimentó y dio origen a los <b>humanos, elfos, enanos y espíritus</b>. Tras concederles atributos únicos, los depositó a dormir pacíficamente en rincones estratégicos del nuevo mundo.</p>
+        `,
+        titleRight: "Los Primogénitos del Sueño",
+        textRight: "<i>«Encendidos los soles y moldeada la Tierra, los pueblos mortales aguardaron en un plácido letargo su momento de despertar.»</i>"
     },
     {
         num: 3,
-        titleLeft: "III. La Caída de Lucian",
-        image: "/static/assets/lore/lucian.png",
-        textLeft: "<p>En el <b>Piso 5</b> aguarda <b>Lucian</b>. Antaño fue el paladín más leal de la vanguardia, encomendado a custodiar las puertas intermedias.</p><p>Envenenado por los susurros de la torre, sucumbió a la maldición de la luna ártica, convirtiéndose en el <b>Primer Hombre Lobo</b>.</p>",
-        titleRight: "Sub-Jefe Lucian (Piso 5)",
-        textRight: "<i>«La bestia feral que desgarra con zarpazos de escarcha a los intrusos.»</i>",
-
+        titleLeft: "III. Los Guardianes Elementales",
+        image: "/static/assets/lore/los Eonaris.png",
+        textLeft: `
+            <h4>El Mandato de la Custodia</h4>
+            <p>Para proteger su creación mientras los mortales dormían, Ainor envió a los cinco Eonaris a la Tierra. Al ser energía pura que rompería la mente mortal, adoptaron formas físicas basadas en los elementos que más ayudaron a cantar en la Creación.</p>
+            <h4>Aethelgard, Kataida y Okeanos</h4>
+            <p><b>Aethelgard</b> tomó la forma de la Tierra Inmutable y la fuerza indomable. <b>Kataida</b> asumió el manto de la Justicia y los Rayos de la tormenta. <b>Okeanos</b> tomó el dominio de la Marea Ancestral, custodiando la Sabiduría, la Verdad y el Tiempo.</p>
+            <h4>Valariel y Silmarion</h4>
+            <p><b>Valariel</b> tomó el aspecto de la Vida Astral, la Misericordia y la Esperanza. Por último, <b>Silmarion</b> (creador de soles) asumió la forma del Fuego Solar, la Justicia Inquebrantable, la Ley y la Claridad para guiar al panteón.</p>
+        `,
+        titleRight: "Los Protectores Manifestados",
+        textRight: "<i>«La energía pura tomó la forma de carne y elemento para velar por el mundo sin cegar a los mortales.»</i>"
     },
     {
         num: 4,
-        titleLeft: "IV. Los Dioses Primordiales",
-        image: "/static/assets/lore/Guardianes.png",
-        textLeft: "<p>En la era del caos, cuatro Seres Supremos descendieron del firmamento sagrado: <b>kataida</b> (tormenta), <b>Valeria</b> (Vida Astral), <b>Aethelgard</b> (Tierra Inmutable) y <b>Kaelen</b> (Marea Ancestral).</p><p>Al ver que los dioses menores caían ante el avance del Señor Oscuro, unieron sus elementos divinos para doblegarlo, despojarlo de su forma física y encadenar su esencia en el abismo de La Torre Oscura.</p>",
-        titleRight: "Los Cuatro Arcontes Supremos",
-        textRight: "<i>«Los pilares divinos que erigieron la prisión eterna y sellaron a la oscuridad .»</i>"
+        titleLeft: "IV. El Despertar y el Silencio de Ainor",
+        image: "/static/assets/lore/simarion.png",
+        textLeft: `
+            <h4>La Era de Oro Primordial</h4>
+            <p>Con las cinco deidades guardianas velando en los cuatro confines y las razas listas para despertar de su largo reposo, Ainor se retiró al descanso divino. El mundo quedó bajo la vigilancia eterna de los Eonaris en una era de esplendor y armonía.</p>
+        `,
+        titleRight: "La Era de Oro Primordial",
+        textRight: "<i>«Los Eonaris tomaron su puesto y el mundo despertó a la luz.»</i>"
     },
     {
         num: 5,
-        titleLeft: "V. El Señor Oscuro",
-        image: "/static/assets/lore/señor oscuro.png",
-        textLeft: "<p>Antes de que la <b>Torre</b> fuera erigida, existía un ente engendrado en el corazón de las <b>llamas sombrías</b>: el <b>Señor Oscuro</b>.</p><p>No es un simple demonio, sino una fuerza primordial de <b>fuego negro y penumbra absoluta</b>. Tan inmenso es su poder que incluso los <b>Dioses del Panteón</b> libraron guerras contra él y fracasaron en destruirlo, logrando únicamente sellar su esencia en las profundidades de este abismo.</p>",
-        titleRight: "El Señor Oscuro",
-        textRight: "<i>«Una fuerza primordial nacida de las llamas sombrías. Ni siquiera los Dioses pudieron destruirlo; solo pudieron sellarlo.»</i>",
+        titleLeft: "V. La Caída del Portador de Soles",
+        image: "/static/assets/lore/caida_silmarion.png",
+        textLeft: `
+            <h4>La Envidia de Silmarion</h4>
+            <p>Siendo el más brillante de los cinco Eonaris, el corazón de <b>Silmarion</b> se llenó de oscuridad y avaricia. Quiso igualar a <b>Ainor</b> y crear vida propia, pero al fracasar, optó por corromper y modificar cruelmente a los seres vivos del mundo.</p>
+            <h4>La Rebelión y el Destierro</h4>
+            <p>Sus hermanos intentaron detenerlo, pero Silmarion era tan poderoso que casi logra vencerlos a todos. Ante tal amenaza, <b>Ainor</b> intervino directamente: al ver en qué se había convertido, le quitó su poder, lo despojó de su brillo solar y lo desterró a la Tierra.</p>
+        `,
+        titleRight: "El Eonari Caído",
+        textRight: "<i>«De aquel que encendía los soles solo quedó el rencor de una estrella caída.»</i>"
     },
     {
         num: 6,
-        titleLeft: "VI. El Campeón Coronado",
+        titleLeft: "VI. El Nacimiento del Señor Oscuro",
         image: "/static/assets/lore/simarion.png",
-        textLeft: "<p>Hong ha caído. El Ojo Carmesí se apaga en cenizas y los muros de la torre se desmoronan bajo la luz del nuevo amanecer.</p><p>Tu nombre ha sido inscrito con letras de oro en las Crónicas Eternas. ¡El reino está a salvo gracias a ti, héroe!</p>",
-        titleRight: "Victoria Eterna",
-        textRight: "<i>«Has vencido a la Torre Oscura. Eres leyenda.»</i>",
-
+        textLeft: `
+            <h4>El Fuego del Núcleo Terrestre</h4>
+            <p>En las profundidades de la Tierra, Silmarion encontró el magma primordial del núcleo y absorbió su poder sin perder su porte regio. Fusionándolo con su rencor, creó las <b>llamas sombrías</b>, alzando su trono oscuro con una corona pálida y ojos ardientes como brasas.</p>
+            <h4>La Corrupción de las Razas</h4>
+            <p>Recordando dónde dormían los humanos, elfos, enanos y espíritus, raptó a los primeros en despertar y retorció sus almas para crear monstruos y demonios. Alimentándose de esa corrupción, acumuló un poder inmenso hasta convertirse en el <b>Señor Oscuro</b>.</p>
+        `,
+        titleRight: "El Señor Oscuro",
+        textRight: "<i>«Sin poder crear vida, aprendió a retorcerla; y de las llamas sin luz forjó su corona.»</i>"
     },
     {
         num: 7,
-        titleLeft: "VII. los antes de la caida",
-        image: "/static/assets/lore/Asamblea.png",
-        textLeft: "<p>Hong ha caído. El Ojo Carmesí se apaga en cenizas y los muros de la torre se desmoronan bajo la luz del nuevo amanecer.</p><p>Tu nombre ha sido inscrito con letras de oro en las Crónicas Eternas. ¡El reino está a salvo gracias a ti, héroe!</p>",
-        titleRight: "Victoria Eterna",
-        textRight: "<i>«Has vencido a la Torre Oscura. Eres leyenda.»</i>",
-
+        titleLeft: "VII. El Despertar de los Pueblos Libres",
+        image: "/static/assets/lore/despertar_razas.png",
+        textLeft: `
+            <h4>La Llamada en la Oscuridad</h4>
+            <p>Sintiendo el avance de la sombra bajo la tierra, los cuatro Eonaris —<b>Aethelgard</b>, <b>Kataida</b>, <b>Okeanos</b> y <b>Valariel</b>— despertaron antes de tiempo a los <b>humanos, elfos, enanos y espíritus</b> para evitar que fueran devorados en su letargo.</p>
+            <h4>La Primera Alianza</h4>
+            <p>Guiados por la sabiduría de Okeanos y la esperanza de Valariel, las cuatro razas dejaron atrás sus diferencias, forjaron sus primeras armas y unieron sus destinos junto a los espíritus para defender la creación de Ainor.</p>
+        `,
+        titleRight: "El Despertar de los Primogénitos",
+        textRight: "<i>«Despertaron de un sueño de paz para encontrar la sombra llamando a sus puertas.»</i>"
+    },
+    {
+        num: 8,
+        titleLeft: "VIII. La Guerra de las Legiones Corrompidas",
+        image: "/static/assets/lore/Batalla.png",
+        textLeft: `
+            <h4>El Azote del Señor Oscuro</h4>
+            <p>Desde su trono de ceniza y fuego negro, <b>Silmarion</b> desató los ejércitos que había retorcido en las sombras: bestias colosales, espectros y demonios nacidos de los primeros cautivos. Los cielos se cubrieron de humo bajo las llamas sombrías.</p>
+            <h4>La Resistencia Mortal</h4>
+            <p>Durante siglos, enanos, elfos, humanos y espíritus resistieron con valor el embate interminable. Sin embargo, cada caída alimentaba el poder oscuro de Silmarion, haciendo imposible derrotarlo únicamente con acero mortal.</p>
+        `,
+        titleRight: "Siglos de Fuego y Ceniza",
+        textRight: "<i>«El acero de los mortales brilló con honor, pero la sombra se alimentaba de cada herida.»</i>"
+    },
+    {
+        num: 9,
+        titleLeft: "IX. El Juicio de los Cuatro Eonaris",
+        image: "/static/assets/lore/Guardianes.png",
+        textLeft: `
+            <h4>El Descenso de los Guardianes</h4>
+            <p>Al ver a los pueblos libres al borde de la extinción, los cuatro Eonaris intervinieron: <b>Aethelgard</b> quebró las fortalezas oscuras, <b>Kataida</b> descargó tormentas de rayos, <b>Okeanos</b> desató mareas purificadoras y <b>Valariel</b> protegió las almas con luz astral.</p>
+            <h4>El Enfrentamiento Final</h4>
+            <p>Acorralado en el corazón de su dominio, Silmarion desató el fuego del núcleo terrestre, pero la unión perfecta de los cuatro elementos primordiales logró doblegar su cuerpo y dispersar sus legiones.</p>
+        `,
+        titleRight: "La Furia de los Cuatro",
+        textRight: "<i>«Cuatro fuerzas de la Creación unidas contra el hermano que eligió la penumbra.»</i>"
+    },
+    {
+        num: 10,
+        titleLeft: "X. El Abismo Sellado y el Origen de la Torre",
+        image: "/static/assets/lore/torre_sello.png",
+        textLeft: `
+            <h4>Una Esencia Indestructible</h4>
+            <p>Tras derrotar su forma física, los cuatro Eonaris comprendieron que la esencia de <b>Silmarion</b> no podía ser destruida por completo, pues al haber nacido de la mano de Ainor seguía ligada a la existencia misma.</p>
+            <h4>Los Cimientos de La Torre Oscura</h4>
+            <p>Confinaron su espíritu ardiente en el abismo más profundo y erigieron sobre él un sello monumental de piedra y luz. Con las eras, el susurro constante del Señor Oscuro corrompió aquel monumento desde adentro, dando origen a <b>La Torre Oscura</b>.</p>
+        `,
+        titleRight: "La Prisión Corrupta",
+        textRight: "<i>«No pudieron destruir su esencia eterna; así que levantaron una prisión que el tiempo convertiría en pesadilla.»</i>"
     }
 ];
 
@@ -1009,14 +1350,12 @@ UIManager.prototype.renderLoreBookPage = function () {
 
     document.getElementById('book-chap-title-right').innerText = chap.titleRight;
 
-    // Subtítulo debajo de la foto:
     const captionEl = document.getElementById('book-text-right');
     if (captionEl) captionEl.innerHTML = chap.textRight;
 
     document.getElementById('book-page-num-right').innerText = (this.currentLorePage * 2 + 2);
     document.getElementById('book-progress-label').innerText = `${chap.num} / ${LORE_CHAPTERS.length}`;
 
-    // Cargar la imagen del capítulo:
     const imgEl = document.getElementById('book-illu-img');
     if (imgEl && chap.image) {
         imgEl.src = chap.image;

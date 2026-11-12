@@ -1,6 +1,7 @@
 """
 Servidor Flask para 'La Torre Oscura' (The Dark Tower)
-Maneja la API REST para persistencia en SQLite/PostgreSQL, lore y salón de la fama.
+Maneja la API REST para persistencia en SQLite, cuentas de usuario,
+progreso victorioso por clase, lore y salón de la fama.
 """
 
 import os
@@ -8,18 +9,39 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import json
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
+from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, PlayerSave, HallOfFame, LoreNote
 
 app = Flask(__name__)
 
-# Configuración de Base de Datos
+# Configuración de Sesiones y Base de Datos
+app.secret_key = os.getenv('SECRET_KEY', 'torre_oscura_secret_key_super_segura_2026')
 db_path = os.path.join(os.path.dirname(__file__), 'dark_tower.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{db_path}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+# ==============================================================================
+# MODELO DE USUARIO (INICIO DE SESIÓN Y HÉROES VENCEDORES)
+# ==============================================================================
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    # Guarda un JSON con el inventario/stats de cada clase que derrotó a Hong:
+    # {"warrior": {...}, "archer": null, "mage": null}
+    cleared_heroes = db.Column(db.Text, default='{}')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+# ==============================================================================
+# TEXTOS Y PERGAMINOS DE LORE
+# ==============================================================================
 LORE_DATA = [
     {
         "floor": 1,
@@ -55,22 +77,21 @@ LORE_DATA = [
         "content": "Las criptas terminan aquí. Más arriba la piedra se calienta y brotan vapores sulfurosos. Los bandidos supervivientes han sucumbido a la locura total y blanden armas empapadas en veneno.",
         "combat_tip": "Consejo: En este piso los enemigos patrullan en parejas. Atrae a uno a la vez hacia los pasillos estrechos."
     },
-   {
+    {
         "floor": 5,
         "title": "Códice de la Bestia Ancestral: Lucian",
         "author": "Cazador Imperial Brand",
-        "content": "En las profundidades de las Fauces de Azufre no habita un lobo ordinario, sino su patriarca: Lucian, el primer hombre lobo creado  por el señor oscuro. Su pelaje no es cenizo sino de un blanco espectral, y su tamaño empequeñece a cualquier bestia conocida. Sus aullidos resuenan por la roca viva con una furia gélida.",
+        "content": "En las profundidades de las Fauces de Azufre no habita un lobo ordinario, sino su patriarca: Lucian, el primer hombre lobo creado por el señor oscuro. Su pelaje no es cenizo sino de un blanco espectral, y su tamaño empequeñece a cualquier bestia conocida. Sus aullidos resuenan por la roca viva con una furia gélida.",
         "combat_tip": "¡ALERTA DE SUB-JEFE!: Lucian es mucho más rápido y agresivo que cualquier enemigo normal. Cuando eche su cabeza hacia atrás para aullar, prepárate: desatará una onda de choque y luego una embestida con garras salvajes. Atácalo tras esquivar su salto mortal."
     },
-
     {
         "floor": 6,
         "title": "Piel Marcada con Garras - Entrada VI",
         "author": "Cazador Brand",
-        "content": "Hombres lobo... Bestias musculosas cubiertas de pelaje cenizo y ojos amarillos hambrientos. No temen al dolor ni a las espadas comunes solo a su progenitor lucian . Atacan con una furia desquiciada.",
+        "content": "Hombres lobo... Bestias musculosas cubiertas de pelaje cenizo y ojos amarillos hambrientos. No temen al dolor ni a las espadas comunes solo a su progenitor lucian. Atacan con una furia desquiciada.",
         "combat_tip": "Consejo: Cuando el Hombre Lobo flexione sus patas traseras para abalanzarse, rueda hacia un lado. Sus zarpazos dejan una breve ventana de vulnerabilidad."
     },
-   {
+    {
         "floor": 7,
         "title": "LOS CELOS DE HONG - PARTE I",
         "author": "Crónicas de las Fauces",
@@ -85,7 +106,6 @@ LORE_DATA = [
         ),
         "combat_tip": "Prepárate para enfrentar enemigos de gran movilidad antes de ascender a los pisos de los jefes."
     },
-    
     {
         "floor": 8,
         "title": "EL TRÁGICO DESTINO DE SAMIRIA",
@@ -107,7 +127,7 @@ LORE_DATA = [
         "author": "Pergamino de las Almas Perdidas",
         "content": (
             "Imposibilitado para destruir el mundo con su propia fuerza mientras permanece "
-            "sellado, el Señor Oscuro perfected el arte de la manipulación. Conoce las "
+            "sellado, el Señor Oscuro perfeccionó el arte de la manipulación. Conoce las "
             "debilidades, los celos y los vacíos del corazón humano. Busca a aquellos con "
             "espíritus quebrantados o ambiciosos que le sean de utilidad, ofreciéndoles falso "
             "poder y consuelo a cambio de sus almas, convirtiéndolos en peones para alimentar su liberación."
@@ -128,23 +148,19 @@ LORE_DATA = [
         ),
         "combat_tip": "Atento a los barridos de gran alcance de Hong; esquiva lateralmente y ataca durante sus pausas de recuperación."
     }
-
 ]
 
 def init_db():
     with app.app_context():
         db.create_all()
-        # Insertar o actualizar notas de lore
         for lore in LORE_DATA:
             existing = LoreNote.query.filter_by(floor=lore['floor']).first()
             if existing:
-                # Sobreescribir con el texto actualizado
                 existing.title = lore['title']
                 existing.author = lore['author']
                 existing.content = lore['content']
                 existing.combat_tip = lore['combat_tip']
             else:
-                # Crear nuevo registro si no existía
                 new_lore = LoreNote(
                     floor=lore['floor'],
                     title=lore['title'],
@@ -158,6 +174,112 @@ def init_db():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# ==============================================================================
+# API REST: AUTENTICACIÓN, SESIONES Y USUARIOS
+# ==============================================================================
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+
+    if not username or not password:
+        return jsonify({'success': False, 'message': 'Usuario y contraseña requeridos'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'success': False, 'message': 'Ese nombre de usuario ya existe'}), 400
+
+    user = User(
+        username=username,
+        password_hash=generate_password_hash(password),
+        cleared_heroes=json.dumps({})
+    )
+    db.session.add(user)
+    db.session.commit()
+
+    session['user_id'] = user.id
+    return jsonify({'success': True, 'username': user.username, 'cleared_heroes': {}})
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '').strip()
+
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.check_password(password):
+        return jsonify({'success': False, 'message': 'Usuario o contraseña incorrectos'}), 401
+
+    session['user_id'] = user.id
+    cleared = json.loads(user.cleared_heroes or '{}')
+    return jsonify({'success': True, 'username': user.username, 'cleared_heroes': cleared})
+
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.pop('user_id', None)
+    return jsonify({'success': True})
+
+@app.route('/api/me', methods=['GET'])
+def get_current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'logged_in': False})
+
+    user = User.query.get(user_id)
+    if not user:
+        session.pop('user_id', None)
+        return jsonify({'logged_in': False})
+
+    cleared = json.loads(user.cleared_heroes or '{}')
+    return jsonify({
+        'logged_in': True,
+        'username': user.username,
+        'cleared_heroes': cleared
+    })
+
+# ==============================================================================
+# API REST: GUARDAR PROGRESO VICTORIOSO POR CLASE (POST-HONG)
+# ==============================================================================
+
+@app.route('/api/record_victory', methods=['POST'])
+def record_victory():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Inicia sesión para guardar tu héroe victorioso'}), 401
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
+
+    data = request.get_json() or {}
+    hero_class = data.get('character_class')
+    if not hero_class:
+        return jsonify({'success': False, 'message': 'Clase no especificada'}), 400
+
+    cleared = json.loads(user.cleared_heroes or '{}')
+
+    # Guardar exactamente las estadísticas, nivel, equipo e inventario del héroe victorioso
+    cleared[hero_class] = {
+        'level': data.get('level', 1),
+        'hp': data.get('hp'),
+        'max_hp': data.get('max_hp'),
+        'mp': data.get('mp'),
+        'max_mp': data.get('max_mp'),
+        'strength': data.get('strength'),
+        'dexterity': data.get('dexterity'),
+        'magic': data.get('magic'),
+        'constitution': data.get('constitution'),
+        'gold': data.get('gold', 0),
+        'equipment': data.get('equipment', {}),
+        'inventory': data.get('inventory', [])
+    }
+
+    user.cleared_heroes = json.dumps(cleared)
+    db.session.commit()
+
+    return jsonify({'success': True, 'cleared_heroes': cleared})
 
 # ==============================================================================
 # API REST: PARTIDAS GUARDADAS (SLOTS 1, 2, 3)
@@ -213,7 +335,7 @@ def handle_single_save(slot):
             db.session.commit()
             return jsonify({"success": True})
         return jsonify({"error": "Partida no encontrada"}), 404
-    # GET
+
     if not save:
         return jsonify({"error": "Partida no encontrada"}), 404
     return jsonify(save.to_dict())
