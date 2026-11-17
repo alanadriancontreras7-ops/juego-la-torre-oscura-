@@ -142,10 +142,18 @@ class DarkTowerGame {
         this.keys[e.key] = false;
     }
 
-    startNewGame(characterClass) {
+    startNewGame(characterClass, companionType = 'wolf') {
         document.getElementById('title-screen').style.display = 'none';
-        document.getElementById('game-hud').style.display = 'block';
+
+        // ¡ESTA LÍNEA DEBE ESTAR PRESENTE!
+        const hud = document.getElementById('game-hud');
+        if (hud) hud.style.display = 'block';
+
         this.player = new Player(characterClass, 'Héroe');
+        if (window.Companion) {
+            this.companion = new Companion(companionType, this.player.x - 20, this.player.y);
+        }
+
         this.loadFloor(1);
         this.state = this.STATE_PLAYING;
         window.soundEngine.startBgm(false);

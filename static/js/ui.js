@@ -1203,7 +1203,7 @@ const LORE_CHAPTERS = [
     {
         num: 2,
         titleLeft: "II. Los Soles, la Tierra y los Primogénitos",
-        image: "/static/assets/lore/Batalla.png",
+        image: "/static/assets/lore/creacion.jpg",
         textLeft: `
             <h4>El Eonari de los Soles</h4>
             <p>Entre los cinco seres divinos, uno sobresalía con singular resplandor: su canto era tan cálido e intenso que con cada nota lograba dar origen a soles resplandecientes en la oscuridad, avivando el calor de la existencia.</p>

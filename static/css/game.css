@@ -212,7 +212,8 @@ canvas {
   height: 100%;
   pointer-events: none;
   display: none;
-  z-index: 35;
+  z-index: 100;
+  /* Asegura que esté por encima del canvas */
 }
 
 .hud-top-bar {
