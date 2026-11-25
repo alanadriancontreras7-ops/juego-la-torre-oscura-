@@ -7,6 +7,7 @@ const BIOME_STYLE = {
     crypt: { rim: 'rgba(150,135,175,0.55)', shade: '6,4,10' },
     demon: { rim: 'rgba(200,95,105,0.50)', shade: '14,2,4' },
     acid: { rim: 'rgba(140,190,120,0.50)', shade: '2,8,2' },
+    void: { rim: 'rgba(185,105,255,0.55)', shade: '8,3,18' },
     apex: { rim: 'rgba(140,135,205,0.50)', shade: '4,3,12' }
 };
 
@@ -373,7 +374,7 @@ class World {
 
     getStartingPosition() {
         const cx = Math.floor(this.cols / 2);
-        if (this.floor === 5 || this.floor === 8 || this.floor === 10) {
+        if (this.floor === 5 || this.floor === 8 || this.floor === 10 || this.floor === 13 || this.floor === 15) {
             return { x: cx * this.tileSize + 16, y: 38 * this.tileSize + 16 };
         }
         if (this.rooms && this.rooms.length > 0) {
@@ -387,6 +388,7 @@ class World {
 
     placeLoreScroll() {
         if (this.loreScroll) return;
+        if (this.floor === 13 || this.floor === 15) return;
         this.loreScroll = { x: 10 * this.tileSize, y: 10 * this.tileSize, collected: false };
     }
 

@@ -76,7 +76,7 @@ class Projectile {
         this.owner = owner;
         this.look = look;
         this.life = 120;
-        this.radius = type === 'fireball' || type === 'acid' ? 7 : (type === 'void' ? 9 : (type === 'slash' ? 8 : 4));
+        this.radius = type === 'fireball' || type === 'acid' || type === 'homing' ? 7 : (type === 'void' || type === 'magma_slash' ? 10 : (type === 'slash' ? 8 : 5));
         this.pierce = type === 'void' ? 2 : 1;
         this.hitEntities = new Set();
     }
@@ -98,6 +98,9 @@ class Projectile {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.8, '#aa22ff', 5, 20));
         } else if (this.type === 'slash') {
             particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.5, '#70d6ff', 3.5, 12));
+        }
+        else if (this.type === 'magma_slash') {
+            particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 0.7, '#ff5722', 4, 14));
         }
 
         if (world.isWallAt(this.x, this.y)) {
@@ -184,6 +187,44 @@ class Projectile {
             ctx.beginPath();
             ctx.arc(-2, 0, 14, -Math.PI / 3, Math.PI / 3);
             ctx.stroke();
+        } else if (this.type === 'homing') {
+            ctx.fillStyle = '#3c1053';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#d966ff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'curved_arrow') {
+            const angle = Math.atan2(this.vy, this.vx);
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+            ctx.fillStyle = '#9b59b6';
+            ctx.fillRect(-9, -1.5, 18, 3);
+            ctx.fillStyle = '#55efc4';
+            ctx.beginPath();
+            ctx.moveTo(9, -3.5);
+            ctx.lineTo(14, 0);
+            ctx.lineTo(9, 3.5);
+            ctx.fill();
+        } else if (this.type === 'magma_slash') {
+            const angle = Math.atan2(this.vy, this.vx);
+            ctx.translate(this.x, this.y);
+            ctx.rotate(angle);
+            ctx.strokeStyle = '#ff4d1a';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+            ctx.strokeStyle = '#ffeaa7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(-2, 0, 16, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
         }
         ctx.restore();
     }
@@ -254,8 +295,9 @@ class GroundItem {
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
         const canPickup = this.canPlayerPickup(player);
+        const pullRadius = (world && world.isWallAt(this.x, this.y)) ? 140 : 50;
 
-        if (dist < 50 && canPickup) {
+        if (dist < pullRadius && canPickup) {
             const pullAngle = Math.atan2(player.y - this.y, player.x - this.x);
             this.x += Math.cos(pullAngle) * 3.8;
             this.y += Math.sin(pullAngle) * 3.8;
@@ -349,6 +391,7 @@ class Player {
         this.width = 24;
         this.height = 30;
         this.speed = 2.8;
+        this.slowTimer = 0;
 
         this.vx = 0;
         this.vy = 0;
@@ -517,6 +560,7 @@ class Player {
     }
 
     update(keys, world, projectiles, particles) {
+        if (this.slowTimer > 0) this.slowTimer--;
         if (this.flashRedTimer > 0) this.flashRedTimer--;
         if (this.invulnerableTimer > 0) this.invulnerableTimer--;
         if (this.attackCooldown > 0) this.attackCooldown--;
@@ -549,7 +593,7 @@ class Player {
                 this.direction = dy > 0 ? 0 : 3;
             }
 
-            const moveSpeed = this.speed;
+            const moveSpeed = this.slowTimer > 0 ? this.speed * 0.55 : this.speed;
             let nextX = this.x + dx * moveSpeed + this.knockbackX;
             if (!world.isSolid(nextX - this.width / 2, this.y - this.height / 2, this.width, this.height)) {
                 this.x = nextX;
@@ -720,6 +764,16 @@ class Player {
         let col = this.isAttacking ? (4 + this.attackFrame) : this.animFrame;
         let row = this.direction;
 
+        if (this.slowTimer > 0) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(231, 76, 60, 0.85)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y + 12, 13, 5, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         window.spriteManager.draw(ctx, this.getSpriteKey(), col, row, frameW, frameH, dx, dy, 48, 48, false, this.flashRedTimer > 0);
     }
 }
@@ -743,87 +797,90 @@ class Enemy {
         this.attackCooldown = 0;
         this.slowTimer = 0;
         this.hasKey = false;
+        this.attackVisualTimer = 0;
+        this.quakeFxTimer = 0;
+        this.arrowCurveSign = 1;
+        this.isFlying = false;
         this.initStats();
     }
 
     initStats() {
-        // Multiplicador de dificultad aumentado a +35% por piso
-        const fMod = 1 + (this.floor - 1) * 0.35;
+        // Curva suavizada: +18% por piso en lugar de +35%
+        const fMod = 1 + (this.floor - 1) * 0.18;
 
         if (this.type === 'rat') {
             this.name = 'Rata de Cloaca';
-            this.maxHp = Math.floor(65 * fMod);
-            this.atk = Math.floor(16 * fMod);
-            this.speed = 2.6;
-            this.expReward = 28;
+            this.maxHp = Math.floor(40 * fMod);
+            this.atk = Math.floor(9 * fMod);
+            this.speed = 2.4;
+            this.expReward = 24;
             this.width = 24; this.height = 22;
             this.spriteKey = 'rat'; this.frameSize = 48;
         } else if (this.type === 'bandit') {
             this.name = 'Bandido de Cripta';
-            this.maxHp = Math.floor(85 * fMod);
-            this.atk = Math.floor(20 * fMod);
-            this.speed = 1.9;
-            this.expReward = 32;
+            this.maxHp = Math.floor(55 * fMod);
+            this.atk = Math.floor(12 * fMod);
+            this.speed = 1.8;
+            this.expReward = 28;
             this.width = 24; this.height = 28;
             this.spriteKey = 'bandit'; this.frameSize = 48;
         } else if (this.type === 'skeleton') {
             this.name = 'Esqueleto del Osario';
-            this.maxHp = Math.floor(110 * fMod);
-            this.atk = Math.floor(24 * fMod);
-            this.speed = 1.5;
-            this.expReward = 40;
+            this.maxHp = Math.floor(70 * fMod);
+            this.atk = Math.floor(14 * fMod);
+            this.speed = 1.45;
+            this.expReward = 35;
             this.width = 24; this.height = 30;
             this.spriteKey = 'skeleton'; this.frameSize = 48;
         } else if (this.type === 'spider') {
             this.name = 'Araña Ponzoñosa';
-            this.maxHp = Math.floor(95 * fMod);
-            this.atk = Math.floor(26 * fMod);
-            this.speed = 2.4;
-            this.expReward = 45;
+            this.maxHp = Math.floor(60 * fMod);
+            this.atk = Math.floor(15 * fMod);
+            this.speed = 2.2;
+            this.expReward = 40;
             this.width = 30; this.height = 24;
             this.spriteKey = 'spider'; this.frameSize = 48;
         } else if (this.type === 'werewolf') {
             this.name = 'Hombre Lobo Feral';
-            this.maxHp = Math.floor(240 * fMod);
-            this.atk = Math.floor(42 * fMod);
-            this.speed = 2.7;
-            this.expReward = 90;
+            this.maxHp = Math.floor(135 * fMod);
+            this.atk = Math.floor(24 * fMod);
+            this.speed = 2.5;
+            this.expReward = 80;
             this.width = 32; this.height = 36;
             this.spriteKey = 'werewolf'; this.frameSize = 56;
         } else if (this.type === 'demon') {
             this.name = 'Demonio Menor';
-            this.maxHp = Math.floor(320 * fMod);
-            this.atk = Math.floor(55 * fMod);
-            this.speed = 2.0;
-            this.expReward = 130;
+            this.maxHp = Math.floor(175 * fMod);
+            this.atk = Math.floor(30 * fMod);
+            this.speed = 1.9;
+            this.expReward = 115;
             this.width = 32; this.height = 36;
             this.spriteKey = 'demon'; this.frameSize = 56;
-        }
-        else if (this.type === 'specter') {
+        } else if (this.type === 'specter') {
             this.name = 'Espectro del Vacío';
-            this.maxHp = Math.floor(210 * fMod);
-            this.atk = Math.floor(38 * fMod);
-            this.speed = 2.2;
-            this.expReward = 140;
+            this.maxHp = Math.floor(130 * fMod);
+            this.atk = Math.floor(24 * fMod);
+            this.speed = 2.1;
+            this.expReward = 130;
             this.width = 28; this.height = 32;
-            this.spriteKey = 'demon'; this.frameSize = 56;
-            this.isFlying = true; // Atraviesa obstáculos
+            this.spriteKey = 'specter'; this.frameSize = 48;
+            this.isFlying = true;
         } else if (this.type === 'golem') {
             this.name = 'Coloso de Obsidiana';
-            this.maxHp = Math.floor(480 * fMod);
-            this.atk = Math.floor(52 * fMod);
-            this.speed = 1.3;
-            this.expReward = 180;
+            this.maxHp = Math.floor(260 * fMod);
+            this.atk = Math.floor(32 * fMod);
+            this.speed = 1.25;
+            this.expReward = 165;
             this.width = 38; this.height = 42;
-            this.spriteKey = 'skeleton'; this.frameSize = 48;
+            this.spriteKey = 'golem'; this.frameSize = 56;
         } else if (this.type === 'void_elf') {
             this.name = 'Elfo del Vacío';
-            this.maxHp = Math.floor(190 * fMod);
-            this.atk = Math.floor(42 * fMod);
-            this.speed = 2.8;
-            this.expReward = 150;
+            this.maxHp = Math.floor(115 * fMod);
+            this.atk = Math.floor(26 * fMod);
+            this.speed = 2.6;
+            this.expReward = 140;
             this.width = 24; this.height = 28;
-            this.spriteKey = 'bandit'; this.frameSize = 48;
+            this.spriteKey = 'void_elf'; this.frameSize = 48;
         }
         this.hp = this.maxHp;
     }
@@ -832,34 +889,162 @@ class Enemy {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
         if (this.attackCooldown > 0) this.attackCooldown--;
         if (this.slowTimer > 0) this.slowTimer--;
+        if (this.attackVisualTimer > 0) this.attackVisualTimer--;
+        if (this.quakeFxTimer > 0) this.quakeFxTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
-        if (dist < 260) {
+        if (dist < 280) {
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
             this.direction = Math.abs(player.x - this.x) > Math.abs(player.y - this.y) ? (player.x > this.x ? 2 : 1) : (player.y > this.y ? 0 : 3);
-            const attackDist = this.type === 'demon' ? 140 : (this.type === 'spider' ? 100 : 26);
 
-            if (dist > attackDist) {
-                const moveSpeed = (this.slowTimer > 0) ? (this.speed * 0.40) : this.speed;
+            const attackDist =
+                this.type === 'demon' ? 140 :
+                    this.type === 'spider' ? 100 :
+                        this.type === 'specter' ? 190 :
+                            this.type === 'void_elf' ? 200 :
+                                this.type === 'golem' ? 54 : 26;
+
+            const moveSpeed = (this.slowTimer > 0) ? (this.speed * 0.40) : this.speed;
+
+            // Elfo del Vacío: retrocede si el jugador se pega mucho
+            if (this.type === 'void_elf' && dist < 80) {
+                const bx = this.x - Math.cos(angle) * moveSpeed + this.knockbackX;
+                const by = this.y - Math.sin(angle) * moveSpeed + this.knockbackY;
+                if (!world.isSolid(bx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = bx;
+                if (!world.isSolid(this.x - this.width / 2, by - this.height / 2, this.width, this.height)) this.y = by;
+            } else if (dist > attackDist) {
                 const nx = this.x + Math.cos(angle) * moveSpeed + this.knockbackX;
                 const ny = this.y + Math.sin(angle) * moveSpeed + this.knockbackY;
-                if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
-                if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
+
+                if (this.isFlying) {
+                    const minX = world.tileSize + this.width / 2;
+                    const maxX = (world.cols - 1) * world.tileSize - this.width / 2;
+                    const minY = world.tileSize + this.height / 2;
+                    const maxY = (world.rows - 1) * world.tileSize - this.height / 2;
+                    this.x = Math.max(minX, Math.min(maxX, nx));
+                    this.y = Math.max(minY, Math.min(maxY, ny));
+                } else {
+                    if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
+                    if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
+                }
 
                 this.animTimer++;
                 if (this.animTimer >= 8) {
                     this.animFrame = (this.animFrame + 1) % 4;
                     this.animTimer = 0;
                 }
-            } else if (this.attackCooldown <= 0) {
-                this.attackCooldown = 45;
-                if (this.type === 'spider') projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.5, Math.sin(angle) * 4.5, 'acid', this.atk, 'enemy'));
-                else if (this.type === 'demon') projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 'void', this.atk, 'enemy'));
-                else player.takeDamage(this.atk, this.x, this.y);
+            }
+
+            if (dist <= attackDist && this.attackCooldown <= 0) {
+                if (this.type === 'spider') {
+                    this.attackCooldown = 45;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.5, Math.sin(angle) * 4.5, 'acid', this.atk, 'enemy'));
+                } else if (this.type === 'demon') {
+                    this.attackCooldown = 45;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(angle) * 4.0, Math.sin(angle) * 4.0, 'void', this.atk, 'enemy'));
+                } else if (this.type === 'specter') {
+                    this.attackCooldown = 85;
+                    this.attackVisualTimer = 18;
+                    const orb = new Projectile(this.x, this.y, Math.cos(angle) * 3.3, Math.sin(angle) * 3.3, 'homing', this.atk, 'enemy');
+                    orb.life = 160;
+                    projectiles.push(orb);
+                } else if (this.type === 'void_elf') {
+                    this.attackCooldown = 70;
+                    this.attackVisualTimer = 16;
+                    this.arrowCurveSign *= -1;
+                    const launchAngle = angle + (0.42 * this.arrowCurveSign);
+                    const arr = new Projectile(this.x, this.y, Math.cos(launchAngle) * 4.8, Math.sin(launchAngle) * 4.8, 'curved_arrow', this.atk, 'enemy');
+                    arr.life = 140;
+                    projectiles.push(arr);
+                } else if (this.type === 'golem') {
+                    this.attackCooldown = 95;
+                    this.attackVisualTimer = 20;
+                    this.quakeFxTimer = 22;
+                    if (dist < 75) {
+                        player.takeDamage(this.atk, this.x, this.y);
+                        player.slowTimer = Math.max(player.slowTimer, 90);
+                    }
+                    for (let i = 0; i < 10; i++) {
+                        particles.push(new Particle(this.x + (Math.random() - 0.5) * 40, this.y + 12, (Math.random() - 0.5) * 3, -Math.random() * 2, '#ff6b2b', 4, 20));
+                    }
+                } else {
+                    this.attackCooldown = 45;
+                    player.takeDamage(this.atk, this.x, this.y);
+                }
             }
         }
+
         this.knockbackX *= 0.82;
         this.knockbackY *= 0.82;
+    }
+
+    draw(ctx) {
+        const hoverY = this.type === 'specter' ? Math.sin(Date.now() * 0.006 + this.x) * 3 : 0;
+        const dx = Math.floor(this.x - this.frameSize / 2);
+        const dy = Math.floor(this.y - this.frameSize / 2 - 4 + hoverY);
+
+        // Onda expansiva del Terremoto del Coloso de Obsidiana
+        if (this.quakeFxTimer > 0) {
+            ctx.save();
+            const prog = 1 - (this.quakeFxTimer / 22);
+            ctx.strokeStyle = `rgba(255, 110, 40, ${1 - prog})`;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + 12, 18 + prog * 58, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        if (this.slowTimer > 0) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(112, 214, 255, 0.45)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y + this.height / 2 - 2, this.width / 2 + 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        let col = this.animFrame;
+        if (this.attackVisualTimer > 0 && this.type !== 'spider') {
+            col = this.attackVisualTimer > 10 ? 4 : 5;
+        }
+
+        window.spriteManager.draw(
+            ctx,
+            this.spriteKey,
+            col,
+            this.direction,
+            this.frameSize,
+            this.frameSize,
+            dx, dy,
+            this.frameSize,
+            this.frameSize,
+            false,
+            this.flashRedTimer > 0
+        );
+
+        if (this.hasKey) {
+            ctx.fillStyle = '#f1c40f';
+            ctx.font = '8px "Press Start 2P"';
+            ctx.fillText('🔑', this.x - 4, this.y - this.height / 2 - 18);
+        }
+
+        if (this.hp < this.maxHp && this.hp > 0) {
+            const barW = 30;
+            const barH = 5;
+            const bx = Math.floor(this.x - barW / 2);
+            const by = Math.floor(this.y - this.height / 2 - 10);
+            ctx.fillStyle = '#08050d';
+            ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+            ctx.fillStyle = '#4a151b';
+            ctx.fillRect(bx, by, barW, barH);
+            const hpPct = Math.max(0, Math.min(1, this.hp / this.maxHp));
+            const fillW = Math.floor(barW * hpPct);
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(bx, by, fillW, barH);
+            ctx.fillStyle = '#ff7675';
+            ctx.fillRect(bx, by, fillW, 1);
+        }
     }
 
     takeDamage(damage, sourceX, sourceY) {
@@ -872,70 +1057,7 @@ class Enemy {
         return this.hp <= 0;
     }
 
-    draw(ctx) {
-        const dx = Math.floor(this.x - this.frameSize / 2);
-        const dy = Math.floor(this.y - this.frameSize / 2 - 4);
 
-        // Efecto de escarcha si está ralentizado
-        if (this.slowTimer > 0) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(112, 214, 255, 0.45)';
-            ctx.beginPath();
-            ctx.arc(this.x, this.y + this.height / 2 - 2, this.width / 2 + 2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-        }
-
-        // Dibujar el sprite del enemigo
-        window.spriteManager.draw(
-            ctx,
-            this.spriteKey,
-            this.animFrame,
-            this.direction,
-            this.frameSize,
-            this.frameSize,
-            dx, dy,
-            this.frameSize,
-            this.frameSize,
-            false,
-            this.flashRedTimer > 0
-        );
-
-        // Ícono de llave sobre la cabeza si es el portador
-        if (this.hasKey) {
-            ctx.fillStyle = '#f1c40f';
-            ctx.font = '8px "Press Start 2P"';
-            ctx.fillText('🔑', this.x - 4, this.y - this.height / 2 - 18);
-        }
-
-        // =====================================================================
-        // BARRA DE VIDA: SOLO APARECE TRAS RECIBIR EL PRIMER GOLPE
-        // =====================================================================
-        if (this.hp < this.maxHp && this.hp > 0) {
-            const barW = 30;
-            const barH = 5;
-            const bx = Math.floor(this.x - barW / 2);
-            const by = Math.floor(this.y - this.height / 2 - 10);
-
-            // 1. Marco exterior negro grueso
-            ctx.fillStyle = '#08050d';
-            ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-
-            // 2. Fondo rojo oscuro (vida perdida)
-            ctx.fillStyle = '#4a151b';
-            ctx.fillRect(bx, by, barW, barH);
-
-            // 3. Relleno rojo vivo de vida actual
-            const hpPct = Math.max(0, Math.min(1, this.hp / this.maxHp));
-            const fillW = Math.floor(barW * hpPct);
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(bx, by, fillW, barH);
-
-            // 4. Brillo superior de 1px
-            ctx.fillStyle = '#ff7675';
-            ctx.fillRect(bx, by, fillW, 1);
-        }
-    }
 }
 
 // ==============================================================================
@@ -1191,16 +1313,14 @@ class BossHong {
         window.spriteManager.draw(ctx, 'hong', this.animFrame, row, 96, 96, Math.floor(this.x - 48), Math.floor(this.y - 58), 96, 96, false, this.flashRedTimer > 0);
     }
 }
-// =============================================================================
-// SUB-JEFE PISO 13: MALAKOR, EL PRIMERGÉNITO (LUGARTENIENTE DE SILMARION)
-// =============================================================================
+
 class BossMalakor {
     constructor(x, y) {
         this.name = 'Malakor, El Primogénito';
         this.x = x; this.y = y;
-        this.maxHp = 6200;
-        this.hp = 6200;
-        this.atk = 75;
+        this.maxHp = 5600;
+        this.hp = 5600;
+        this.atk = 72;
         this.width = 46; this.height = 54;
         this.state = 'stalk';
         this.stateTimer = 0;
@@ -1208,6 +1328,8 @@ class BossMalakor {
         this.activated = false;
         this.slowTimer = 0;
         this.flashRedTimer = 0;
+        this.chainZones = [];
+        this.decoy = null;
     }
 
     update(player, world, projectiles, particles, floatingTexts) {
@@ -1217,71 +1339,96 @@ class BossMalakor {
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
         if (!this.activated) {
-            if (player.y < 16 * world.tileSize || dist < 260) {
+            if (player.y < 19 * world.tileSize || dist < 260) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
                 if (window.soundEngine) window.soundEngine.startBgm(true);
             } else return;
         }
 
+        // Actualizar trampas de cadenas en el suelo
+        for (let i = this.chainZones.length - 1; i >= 0; i--) {
+            const cz = this.chainZones[i];
+            cz.timer--;
+            if (cz.timer <= 0) {
+                if (Math.hypot(player.x - cz.x, player.y - cz.y) <= cz.radius) {
+                    player.takeDamage(this.atk, cz.x, cz.y);
+                    player.slowTimer = 110;
+                    if (floatingTexts) floatingTexts.push(new FloatingText(player.x, player.y - 26, '¡ENCADENADO!', '#e74c3c', true));
+                }
+                for (let k = 0; k < 14; k++) {
+                    particles.push(new Particle(cz.x, cz.y, (Math.random() - 0.5) * 4, -Math.random() * 3, '#e74c3c', 4, 20));
+                }
+                this.chainZones.splice(i, 1);
+            }
+        }
+
+        if (this.decoy) {
+            this.decoy.timer--;
+            if (this.decoy.timer <= 0) this.decoy = null;
+        }
+
         this.stateTimer++;
         const angle = Math.atan2(player.y - this.y, player.x - this.x);
-
-        // Fase 2: Al 35% de vida se desata duplicando su agilidad
         const isEnraged = (this.hp / this.maxHp) < 0.35;
-        const baseSpeed = isEnraged ? 2.5 : 1.7;
+        const speedMod = this.slowTimer > 0 ? 0.55 : 1;
+        const baseSpeed = (isEnraged ? 2.4 : 1.7) * speedMod;
 
         if (this.state === 'stalk') {
-            this.x += Math.cos(angle) * baseSpeed;
-            this.y += Math.sin(angle) * baseSpeed;
+            const nx = this.x + Math.cos(angle) * baseSpeed;
+            const ny = this.y + Math.sin(angle) * baseSpeed;
+            if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
+            if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
+
             if (this.stateTimer % 8 === 0) this.animFrame = (this.animFrame + 1) % 4;
 
-            if (this.stateTimer > 90) {
+            if (this.stateTimer > (isEnraged ? 65 : 90)) {
                 this.stateTimer = 0;
                 const roll = Math.random();
-                if (roll < 0.40) {
-                    // ARTIMAÑA 1: Teleport a la espalda con señuelo explosivo
-                    this.state = 'clone_teleport';
-                } else if (roll < 0.75) {
-                    // ARTIMAÑA 2: Cuchillas de magma sombrío
-                    this.state = 'magma_slash';
-                } else {
-                    // ARTIMAÑA 3: Cadenas subterráneas
-                    this.state = 'chains';
-                }
+                if (roll < 0.35) this.state = 'clone_teleport';
+                else if (roll < 0.72) this.state = 'magma_slash';
+                else this.state = 'chains';
             }
         } else if (this.state === 'clone_teleport') {
-            // Deja humo y se teleporta detrás del jugador
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 9));
             if (this.stateTimer === 10) {
+                this.decoy = { x: this.x, y: this.y, timer: 25 };
                 for (let i = 0; i < 14; i++) {
-                    particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, '#2c3e50', 5, 25));
+                    particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, '#6c3483', 5, 25));
                 }
                 const behindAngle = Math.atan2(player.y - this.y, player.x - this.x);
-                this.x = player.x - Math.cos(behindAngle) * 45;
-                this.y = player.y - Math.sin(behindAngle) * 45;
+                const candidateAngles = [behindAngle + Math.PI, behindAngle + Math.PI * 0.75, behindAngle - Math.PI * 0.75, behindAngle + Math.PI * 0.5, behindAngle - Math.PI * 0.5];
+                for (const a of candidateAngles) {
+                    const tx = player.x + Math.cos(a) * 48;
+                    const ty = player.y + Math.sin(a) * 48;
+                    if (!world.isSolid(tx - this.width / 2, ty - this.height / 2, this.width, this.height)) {
+                        this.x = tx;
+                        this.y = ty;
+                        break;
+                    }
+                }
                 window.soundEngine.playSwordSlash();
-                player.takeDamage(this.atk + 15, this.x, this.y);
+                if (Math.hypot(player.x - this.x, player.y - this.y) < 62) {
+                    player.takeDamage(this.atk + 10, this.x, this.y);
+                }
             }
-            if (this.stateTimer > 35) { this.state = 'stalk'; this.stateTimer = 0; }
+            if (this.stateTimer > 36) { this.state = 'stalk'; this.stateTimer = 0; }
         } else if (this.state === 'magma_slash') {
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 10));
             if (this.stateTimer === 15) {
                 window.soundEngine.playSwordSlash();
-                [-0.3, 0, 0.3].forEach(offset => {
+                [-0.32, 0, 0.32].forEach(offset => {
                     const a = angle + offset;
-                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 6.0, Math.sin(a) * 6.0, 'slash', this.atk + 20, 'enemy'));
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 6.0, Math.sin(a) * 6.0, 'magma_slash', this.atk + 15, 'enemy'));
                 });
             }
             if (this.stateTimer > 40) { this.state = 'stalk'; this.stateTimer = 0; }
         } else if (this.state === 'chains') {
-            if (this.stateTimer === 15) {
-                // Inmoviliza al jugador con cadenas oscuras
-                player.takeDamage(this.atk - 10, this.x, this.y);
-                player.slowTimer = 90; // Ralentizado severo
-                for (let i = 0; i < 20; i++) {
-                    particles.push(new Particle(player.x, player.y, (Math.random() - 0.5) * 3, -1, '#e74c3c', 4, 20));
-                }
+            this.animFrame = Math.min(3, Math.floor(this.stateTimer / 10));
+            if (this.stateTimer === 12) {
+                this.chainZones.push({ x: player.x, y: player.y, radius: 36, timer: 24, maxTimer: 24 });
             }
-            if (this.stateTimer > 45) { this.state = 'stalk'; this.stateTimer = 0; }
+            if (this.stateTimer > 44) { this.state = 'stalk'; this.stateTimer = 0; }
         }
     }
 
@@ -1293,110 +1440,168 @@ class BossMalakor {
     }
 
     draw(ctx) {
-        // Dibuja a Malakor usando su silueta de espadachín de fuego sombrío
-        const dx = Math.floor(this.x - 24);
-        const dy = Math.floor(this.y - 32);
-        window.spriteManager.draw(ctx, 'bandit', this.animFrame, 0, 48, 48, dx, dy, 48, 54, false, this.flashRedTimer > 0);
+        // Cepos de cadenas telegrafiados en el suelo
+        this.chainZones.forEach(cz => {
+            ctx.save();
+            const pct = 1 - (cz.timer / cz.maxTimer);
+            ctx.strokeStyle = '#ff3b30';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cz.x, cz.y, cz.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = `rgba(231, 76, 60, ${0.15 + pct * 0.35})`;
+            ctx.beginPath();
+            ctx.arc(cz.x, cz.y, cz.radius * pct, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
 
-        // Aura de fuego negro y brasas
-        ctx.save();
-        ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 22, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        // Señuelo de sombra al teletransportarse
+        if (this.decoy) {
+            ctx.save();
+            ctx.globalAlpha = 0.45 * (this.decoy.timer / 25);
+            window.spriteManager.draw(ctx, 'malakor', 2, 2, 96, 96, Math.floor(this.decoy.x - 48), Math.floor(this.decoy.y - 62), 96, 96);
+            ctx.restore();
+        }
+
+        // Mapeo exacto a las 4 filas de tu imagen
+        let row = 0;
+        let col = this.animFrame;
+        if (this.state === 'magma_slash') {
+            row = 1;
+            col = Math.min(3, Math.floor(this.stateTimer / 10));
+        } else if (this.state === 'clone_teleport') {
+            row = 2;
+            col = Math.min(3, Math.floor(this.stateTimer / 9));
+        } else if (this.state === 'chains') {
+            row = 3;
+            col = this.stateTimer < 26 ? 0 : 1; // Columna 0 tiene el estallido de chispas
+        }
+
+        window.spriteManager.draw(ctx, 'malakor', col, row, 96, 96, Math.floor(this.x - 48), Math.floor(this.y - 62), 96, 96, false, this.flashRedTimer > 0);
     }
 }
 
-// =============================================================================
-// JEFE FINAL ABSOLUTO PISO 15: SILMARION, EL SEÑOR OSCURO (2 FASES)
-// =============================================================================
 class BossSilmarion {
     constructor(x, y) {
         this.name = 'Silmarion, El Señor Oscuro';
         this.x = x; this.y = y;
-        this.maxHp = 10500;
-        this.hp = 10500;
-        this.atk = 110;
+        this.maxHp = 8500;
+        this.hp = 8500;
+        this.atk = 90;
         this.width = 64; this.height = 70;
         this.state = 'idle';
         this.stateTimer = 0;
         this.animFrame = 0;
         this.activated = false;
         this.phase = 1;
+        this.slowTimer = 0;
         this.flashRedTimer = 0;
+        this.spinOffset = 0;
+        this.meteors = [];
     }
 
-    update(player, world, projectiles, particles) {
+    update(player, world, projectiles, particles, floatingTexts) {
         if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
 
         const dist = Math.hypot(player.x - this.x, player.y - this.y);
 
         if (!this.activated) {
-            if (player.y < 16 * world.tileSize || dist < 280) {
+            if (player.y < 19 * world.tileSize || dist < 280) {
                 this.activated = true;
                 window.soundEngine.playBossRoar();
                 if (window.soundEngine) window.soundEngine.startBgm(true);
             } else return;
         }
 
-        this.stateTimer++;
-        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        // Actualizar meteoros cayendo (Fase 2)
+        for (let i = this.meteors.length - 1; i >= 0; i--) {
+            const m = this.meteors[i];
+            m.timer--;
+            if (m.timer <= 0) {
+                window.soundEngine.playHit();
+                if (Math.hypot(player.x - m.x, player.y - m.y) <= m.radius) {
+                    player.takeDamage(this.atk + 20, m.x, m.y);
+                }
+                for (let k = 0; k < 16; k++) {
+                    particles.push(new Particle(m.x, m.y, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 5, '#ff7722', 5, 22));
+                }
+                this.meteors.splice(i, 1);
+            }
+        }
 
-        // TRANSICIÓN A FASE 2: ESENCIA INDESTRUCTIBLE DESATADA
+        this.stateTimer++;
+        if (this.stateTimer % 10 === 0) this.animFrame = (this.animFrame + 1) % 4;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+        const speedMod = this.slowTimer > 0 ? 0.6 : 1;
+
+        // TRANSICIÓN A FASE 2: ESENCIA DESATADA (<= 45% HP)
         if (this.phase === 1 && (this.hp / this.maxHp) <= 0.45) {
             this.phase = 2;
             this.state = 'storm';
             this.stateTimer = 0;
             window.soundEngine.playBossRoar();
+            if (floatingTexts) floatingTexts.push(new FloatingText(this.x, this.y - 50, '¡ESENCIA SOLAR DESATADA!', '#ff9f43', true));
         }
 
         if (this.phase === 1) {
-            // FASE 1: El Portador de Soles Caído
             if (this.state === 'idle') {
-                this.x += Math.cos(angle) * 1.6;
-                this.y += Math.sin(angle) * 1.6;
-                if (this.stateTimer > 100) {
+                const nx = this.x + Math.cos(angle) * 1.6 * speedMod;
+                const ny = this.y + Math.sin(angle) * 1.6 * speedMod;
+                if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
+                if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
+
+                if (this.stateTimer > 95) {
                     this.stateTimer = 0;
-                    this.state = Math.random() < 0.5 ? 'shadow_sun' : 'solar_cleave';
+                    this.state = Math.random() < 0.55 ? 'shadow_sun' : 'solar_cleave';
                 }
             } else if (this.state === 'shadow_sun') {
-                // Dispara un sol oscuro giratorio de 8 llamas
                 if (this.stateTimer === 20) {
+                    this.spinOffset += 0.35;
                     for (let i = 0; i < 8; i++) {
-                        const a = (i * Math.PI * 2) / 8;
-                        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 4.2, Math.sin(a) * 4.2, 'void', this.atk + 25, 'enemy'));
+                        const a = this.spinOffset + (i * Math.PI * 2) / 8;
+                        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 4.1, Math.sin(a) * 4.1, 'void', this.atk + 10, 'enemy'));
                     }
                 }
-                if (this.stateTimer > 50) { this.state = 'idle'; this.stateTimer = 0; }
+                if (this.stateTimer > 48) { this.state = 'idle'; this.stateTimer = 0; }
             } else if (this.state === 'solar_cleave') {
-                if (this.stateTimer === 25) {
+                if (this.stateTimer === 24) {
                     window.soundEngine.playSwordSlash();
-                    if (dist < 90) player.takeDamage(this.atk + 35, this.x, this.y);
+                    [-0.4, 0, 0.4].forEach(off => {
+                        const a = angle + off;
+                        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 5.6, Math.sin(a) * 5.6, 'magma_slash', this.atk + 18, 'enemy'));
+                    });
+                    if (dist < 88) player.takeDamage(this.atk + 22, this.x, this.y);
                 }
-                if (this.stateTimer > 55) { this.state = 'idle'; this.stateTimer = 0; }
+                if (this.stateTimer > 50) { this.state = 'idle'; this.stateTimer = 0; }
             }
         } else {
-            // FASE 2: Tormenta Primordial del Núcleo
-            if (this.state === 'storm' || this.stateTimer % 60 === 0) {
-                // Lluvia de meteoros sombríos alrededor del jugador
-                for (let i = 0; i < 4; i++) {
-                    const rx = player.x + (Math.random() - 0.5) * 120;
-                    const ry = player.y + (Math.random() - 0.5) * 120;
-                    projectiles.push(new Projectile(rx, ry - 180, 0, 5.5, 'void', this.atk + 30, 'enemy'));
+            // FASE 2: Tormenta de Meteoros + Descargas Solares
+            const nx = this.x + Math.cos(angle) * 2.2 * speedMod;
+            const ny = this.y + Math.sin(angle) * 2.2 * speedMod;
+            if (!world.isSolid(nx - this.width / 2, this.y - this.height / 2, this.width, this.height)) this.x = nx;
+            if (!world.isSolid(this.x - this.width / 2, ny - this.height / 2, this.width, this.height)) this.y = ny;
+
+            if (this.stateTimer % 65 === 10) {
+                this.state = 'burst';
+                for (let i = 0; i < 3; i++) {
+                    const mx = player.x + (Math.random() - 0.5) * 140;
+                    const my = player.y + (Math.random() - 0.5) * 140;
+                    if (!world.isWallAt(mx, my)) {
+                        this.meteors.push({ x: mx, y: my, radius: 34, timer: 42, maxTimer: 42 });
+                    }
                 }
             }
 
-            this.x += Math.cos(angle) * 2.4;
-            this.y += Math.sin(angle) * 2.4;
-
-            if (this.stateTimer % 80 === 0) {
-                // Rayo expansivo en 360°
+            if (this.stateTimer % 85 === 0) {
+                this.spinOffset += 0.25;
                 for (let i = 0; i < 12; i++) {
-                    const a = (i * Math.PI * 2) / 12;
-                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 5.0, Math.sin(a) * 5.0, 'slash', this.atk + 20, 'enemy'));
+                    const a = this.spinOffset + (i * Math.PI * 2) / 12;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 4.6, Math.sin(a) * 4.6, 'magma_slash', this.atk + 15, 'enemy'));
                 }
             }
+            if (this.stateTimer % 65 > 35) this.state = 'storm';
         }
     }
 
@@ -1408,17 +1613,52 @@ class BossSilmarion {
     }
 
     draw(ctx) {
+        // Zonas de impacto y meteoros cayendo desde el cielo
+        this.meteors.forEach(m => {
+            ctx.save();
+            const pct = 1 - (m.timer / m.maxTimer);
+            ctx.strokeStyle = '#ff5722';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = `rgba(255, 87, 34, ${0.15 + pct * 0.35})`;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, m.radius * pct, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Roca solar descendiendo
+            const skyY = m.y - (1 - pct) * 170;
+            ctx.fillStyle = '#2d0c3a';
+            ctx.beginPath();
+            ctx.arc(m.x, skyY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ff9f43';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+        });
+
+        let row = 0;
+        let col = this.animFrame;
+        if (this.phase === 1) {
+            if (this.state === 'shadow_sun' || this.state === 'solar_cleave') {
+                row = 1;
+                col = Math.min(3, Math.floor(this.stateTimer / 12));
+            }
+        } else {
+            if (this.state === 'burst') {
+                row = 3;
+                col = Math.min(3, Math.floor(Math.max(0, (this.stateTimer % 65) - 10) / 6));
+            } else {
+                row = 2;
+            }
+        }
+
         const dx = Math.floor(this.x - 48);
         const dy = Math.floor(this.y - 54);
-        window.spriteManager.draw(ctx, 'hong', this.animFrame, 0, 96, 96, dx, dy, 96, 96, false, this.flashRedTimer > 0);
-
-        // Corona pálida y fuego solar oscuro sobre su cabeza
-        ctx.save();
-        ctx.fillStyle = '#f1c40f';
-        ctx.font = '8px "Press Start 2P"';
-        ctx.textAlign = 'center';
-        ctx.fillText(this.phase === 1 ? '👑 SILMARION' : '🔥 ESENCIA DESATADA', this.x, this.y - 45);
-        ctx.restore();
+        window.spriteManager.draw(ctx, 'silmarion', col, row, 96, 96, dx, dy, 96, 96, false, this.flashRedTimer > 0);
     }
 }
 

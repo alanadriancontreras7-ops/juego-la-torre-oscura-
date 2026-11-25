@@ -3,6 +3,7 @@ Generador de Sprites Pixel Art 16-Bit para 'La Torre Oscura'
 Héroes con variantes de armas/armaduras, monstruos/jefes detallados, tilesets, props e iconos.
 """
 
+
 import os
 import math
 from PIL import Image, ImageDraw, ImageOps
@@ -376,7 +377,7 @@ def _blade_fx(hand, tip, look, size=48):
     L.line([(sx + nx, sy + ny), (tx + nx, ty + ny)], R[DK], 1)
     L.px(int(tx), int(ty), R[HI])
 
-def _blade_fx(hand, tip, look, size=48):
+
     fx = _L(noline=True, size=size)
     if look == 0:
         return fx
@@ -474,168 +475,7 @@ def _bow(L, dr, ai, look=0, fx=None):
         L.px(2, 27, a_head)
         L.px(x1 + 1, 26, a_fl)
         L.px(x1 + 1, 28, a_fl)
-    lk = min(4, max(0, look))
-    W = [P_WOOD, P_BONE, P_WOLF_MANE, P_OBSID, P_GOLD][lk]
-    string = [
-        (236, 230, 204, 255),
-        (200, 190, 175, 255),
-        (70, 230, 255, 255),  # Lobo
-        (255, 96, 120, 255),  # Demon
-        (190, 246, 255, 255)  # Legend
-    ][lk]
-    tipc = [None, (160, 50, 40, 255), (160, 150, 170, 255), P_LAVA[HI], P_WHITE[HI]][lk]
-    glow = [None, None, (70, 220, 255), (255, 70, 110), (140, 225, 255)][lk]
-    a_shaft = [P_WOOD[LT], P_BONE[LT], P_WOLF_FUR[LT], P_OBSID[LT], P_GOLD[LT]][lk]
-    a_head = [P_STEEL[HI], P_BONE[HI], (70, 230, 255, 255), P_LAVA[MD], P_AQUA[HI]][lk]
-    a_fl = [P_RED[MD], (140, 40, 40, 255), P_WHITE[HI], P_PURPLE[DK], P_WHITE[HI]][lk]
-
-    def tips(pts):
-        if tipc:
-            for (x, y) in pts: L.px(x, y, tipc)
-
-    def deco(x, y0, y1):
-        if lk == 4:
-            L.poly([(x - 3, y0 + 3), (x - 8, y0), (x - 6, y0 + 5)], P_WHITE[LT])
-            L.poly([(x - 3, y1 - 3), (x - 8, y1), (x - 6, y1 - 5)], P_WHITE[LT])
-        elif lk == 3:
-            L.line([(x, y0), (x - 2, y0 - 2)], P_OBSID[LT])
-            L.line([(x, y1), (x - 2, y1 + 2)], P_OBSID[LT])
-
-    def glow_arc(box, a0, a1):
-        if fx is not None and glow:
-            fx.arc(box, a0, a1, glow + (50,), 6)
-
-    if dr in (0, 3):
-        sg = 1 if dr == 0 else -1
-        if ai is None:
-            box = (10, 14, 20, 40)
-            L.arc(box, 90, 270, W[MD], 2)
-            glow_arc(box, 90, 270)
-            L.line([(15, 14), (15, 40)], string, 1)
-            tips([(15, 14), (15, 40)])
-            deco(15, 14, 40)
-            return
-        box = (12, 19, 36, 33)
-        a0, a1 = (0, 180) if dr == 0 else (180, 360)
-        L.arc(box, a0, a1, W[MD], 2)
-        glow_arc(box, a0, a1)
-        pull = {0: 2, 1: 6, 2: 0}[ai] * (-sg)
-        L.line([(12, 26), (24, 26 + pull)], string, 1)
-        L.line([(24, 26 + pull), (36, 26)], string, 1)
-        tips([(12, 26), (36, 26)])
-        if ai in (0, 1):
-            y0 = 26 + pull
-            y1 = y0 + sg * 17
-            L.line([(24, y0), (24, y1)], a_shaft, 1)
-            L.px(24, y1, a_head)
-            L.px(24, y1 + sg, a_head)
-            L.px(23, y0 + sg, a_fl)
-            L.px(25, y0 + sg, a_fl)
-        return
-
-    if ai is None:
-        box = (8, 14, 18, 40)
-        L.arc(box, 90, 270, W[MD], 2)
-        glow_arc(box, 90, 270)
-        L.line([(13, 14), (13, 40)], string, 1)
-        tips([(13, 14), (13, 40)])
-        deco(13, 14, 40)
-        return
-    box = (7, 14, 17, 40)
-    L.arc(box, 90, 270, W[MD], 2)
-    glow_arc(box, 90, 270)
-    pull = {0: 3, 1: 8, 2: 0}[ai]
-    L.line([(12, 14), (12 + pull, 27)], string, 1)
-    L.line([(12 + pull, 27), (12, 40)], string, 1)
-    tips([(12, 14), (12, 40)])
-    deco(12, 14, 40)
-    if ai in (0, 1):
-        x1 = 12 + pull
-        L.line([(2, 27), (x1 + 2, 27)], a_shaft, 1)
-        L.px(1, 27, a_head)
-        L.px(2, 27, a_head)
-        L.px(x1 + 1, 26, a_fl)
-        L.px(x1 + 1, 28, a_fl)
-    W = [P_WOOD, P_OBSID, P_GOLD][look]
-    string = [(236, 230, 204, 255), (255, 96, 120, 255), (190, 246, 255, 255)][look]
-    tipc = [None, P_LAVA[HI], P_WHITE[HI]][look]
-    glow = [None, (255, 70, 110), (140, 225, 255)][look]
-    a_shaft = [P_WOOD[LT], P_OBSID[LT], P_GOLD[LT]][look]
-    a_head = [P_STEEL[HI], P_LAVA[MD], P_AQUA[HI]][look]
-    a_fl = [P_RED[MD], P_PURPLE[DK], P_WHITE[HI]][look]
-
-    def tips(pts):
-        if tipc:
-            for (x, y) in pts:
-                L.px(x, y, tipc)
-
-    def deco(x, y0, y1):
-        if look == 2:
-            L.poly([(x - 3, y0 + 3), (x - 8, y0), (x - 6, y0 + 5)], P_WHITE[LT])
-            L.poly([(x - 3, y1 - 3), (x - 8, y1), (x - 6, y1 - 5)], P_WHITE[LT])
-        elif look == 1:
-            L.line([(x, y0), (x - 2, y0 - 2)], P_OBSID[LT])
-            L.line([(x, y1), (x - 2, y1 + 2)], P_OBSID[LT])
-
-    def glow_arc(box, a0, a1):
-        if fx is not None and glow:
-            fx.arc(box, a0, a1, glow + (50,), 6)
-
-    if dr in (0, 3):
-        sg = 1 if dr == 0 else -1
-        if ai is None:
-            box = (10, 14, 20, 40)
-            L.arc(box, 90, 270, W[MD], 2)
-            glow_arc(box, 90, 270)
-            L.line([(15, 14), (15, 40)], string, 1)
-            tips([(15, 14), (15, 40)])
-            deco(15, 14, 40)
-            return
-        box = (12, 19, 36, 33)
-        a0, a1 = (0, 180) if dr == 0 else (180, 360)
-        L.arc(box, a0, a1, W[MD], 2)
-        glow_arc(box, a0, a1)
-        pull = {0: 2, 1: 6, 2: 0}[ai] * (-sg)
-        L.line([(12, 26), (24, 26 + pull)], string, 1)
-        L.line([(24, 26 + pull), (36, 26)], string, 1)
-        tips([(12, 26), (36, 26)])
-        if ai in (0, 1):
-            y0 = 26 + pull
-            y1 = y0 + sg * 17
-            L.line([(24, y0), (24, y1)], a_shaft, 1)
-            L.px(24, y1, a_head)
-            L.px(24, y1 + sg, a_head)
-            L.px(23, y0 + sg, a_fl)
-            L.px(25, y0 + sg, a_fl)
-            if fx is not None and glow:
-                fx.px(24, y1 + sg * 2, glow + (200,))
-        return
-
-    if ai is None:
-        box = (8, 14, 18, 40)
-        L.arc(box, 90, 270, W[MD], 2)
-        glow_arc(box, 90, 270)
-        L.line([(13, 14), (13, 40)], string, 1)
-        tips([(13, 14), (13, 40)])
-        deco(13, 14, 40)
-        return
-    box = (7, 14, 17, 40)
-    L.arc(box, 90, 270, W[MD], 2)
-    glow_arc(box, 90, 270)
-    pull = {0: 3, 1: 8, 2: 0}[ai]
-    L.line([(12, 14), (12 + pull, 27)], string, 1)
-    L.line([(12 + pull, 27), (12, 40)], string, 1)
-    tips([(12, 14), (12, 40)])
-    deco(12, 14, 40)
-    if ai in (0, 1):
-        x1 = 12 + pull
-        L.line([(2, 27), (x1 + 2, 27)], a_shaft, 1)
-        L.px(1, 27, a_head)
-        L.px(2, 27, a_head)
-        L.px(x1 + 1, 26, a_fl)
-        L.px(x1 + 1, 28, a_fl)
-        if fx is not None and glow:
-            fx.px(0, 27, glow + (220,))
+   
 
 def _warrior_extra(dr, b, ak):
     if ak == 0 or ak == 1:
@@ -1158,7 +998,7 @@ def _mage_layers(dr, p, ai, anim, wl=0, ak=0):
         ((40, 210, 255), (140, 240, 255), (255, 255, 255)),   # 2 Lobo
         ((190, 80, 255), (232, 160, 255), (246, 200, 255)),   # 3 Demonio
         ((130, 225, 255), (226, 250, 255), (255, 255, 255))   # 4 Legendario
-    ][min(4, max(0, wl))][wl]
+    ][min(4, max(0, wl))]
     out = []
     sway = 1 if p['s'] > 0 else (-1 if p['s'] < 0 else 0)
 
@@ -2214,6 +2054,7 @@ TILE_STYLES = {
     'demon': dict(floor=(84, 58, 62), brick=(104, 38, 48), cap=(176, 82, 94), top=(50, 22, 30), void=(21, 9, 14), crack=(30, 16, 20)),
     'acid':  dict(floor=(92, 106, 86), brick=(48, 66, 46), cap=(124, 154, 112), top=(26, 36, 26), void=(11, 17, 11), crack=(30, 40, 28)),
     'apex':  dict(floor=(72, 70, 96), brick=(48, 44, 78), cap=(112, 106, 164), top=(28, 26, 48), void=(12, 11, 22), crack=(22, 20, 40)),
+    'void':  dict(floor=(54, 44, 78), brick=(42, 28, 66), cap=(122, 78, 176), top=(22, 14, 38), void=(10, 6, 18), crack=(20, 12, 34)),
 }
 
 FLOOR_LAYOUTS = [
@@ -2296,6 +2137,17 @@ def _floor_accent(S, kind, which, rng):
                 x, y = rng.randint(3, 25), rng.randint(3, 26)
                 d.ellipse([x, y, x + 4, y + 3], fill=(70, 150, 46, 255))
                 d.point((x + 1, y), fill=(170, 240, 90, 255))
+    elif kind == 'void':
+        if which == 'a1':
+            pts = _crack_points(rng)
+            d.line(pts, fill=(90, 24, 130, 255), width=3)
+            d.line(pts, fill=(190, 75, 255, 255), width=2)
+            d.line(pts, fill=(245, 200, 255, 255), width=1)
+        else:
+            for _ in range(9):
+                x, y = rng.randrange(32), rng.randrange(32)
+                d.point((x, y), fill=(205, 110, 255, 255) if rng.random() < 0.45 else (28, 16, 48, 255))    
+
     else:
         if which == 'a1':
             d.ellipse([7, 7, 25, 25], outline=(110, 180, 255, 255))
@@ -2306,7 +2158,10 @@ def _floor_accent(S, kind, which, rng):
             for _ in range(9):
                 x, y = rng.randrange(32), rng.randrange(32)
                 d.point((x, y), fill=(160, 200, 255, 255) if rng.random() < 0.5 else (90, 80, 140, 255))
+                
     return img
+
+    
 
 def _wall_front(S, kind, accent, rng):
     brick = S['brick']
@@ -2347,10 +2202,16 @@ def _wall_front(S, kind, accent, rng):
             for x in (7, 17, 24):
                 d.line([(x, 4), (x, rng.randint(14, 24))], fill=(84, 200, 52, 255), width=2)
                 d.point((x, 26), fill=(190, 255, 90, 255))
+        elif kind == 'void':
+            pts = [(15, 5), (12, 12), (18, 19), (14, 27)]
+            d.line(pts, fill=(100, 25, 140, 255), width=3)
+            d.line(pts, fill=(200, 80, 255, 255), width=1)
+
         else:
             d.line([(8, 17), (15, 12), (24, 20)], fill=(110, 180, 255, 255))
             for p in [(8, 17), (15, 12), (24, 20)]:
                 d.point(p, fill=(220, 240, 255, 255))
+                
     return img
 
 def _wall_top(S, variant, rng):
@@ -3154,6 +3015,86 @@ def _icon_armor_wolf_mage():
     L.ell(9, 6, 15, 9, S[DP])
     return [L]
 
+    # ------------------------------------------------------------------ 38-42: ACCESORIOS MÍTICOS (PISOS 11-15)
+def _icon_acc_okeanos():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    # Cadena de plata
+    L.arc((6, 2, 18, 13), 180, 360, P_STEEL[LT], 1)
+    L.line([(6, 8), (10, 12)], P_STEEL[MD], 1)
+    L.line([(18, 8), (14, 12)], P_STEEL[MD], 1)
+    # Engaste dorado + gema de marea aguamarina
+    L.poly([(12, 9), (17, 14), (12, 21), (7, 14)], P_GOLD[MD])
+    L.poly([(12, 11), (15, 14), (12, 19), (9, 14)], P_AQUA[MD])
+    L.px(11, 13, P_AQUA[HI]); L.px(11, 14, P_AQUA[LT])
+    fx.ell(6, 9, 18, 22, (84, 210, 255, 55))
+    return [fx, L]
+
+
+def _icon_acc_kataida():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    # Aro dorado grueso con hueco
+    _ball(L, 4, 7, 20, 22, P_GOLD)
+    L.d.ellipse([8, 11, 16, 18], fill=(0, 0, 0, 0))
+    L.px(7, 12, P_GOLD[HI]); L.px(16, 17, P_GOLD[DK])
+    # Gema de tormenta + rayo eléctrico
+    L.poly([(12, 3), (16, 7), (12, 11), (8, 7)], P_AQUA[MD])
+    L.px(11, 6, P_WHITE[HI])
+    L.line([(17, 2), (14, 6), (17, 6), (14, 10)], (180, 245, 255, 255), 1)
+    fx.ell(6, 1, 18, 13, (90, 220, 255, 60))
+    return [fx, L]
+
+
+def _icon_acc_aethelgard():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    # Sello hexagonal de piedra y oro
+    L.poly([(8, 3), (16, 3), (21, 8), (21, 16), (16, 21), (8, 21), (3, 16), (3, 8)], P_PANTS[DK])
+    L.poly([(9, 5), (15, 5), (19, 9), (19, 15), (15, 19), (9, 19), (5, 15), (5, 9)], P_PANTS[MD])
+    L.line([(9, 5), (15, 5)], P_PANTS[HI])
+    # Runa central de tierra viva
+    L.rect(10, 8, 14, 16, P_GREEN[DK])
+    L.line([(12, 7), (12, 17)], P_GREEN[HI], 2)
+    L.line([(8, 12), (16, 12)], P_GREEN[LT], 1)
+    L.px(12, 12, P_GOLD[HI])
+    fx.ell(5, 5, 19, 19, (110, 220, 120, 40))
+    return [fx, L]
+
+
+def _icon_acc_valariel():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    # Alas astrales laterales
+    L.poly([(7, 10), (1, 5), (2, 11), (6, 13)], P_WHITE[LT])
+    L.poly([(17, 10), (23, 5), (22, 11), (18, 13)], P_WHITE[LT])
+    # Corazón dorado / luz astral
+    L.poly([(12, 19), (5, 12), (6, 7), (10, 6), (12, 9), (14, 6), (18, 7), (19, 12)], P_GOLD[MD])
+    L.poly([(12, 17), (7, 12), (8, 8), (11, 8), (12, 10), (13, 8), (16, 8), (17, 12)], P_HOLYORB[LT])
+    L.px(9, 9, P_WHITE[HI]); L.px(10, 10, P_WHITE[HI])
+    fx.ell(3, 3, 21, 21, (190, 240, 255, 65))
+    return [fx, L]
+
+
+def _icon_acc_silmarion():
+    L = _L(size=24)
+    fx = _L(noline=True, size=24)
+    # Corona pálida de 5 puntas
+    L.poly([
+        (3, 18), (2, 7), (7, 12),
+        (9, 5), (12, 11),
+        (15, 5), (17, 12),
+        (22, 7), (21, 18)
+    ], P_CREAM[MD])
+    L.line([(4, 18), (20, 18)], P_CREAM[DK], 2)
+    L.line([(4, 16), (20, 16)], P_CREAM[HI], 1)
+    # Gemas de brasa oscura
+    for gx, gy in ((6, 15), (12, 14), (18, 15)):
+        L.rect(gx - 1, gy - 1, gx + 1, gy + 1, P_CRIMSON[MD])
+        L.px(gx, gy, P_LAVA[HI])
+    fx.ell(1, 3, 23, 20, (255, 100, 45, 55))
+    return [fx, L]
+
 
 ICON_BUILDERS = [
     lambda: _icon_sword(0), lambda: _icon_sword(1), lambda: _icon_bow(0), lambda: _icon_staff(0),
@@ -3168,7 +3109,80 @@ ICON_BUILDERS = [
     # 34-37: armaduras de hueso y de lobo para arquero y mago (guerrero usa 29 y 33)
     lambda: _icon_armor_bone_archer(), lambda: _icon_armor_bone_mage(),
     lambda: _icon_armor_wolf_archer(), lambda: _icon_armor_wolf_mage(),
+    # 38-42: accesorios míticos pisos 11-15
+    lambda: _icon_acc_okeanos(), lambda: _icon_acc_kataida(), lambda: _icon_acc_aethelgard(),
+    lambda: _icon_acc_valariel(), lambda: _icon_acc_silmarion(),
 ]
+
+def _remove_white_bg(img, threshold=232):
+    """Quita el fondo blanco exterior y bolsas blancas cerradas sin dañar brillos pequeños."""
+    from collections import deque
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+
+    if px[0, 0][3] < 20 and px[w - 1, 0][3] < 20:
+        return img
+
+    visited = bytearray(w * h)
+    q = deque()
+
+    def is_bg(r, g, b, a):
+        return a == 0 or (r >= threshold and g >= threshold and b >= threshold and (max(r, g, b) - min(r, g, b)) < 28)
+
+    for x in range(w):
+        for y in (0, h - 1):
+            if is_bg(*px[x, y]):
+                idx = y * w + x
+                if not visited[idx]:
+                    visited[idx] = 1
+                    q.append((x, y))
+    for y in range(h):
+        for x in (0, w - 1):
+            if is_bg(*px[x, y]):
+                idx = y * w + x
+                if not visited[idx]:
+                    visited[idx] = 1
+                    q.append((x, y))
+
+    while q:
+        cx, cy = q.popleft()
+        px[cx, cy] = (0, 0, 0, 0)
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = cx + dx, cy + dy
+            if 0 <= nx < w and 0 <= ny < h:
+                idx = ny * w + nx
+                if not visited[idx] and is_bg(*px[nx, ny]):
+                    visited[idx] = 1
+                    q.append((nx, ny))
+
+    # Limpiar huecos blancos cerrados (entre piernas o dentro del arco de fuego)
+    def is_pure_white(r, g, b, a):
+        return a > 0 and r >= 242 and g >= 242 and b >= 242 and (max(r, g, b) - min(r, g, b)) <= 14
+
+    for y in range(h):
+        for x in range(w):
+            idx = y * w + x
+            if not visited[idx] and is_pure_white(*px[x, y]):
+                comp = []
+                cq = deque([(x, y)])
+                visited[idx] = 1
+                while cq:
+                    cx, cy = cq.popleft()
+                    comp.append((cx, cy))
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        nx, ny = cx + dx, cy + dy
+                        if 0 <= nx < w and 0 <= ny < h:
+                            nidx = ny * w + nx
+                            if not visited[nidx] and is_pure_white(*px[nx, ny]):
+                                visited[nidx] = 1
+                                cq.append((nx, ny))
+                if len(comp) >= 12:
+                    for cx, cy in comp:
+                        px[cx, cy] = (0, 0, 0, 0)
+    return img
+
+
 
 # ==============================================================================
 # GENERACIÓN DE ICONOS 24x24 (índices 0 a 33)
@@ -3176,7 +3190,7 @@ ICON_BUILDERS = [
 
 def generate_icons():
     # 38 iconos en total (0 a 37)
-    n = 38
+    n = 43
     icons = create_canvas(24 * n, 24)
     d = ImageDraw.Draw(icons)
 
@@ -3220,16 +3234,455 @@ def generate_icons():
     d.point((ox + 13, 9), fill=(255, 255, 200, 255))
 
     # (iconos 22 a 33: ahora se dibujan con ICON_BUILDERS, arriba)
+    
 
     icons.save(os.path.join(ASSETS_DIR, 'icons.png'))
     print(f"Creado: icons.png ({n} iconos de alta resolución 24x24)")
 
+
+# ==============================================================================
+# ENEMIGOS Y JEFES EXCLUSIVOS DE PISOS 11 AL 15
+# ==============================================================================
+
+P_ELF_SKIN   = [(235, 225, 245), (205, 190, 220), (168, 150, 188), (124, 108, 146), (82, 68, 102)]
+P_MALAKOR_AR = [(115, 98, 118), (82, 68, 88), (54, 42, 62), (34, 24, 42), (18, 12, 26)]
+
+def draw_specter_frame(direction, anim_frame, is_attack=False):
+    dr = 1 if direction == 2 else direction
+    hover = -2 if anim_frame in (1, 2) else 0
+    sway = 2 if anim_frame in (1, 3) else -1
+    layers = []
+    V, N = P_VOID, P_NIGHTROBE
+
+    # 1. Túnica flotante desgarrada (sin piernas)
+    L = _L()
+    if dr in (0, 3):
+        L.poly([
+            (18, 19 + hover), (29, 19 + hover),
+            (34 + sway, 37 + hover), (29, 34 + hover),
+            (25, 40 + hover), (21, 35 + hover),
+            (15 + sway, 38 + hover)
+        ], N[MD])
+        L.line([(18, 19 + hover), (15 + sway, 38 + hover)], N[LT])
+        L.line([(29, 19 + hover), (34 + sway, 37 + hover)], N[DK])
+        L.line([(23, 24 + hover), (24, 37 + hover)], V[DK])
+    else:
+        L.poly([
+            (18, 19 + hover), (29, 19 + hover),
+            (35 + sway, 38 + hover), (27, 35 + hover),
+            (22, 40 + hover), (17, 34 + hover)
+        ], N[MD])
+        L.line([(18, 19 + hover), (17, 34 + hover)], N[LT])
+    layers.append(L)
+
+    # 2. Capucha abisal y rostro en penumbra
+    L = _L()
+    if dr == 0:
+        _ball(L, 16, 7 + hover, 31, 21 + hover, N)
+        L.ell(19, 11 + hover, 28, 20 + hover, (14, 8, 22, 255))
+        L.px(21, 15 + hover, (240, 110, 255, 255))
+        L.px(26, 15 + hover, (240, 110, 255, 255))
+        L.px(21, 14 + hover, (255, 230, 255, 255))
+        L.px(26, 14 + hover, (255, 230, 255, 255))
+    elif dr == 3:
+        _ball(L, 16, 7 + hover, 31, 21 + hover, _dn(N))
+        L.poly([(20, 11 + hover), (24, 4 + hover), (28, 11 + hover)], N[DK])
+    else:
+        _ball(L, 17, 7 + hover, 30, 21 + hover, N)
+        L.ell(18, 11 + hover, 23, 19 + hover, (14, 8, 22, 255))
+        L.px(19, 15 + hover, (240, 110, 255, 255))
+        L.px(19, 14 + hover, (255, 230, 255, 255))
+    layers.append(L)
+
+    # 3. Brazos espectrales y conjuro del vacío
+    L = _L()
+    if not is_attack:
+        if dr in (0, 3):
+            L.line([(17, 22 + hover), (11, 29 + hover)], V[DK], 3)
+            L.line([(30, 22 + hover), (36, 29 + hover)], V[DK], 3)
+            L.px(10, 30 + hover, V[HI]); L.px(37, 30 + hover, V[HI])
+        else:
+            L.line([(22, 22 + hover), (12, 26 + hover)], V[MD], 3)
+            L.px(11, 26 + hover, V[HI])
+    else:
+        fx = _L(noline=True)
+        if dr in (0, 3):
+            L.line([(17, 22 + hover), (13, 27 + hover)], V[LT], 3)
+            L.line([(30, 22 + hover), (34, 27 + hover)], V[LT], 3)
+            _ball(L, 20, 25 + hover, 27, 32 + hover, V)
+            fx.ell(16, 21 + hover, 31, 36 + hover, (195, 70, 255, 110))
+        else:
+            L.line([(22, 22 + hover), (12, 23 + hover)], V[LT], 3)
+            _ball(L, 5, 20 + hover, 12, 27 + hover, V)
+            fx.ell(2, 17 + hover, 15, 30 + hover, (195, 70, 255, 110))
+        layers.append(fx)
+    layers.append(L)
+
+    img = create_canvas(48, 48)
+    _draw_shadow(ImageDraw.Draw(img), 24, 43, 10, 3)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    if direction == 2:
+        img = ImageOps.mirror(img)
+    return img
+
+
+def draw_golem_frame(direction, anim_frame, is_attack=False):
+    dr = 1 if direction == 2 else direction
+    b = 1 if (anim_frame in (1, 3) and not is_attack) else 0
+    p = _pose(is_attack, anim_frame)
+    layers = []
+    O, Lv = P_OBSID, P_LAVA
+
+    # 1. Piernas pesadas de obsidiana
+    L = _L(w=56, h=56)
+    if dr in (0, 3):
+        for x0, lift in ((17, p['ll']), (32, p['lr'])):
+            _box(L, x0, 35 + lift, x0 + 6, 47 + lift, O)
+            L.rect(x0 - 1, 45 + lift, x0 + 7, 49 + lift, O[DP])
+    else:
+        s = p['s']
+        for off, pal in ((-s, _dn(O)), (s, O)):
+            _box(L, 23 + off, 35, 32 + off, 48, pal)
+    layers.append(L)
+
+    # 2. Torso macizo con grietas de magma
+    L = _L(w=56, h=56)
+    if dr == 0:
+        _box(L, 15, 16 + b, 40, 36 + b, O)
+        L.poly([(19, 20 + b), (27, 26 + b), (36, 21 + b), (28, 32 + b)], Lv[MD])
+        L.line([(23, 24 + b), (31, 28 + b)], Lv[HI], 2)
+    elif dr == 3:
+        _box(L, 15, 16 + b, 40, 36 + b, _dn(O))
+        L.line([(21, 21 + b), (27, 30 + b), (34, 22 + b)], Lv[DK], 2)
+    else:
+        _box(L, 18, 16 + b, 37, 36 + b, O)
+        L.line([(21, 22 + b), (27, 29 + b)], Lv[MD], 2)
+    layers.append(L)
+
+    # 3. Cabeza hundida en roca y visor ardiente
+    L = _L(w=56, h=56)
+    if dr == 0:
+        _box(L, 21, 10 + b, 34, 19 + b, O)
+        L.rect(23, 14 + b, 32, 16 + b, Lv[MD])
+        L.px(25, 14 + b, Lv[HI]); L.px(30, 14 + b, Lv[HI])
+    elif dr == 3:
+        _box(L, 21, 10 + b, 34, 19 + b, _dn(O))
+    else:
+        _box(L, 19, 10 + b, 32, 19 + b, O)
+        L.rect(19, 14 + b, 24, 16 + b, Lv[MD])
+        L.px(20, 14 + b, Lv[HI])
+    layers.append(L)
+
+    # 4. Hombreras gigantes y puños sísmicos
+    L = _L(w=56, h=56)
+    _ball(L, 10, 13 + b, 19, 24 + b, O)
+    _ball(L, 36, 13 + b, 45, 24 + b, O)
+    L.px(13, 16 + b, Lv[LT]); L.px(40, 16 + b, Lv[LT])
+
+    if not is_attack:
+        if dr in (0, 3):
+            _box(L, 9, 23 + b, 16, 37 + b, O)
+            _box(L, 39, 23 + b, 46, 37 + b, O)
+        else:
+            _box(L, 21, 22 + b, 30, 38 + b, O)
+    else:
+        atk = anim_frame
+        dy_p = -6 if atk == 0 else 7
+        if dr in (0, 3):
+            _box(L, 8, 25 + dy_p, 17, 39 + dy_p, O)
+            _box(L, 38, 25 + dy_p, 47, 39 + dy_p, O)
+        else:
+            _box(L, 14, 24 + dy_p, 25, 39 + dy_p, O)
+        if atk == 1:
+            fx = _L(noline=True, w=56, h=56)
+            fx.ell(10, 40, 46, 52, (255, 110, 30, 150))
+            fx.ell(15, 42, 41, 50, (255, 220, 100, 200))
+            layers.append(fx)
+    layers.append(L)
+
+    img = create_canvas(56, 56)
+    _draw_shadow(ImageDraw.Draw(img), 28, 49, 17, 6)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    if direction == 2:
+        img = ImageOps.mirror(img)
+    return img
+
+
+def draw_void_elf_frame(direction, anim_frame, is_attack=False):
+    dr = 1 if direction == 2 else direction
+    b = -1 if (anim_frame in (1, 3) and not is_attack) else 0
+    p = _pose(is_attack, anim_frame)
+    layers = []
+    Sk, Ng, V, W = P_ELF_SKIN, P_NIGHT, P_VOID, P_WHITE
+
+    # 1. Capa nocturna
+    L = _L()
+    if dr == 3:
+        L.poly([(17, 21 + b), (30, 21 + b), (33, 36), (14, 36)], Ng[MD])
+        L.line([(17, 21 + b), (14, 36)], V[DK])
+    elif dr == 1:
+        L.poly([(25, 21 + b), (31, 24 + b), (33, 36), (26, 35)], Ng[MD])
+    layers.append(L)
+
+    layers.append(_legs(dr, p, P_BLACKLEATHER, Ng))
+
+    # 2. Jubón del vacío
+    L = _L()
+    if dr == 0:
+        _box(L, 19, 21 + b, 28, 30 + b, Ng)
+        L.line([(20, 22 + b), (27, 29 + b)], V[MD], 1)
+    elif dr == 3:
+        _box(L, 19, 21 + b, 28, 30 + b, _dn(Ng))
+    else:
+        _box(L, 20, 21 + b, 28, 30 + b, Ng)
+        L.px(21, 24 + b, V[LT])
+    layers.append(L)
+
+    # 3. Cabeza, cabello plateado y orejas puntiagudas élficas
+    L = _L()
+    if dr == 0:
+        L.poly([(17, 13 + b), (11, 10 + b), (17, 16 + b)], Sk[MD])
+        L.poly([(30, 13 + b), (36, 10 + b), (30, 16 + b)], Sk[MD])
+        _ball(L, 18, 9 + b, 29, 20 + b, Sk)
+        L.poly([(18, 12 + b), (20, 7 + b), (27, 7 + b), (29, 12 + b)], W[LT])
+        L.rect(21, 15 + b, 21, 16 + b, (120, 255, 160, 255))
+        L.rect(26, 15 + b, 26, 16 + b, (120, 255, 160, 255))
+    elif dr == 3:
+        L.poly([(17, 13 + b), (11, 10 + b), (17, 16 + b)], Sk[DK])
+        L.poly([(30, 13 + b), (36, 10 + b), (30, 16 + b)], Sk[DK])
+        _ball(L, 18, 8 + b, 29, 20 + b, W)
+        L.poly([(20, 18 + b), (24, 27 + b), (28, 18 + b)], W[MD])
+    else:
+        L.poly([(25, 13 + b), (33, 9 + b), (27, 16 + b)], Sk[MD])
+        _ball(L, 18, 9 + b, 29, 20 + b, Sk)
+        L.poly([(21, 9 + b), (28, 9 + b), (30, 22 + b), (24, 21 + b)], W[LT])
+        L.px(19, 15 + b, (120, 255, 160, 255))
+    layers.append(L)
+
+    # 4. Arco del vacío
+    L = _L()
+    bfx = _L(noline=True)
+    ai = anim_frame if is_attack else None
+    _bow(L, dr, ai if ai is None else min(2, ai), look=3, fx=bfx)
+    layers.append(L)
+    layers.append(bfx)
+
+    img = create_canvas(48, 48)
+    _draw_shadow(ImageDraw.Draw(img), 24, 41, 10, 4)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    if direction == 2:
+        img = ImageOps.mirror(img)
+    return img
+
+
+
+
+
+    layers = []
+    O, Gd, Lv, Cr, V = P_OBSID, P_GOLD, P_LAVA, P_CRIMSON, P_VOID
+    cx, cy = 48, 52
+    hover = -3 if frame_idx in (1, 2) else 0
+
+    # 1. Alas de fuego sombrío en Fase 2
+    if phase == 2:
+        wfx = _L(noline=True, w=96, h=96)
+        flap = (frame_idx % 2) * 5
+        for sg in (-1, 1):
+            wfx.poly([
+                (cx + sg * 12, cy - 10 + hover),
+                (cx + sg * 42, cy - 34 + flap + hover),
+                (cx + sg * 36, cy - 6 + hover),
+                (cx + sg * 40, cy + 14 + hover),
+                (cx + sg * 16, cy + 6 + hover)
+            ], (170, 35, 220, 130))
+            wfx.line([(cx + sg * 14, cy - 8 + hover), (cx + sg * 40, cy - 30 + flap + hover)], (255, 140, 40, 220), 3)
+        layers.append(wfx)
+
+    # 2. Manto regio oscuro flotante
+    L = _L(w=96, h=96)
+    L.poly([
+        (cx - 22, cy - 12 + hover), (cx + 22, cy - 12 + hover),
+        (cx + 30, cy + 36 + hover), (cx + 12, cy + 28 + hover),
+        (cx, cy + 38 + hover), (cx - 12, cy + 28 + hover),
+        (cx - 30, cy + 36 + hover)
+    ], O[DP])
+    L.line([(cx - 22, cy - 12 + hover), (cx - 30, cy + 36 + hover)], Cr[MD], 2)
+    L.line([(cx + 22, cy - 12 + hover), (cx + 30, cy + 36 + hover)], Cr[MD], 2)
+    layers.append(L)
+
+    # 3. Coraza solar ennegrecida
+    L = _L(w=96, h=96)
+    _box(L, cx - 18, cy - 14 + hover, cx + 18, cy + 16 + hover, O)
+    L.line([(cx - 16, cy - 12 + hover), (cx + 16, cy - 12 + hover)], Gd[DK], 2)
+    if phase == 1:
+        _ball(L, cx - 6, cy - 7 + hover, cx + 6, cy + 5 + hover, V)
+    else:
+        _ball(L, cx - 8, cy - 9 + hover, cx + 8, cy + 7 + hover, Lv)
+    # Hombreras solares
+    _ball(L, cx - 28, cy - 18 + hover, cx - 15, cy - 4 + hover, O)
+    _ball(L, cx + 15, cy - 18 + hover, cx + 28, cy - 4 + hover, O)
+    L.px(cx - 22, cy - 14 + hover, Gd[MD]); L.px(cx + 21, cy - 14 + hover, Gd[MD])
+    layers.append(L)
+
+    # 4. Cabeza, ojos de brasa y Corona Pálida
+    L = _L(w=96, h=96)
+    hy = cy - 32 + hover
+    _ball(L, cx - 12, hy, cx + 12, hy + 20, O)
+    L.rect(cx - 8, hy + 8, cx + 8, hy + 13, (14, 6, 18, 255))
+    eye_col = Lv[HI] if phase == 2 else (255, 95, 45, 255)
+    L.rect(cx - 6, hy + 9, cx - 3, hy + 11, eye_col)
+    L.rect(cx + 3, hy + 9, cx + 6, hy + 11, eye_col)
+
+    # Corona Pálida flotante
+    crown = P_WHITE if phase == 1 else P_GOLD
+    L.poly([(cx - 12, hy - 2), (cx - 14, hy - 14), (cx - 6, hy - 6),
+            (cx, hy - 18), (cx + 6, hy - 6), (cx + 14, hy - 14), (cx + 12, hy - 2)], crown[LT])
+    L.line([(cx - 11, hy - 2), (cx + 11, hy - 2)], crown[HI], 2)
+    layers.append(L)
+
+    # 5. Brazos y llamas sombrías
+    L = _L(w=96, h=96)
+    lift = -8 if is_attack else 0
+    _box(L, cx - 28, cy - 5 + hover + lift, cx - 19, cy + 13 + hover + lift, O)
+    _box(L, cx + 19, cy - 5 + hover + lift, cx + 28, cy + 13 + hover + lift, O)
+    orb_pal = Lv if phase == 2 else V
+    _ball(L, cx - 31, cy + 11 + hover + lift, cx - 21, cy + 21 + hover + lift, orb_pal)
+    _ball(L, cx + 21, cy + 11 + hover + lift, cx + 31, cy + 21 + hover + lift, orb_pal)
+    layers.append(L)
+
+    # 6. Aura de sol oscuro en ataque
+    if is_attack:
+        fx = _L(noline=True, w=96, h=96)
+        col = (255, 110, 40, 110) if phase == 2 else (175, 60, 255, 110)
+        fx.ell(cx - 34, cy - 34 + hover, cx + 34, cy + 34 + hover, col)
+        layers.append(fx)
+
+    img = create_canvas(96, 96)
+    _draw_shadow(ImageDraw.Draw(img), cx, cy + 37, 26, 8)
+    for lay in layers:
+        img.alpha_composite(lay.im if lay.noline else _outline(lay.im))
+    return img
     
 # ==============================================================================
 # BUCLE PRINCIPAL DE CONSTRUCCIÓN
 # ==============================================================================
 
 def build_all_spritesheets():
+    print("Generando spritesheets...")
+
+    # 1. Jugadores: 25 combinaciones (5 armas x 5 armaduras) por clase
+    # 0: Común | 1: Hueso | 2: Lobo | 3: Oscura | 4: Legendaria
+    classes = [
+        ('warrior', draw_warrior_frame),
+        ('archer', draw_archer_frame),
+        ('mage', draw_mage_frame),
+    ]
+    for cls, drawer in classes:
+        for wl in range(5):        # 5 armas (0 a 4)
+            for ak in range(5):    # 5 armaduras (0 a 4)
+                sheet = create_canvas(48 * 7, 48 * 4)
+                for direction in range(4):
+                    for frame in range(4):
+                        f_img = drawer(direction, frame, is_attack=False, wl=wl, ak=ak)
+                        sheet.paste(f_img, (frame * 48, direction * 48))
+                    for atk in range(3):
+                        f_img = drawer(direction, atk, is_attack=True, wl=wl, ak=ak)
+                        sheet.paste(f_img, ((4 + atk) * 48, direction * 48))
+                sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}_w{wl}_a{ak}.png'))
+                if wl == 0 and ak == 0:
+                    sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}.png'))
+        print(f"Creado: player_{cls}_w*_a*.png (25 combinaciones)")
+
+    # 2. Enemigos comunes 48x48
+    enemies_48 = [
+        ('enemy_bandit.png', draw_bandit_frame),
+        ('enemy_skeleton.png', draw_skeleton_frame),
+        ('enemy_rat.png', draw_rat_frame),
+    ]
+    for filename, drawer in enemies_48:
+        sheet = create_canvas(48 * 6, 48 * 4)
+        for direction in range(4):
+            for frame in range(4):
+                f_img = drawer(direction, frame, is_attack=False)
+                sheet.paste(f_img, (frame * 48, direction * 48))
+            for atk in range(2):
+                f_img = drawer(direction, atk, is_attack=True)
+                sheet.paste(f_img, ((4 + atk) * 48, direction * 48))
+        sheet.save(os.path.join(ASSETS_DIR, filename))
+        print(f"Creado: {filename}")
+
+    # 3. Araña 48x48
+    spider_sheet = create_canvas(48 * 4, 48 * 4)
+    for direction in range(4):
+        for frame in range(4):
+            f_img = draw_spider_frame(direction, frame)
+            spider_sheet.paste(f_img, (frame * 48, direction * 48))
+    spider_sheet.save(os.path.join(ASSETS_DIR, 'enemy_spider.png'))
+    print("Creado: enemy_spider.png")
+
+    # 4. Enemigos Grandes 56x56
+    enemies_56 = [
+        ('enemy_werewolf.png', draw_werewolf_frame),
+        ('enemy_demon.png', draw_demon_frame),
+    ]
+    for filename, drawer in enemies_56:
+        sheet = create_canvas(56 * 6, 56 * 4)
+        for direction in range(4):
+            for frame in range(4):
+                f_img = drawer(direction, frame, is_attack=False)
+                sheet.paste(f_img, (frame * 56, direction * 56))
+            for atk in range(2):
+                f_img = drawer(direction, atk, is_attack=True)
+                sheet.paste(f_img, ((4 + atk) * 56, direction * 56))
+        sheet.save(os.path.join(ASSETS_DIR, filename))
+        print(f"Creado: {filename}")
+
+    # 5. Jefes desde bosses_reference.png
+    ref_path = os.path.join(os.path.dirname(__file__), 'bosses_reference.png')
+    if os.path.exists(ref_path):
+        print("Procesando jefes desde bosses_reference.png con calidad profesional...")
+        ref_img = Image.open(ref_path).convert("RGBA")
+        rw, rh = ref_img.size
+        cell_w = rw // 4
+        cell_h = rh // 4
+
+        abra_sheet = create_canvas(72 * 4, 72 * 4)
+        for fila_origen, row_dest in [(0, 0), (0, 1), (1, 2), (1, 3)]:
+            for col in range(4):
+                box = (col * cell_w, fila_origen * cell_h, (col + 1) * cell_w, (fila_origen + 1) * cell_h)
+                frame = ref_img.crop(box).resize((72, 72), Image.Resampling.NEAREST)
+                abra_sheet.paste(frame, (col * 72, row_dest * 72))
+        abra_sheet.save(os.path.join(ASSETS_DIR, 'boss_abracadabra.png'))
+        print("Creado: boss_abracadabra.png (Calidad HD Pixel Art)")
+
+        hong_sheet = create_canvas(96 * 4, 96 * 2)
+        for col in range(4):
+            box = (col * cell_w, 2 * cell_h, (col + 1) * cell_w, 3 * cell_h)
+            frame = ref_img.crop(box).resize((96, 96), Image.Resampling.NEAREST)
+            hong_sheet.paste(frame, (col * 96, 0))
+            hong_sheet.paste(frame, (col * 96, 96))
+        hong_sheet.save(os.path.join(ASSETS_DIR, 'boss_hong.png'))
+        print("Creado: boss_hong.png (Calidad HD Pixel Art)")
+
+        lucian_sheet = create_canvas(72 * 4, 72 * 4)
+        for row_dest in range(4):
+            for col in range(4):
+                box = (col * cell_w, 3 * cell_h, (col + 1) * cell_w, 4 * cell_h)
+                frame = ref_img.crop(box).resize((72, 72), Image.Resampling.NEAREST)
+                lucian_sheet.paste(frame, (col * 72, row_dest * 72))
+        lucian_sheet.save(os.path.join(ASSETS_DIR, 'boss_lucian.png'))
+        print("Creado: boss_lucian.png (Calidad HD Pixel Art)")
+    else:
+        print(f"ADVERTENCIA: No se encontró {ref_path}. Coloca bosses_reference.png en la raíz.")
+
+    # 6. Tilesets, Utilería e Iconos
+    generate_tiles()
+    generate_props()
+    generate_icons()
+    print("Generación completada con éxito.")
     print("Generando spritesheets...")
     
     # 1. Jugadores: 25 combinaciones (5 armas x 5 armaduras) por clase
@@ -3298,6 +3751,60 @@ def build_all_spritesheets():
                 sheet.paste(f_img, ((4 + atk) * 56, direction * 56))
         sheet.save(os.path.join(ASSETS_DIR, filename))
         print(f"Creado: {filename}")
+
+
+
+        # 4B. Enemigos Exclusivos Pisos 11-14
+    for filename, drawer in [('enemy_specter.png', draw_specter_frame), ('enemy_void_elf.png', draw_void_elf_frame)]:
+        sheet = create_canvas(48 * 6, 48 * 4)
+        for direction in range(4):
+            for frame in range(4):
+                sheet.paste(drawer(direction, frame, is_attack=False), (frame * 48, direction * 48))
+            for atk in range(2):
+                sheet.paste(drawer(direction, atk, is_attack=True), ((4 + atk) * 48, direction * 48))
+        sheet.save(os.path.join(ASSETS_DIR, filename))
+        print(f"Creado: {filename}")
+
+    golem_sheet = create_canvas(56 * 6, 56 * 4)
+    for direction in range(4):
+        for frame in range(4):
+            golem_sheet.paste(draw_golem_frame(direction, frame, is_attack=False), (frame * 56, direction * 56))
+        for atk in range(2):
+            golem_sheet.paste(draw_golem_frame(direction, atk, is_attack=True), ((4 + atk) * 56, direction * 56))
+    golem_sheet.save(os.path.join(ASSETS_DIR, 'enemy_golem.png'))
+    print("Creado: enemy_golem.png")
+
+    # 5B. Jefes Exclusivos Pisos 13 y 15
+    malakor_ref = os.path.join(os.path.dirname(__file__), 'malakor_reference.png')
+    if os.path.exists(malakor_ref):
+        print("Procesando Malakor desde malakor_reference.png...")
+        m_img = _remove_white_bg(Image.open(malakor_ref))
+        mw, mh = m_img.size
+        mcw, mch = mw // 4, mh // 4
+        malakor_sheet = create_canvas(96 * 4, 96 * 4)
+        for row_idx in range(4):
+            for col_idx in range(4):
+                box = (col_idx * mcw, row_idx * mch, (col_idx + 1) * mcw, (row_idx + 1) * mch)
+                frame = m_img.crop(box).resize((96, 96), Image.Resampling.NEAREST)
+                malakor_sheet.paste(frame, (col_idx * 96, row_idx * 96))
+        malakor_sheet.save(os.path.join(ASSETS_DIR, 'boss_malakor.png'))
+        print("Creado: boss_malakor.png (Desde referencia HD)")
+  
+
+    silmarion_ref = os.path.join(os.path.dirname(__file__), 'silmarion_reference.png')
+    if os.path.exists(silmarion_ref):
+        print("Procesando Silmarion desde silmarion_reference.png...")
+        s_img = _remove_white_bg(Image.open(silmarion_ref))
+        sw, sh = s_img.size
+        scw, sch = sw // 4, sh // 4
+        silmarion_sheet = create_canvas(96 * 4, 96 * 4)
+        for row_idx in range(4):
+            for col_idx in range(4):
+                box = (col_idx * scw, row_idx * sch, (col_idx + 1) * scw, (row_idx + 1) * sch)
+                frame = s_img.crop(box).resize((96, 96), Image.Resampling.NEAREST)
+                silmarion_sheet.paste(frame, (col_idx * 96, row_idx * 96))
+        silmarion_sheet.save(os.path.join(ASSETS_DIR, 'boss_silmarion.png'))
+        print("Creado: boss_silmarion.png (Desde referencia HD)")
         
     # ==============================================================================
     # JEFES: EXTRAER Y EXPORTAR DIRECTAMENTE DEL SPRITESHEET DE ALTA CALIDAD

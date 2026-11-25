@@ -92,11 +92,11 @@ const ITEM_DATABASE = {
     // =========================================================================
     // ACCESORIOS MÍTICOS (PISOS 11 AL 15)
     // =========================================================================
-    acc_okeanos: { id: 'acc_okeanos', name: 'Amuleto de las Mareas de Okeanos', type: 'accessory', rarity: 'EPIC', icon: 5, mag: 8, def: 6, value: 300, desc: 'Reliquia del Eonari del agua y el tiempo. Otorga +8 de Magia.' },
-    acc_kataida: { id: 'acc_kataida', name: 'Anillo de la Tormenta de Kataida', type: 'accessory', rarity: 'EPIC', icon: 12, dex: 8, atk: 10, value: 320, desc: 'Forjado con rayos de Kataida. Otorga +10 de Ataque y +8% Crítico.' },
-    acc_aethelgard: { id: 'acc_aethelgard', name: 'Sello de Piedra de Aethelgard', type: 'accessory', rarity: 'EPIC', icon: 4, con: 12, def: 14, value: 320, desc: 'La bendición de la Tierra Inmutable. Aumenta Constitución y Defensa.' },
-    acc_valariel: { id: 'acc_valariel', name: 'Corazón de Luz Astral de Valariel', type: 'accessory', rarity: 'LEGENDARY', icon: 14, str: 8, dex: 8, mag: 8, con: 8, value: 500, desc: 'La reliquia más pura de la Esperanza. Si tu vida llega a 0, revives al instante.' },
-    acc_silmarion: { id: 'acc_silmarion', name: 'Corona Pálida de Silmarion', type: 'accessory', rarity: 'LEGENDARY', icon: 25, atk: 25, def: 18, str: 12, mag: 12, value: 1000, desc: 'La corona del Portador de Soles Caído. Duplica el daño de todas tus habilidades.' }
+    acc_okeanos: { id: 'acc_okeanos', name: 'Amuleto de las Mareas de Okeanos', type: 'accessory', rarity: 'EPIC', icon: 38, mag: 8, def: 6, value: 300, desc: 'Reliquia del Eonari del agua y el tiempo. Otorga +8 de Magia.' },
+    acc_kataida: { id: 'acc_kataida', name: 'Anillo de la Tormenta de Kataida', type: 'accessory', rarity: 'EPIC', icon: 39, dex: 8, atk: 10, value: 320, desc: 'Forjado con rayos de Kataida. Otorga +10 de Ataque y +8% Crítico.' },
+    acc_aethelgard: { id: 'acc_aethelgard', name: 'Sello de Piedra de Aethelgard', type: 'accessory', rarity: 'EPIC', icon: 40, con: 12, def: 14, value: 320, desc: 'La bendición de la Tierra Inmutable. Aumenta Constitución y Defensa.' },
+    acc_valariel: { id: 'acc_valariel', name: 'Corazón de Luz Astral de Valariel', type: 'accessory', rarity: 'LEGENDARY', icon: 41, str: 8, dex: 8, mag: 8, con: 8, value: 500, desc: 'La reliquia más pura de la Esperanza. Si tu vida llega a 0, revives al instante.' },
+    acc_silmarion: { id: 'acc_silmarion', name: 'Corona Pálida de Silmarion', type: 'accessory', rarity: 'LEGENDARY', icon: 42, atk: 25, def: 18, str: 12, mag: 12, value: 1000, desc: 'La corona del Portador de Soles Caído. Duplica el daño de todas tus habilidades.' }
 };
 
 // =============================================================================

@@ -28,7 +28,13 @@ class SpriteManager {
             tiles_acid: '/static/assets/sprites/tileset_acid.png?v=4',
             tiles_apex: '/static/assets/sprites/tileset_apex.png?v=4',
             props: '/static/assets/sprites/props.png?v=4',
-            icons: '/static/assets/sprites/icons.png?v=7'
+            icons: '/static/assets/sprites/icons.png?v=8',
+            specter: '/static/assets/sprites/enemy_specter.png?v=1',
+            golem: '/static/assets/sprites/enemy_golem.png?v=1',
+            void_elf: '/static/assets/sprites/enemy_void_elf.png?v=1',
+            malakor: '/static/assets/sprites/boss_malakor.png?v=2',
+            silmarion: '/static/assets/sprites/boss_silmarion.png?v=2',
+            tiles_void: '/static/assets/sprites/tileset_void.png?v=1',
         };
 
         // Registrar dinámicamente las 15 variantes visuales (3 armas x 5 armaduras) de cada héroe
