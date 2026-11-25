@@ -106,6 +106,21 @@ class Projectile {
                 world.addAcidPool(this.x, this.y);
             }
         }
+        // Dentro del método update(world, particles) de Projectile:
+        if (this.type === 'homing' || this.type === 'curved_arrow') {
+            // Persiguen suavemente al jugador
+            if (window.game && window.game.player) {
+                const target = window.game.player;
+                const angleToPlayer = Math.atan2(target.y - this.y, target.x - this.x);
+                const currentAngle = Math.atan2(this.vy, this.vx);
+                const turnSpeed = this.type === 'homing' ? 0.045 : 0.025;
+                const newAngle = currentAngle + Math.sin(angleToPlayer - currentAngle) * turnSpeed;
+                const currentSpeed = Math.hypot(this.vx, this.vy);
+                this.vx = Math.cos(newAngle) * currentSpeed;
+                this.vy = Math.sin(newAngle) * currentSpeed;
+            }
+            particles.push(new Particle(this.x, this.y, 0, 0, this.type === 'homing' ? '#9b59b6' : '#2ecc71', 3, 10));
+        }
     }
 
     draw(ctx) {
@@ -470,21 +485,17 @@ class Player {
     }
 
     getWeaponLook() {
-        const nativeWeapon = { warrior: 'sword', archer: 'bow', mage: 'staff' }[this.characterClass];
         const w = this.equipment && this.equipment.weapon;
         if (!w) return 0;
-        const itemDef = window.ITEM_DATABASE[w.id] || w;
-        if (itemDef.weaponType && itemDef.weaponType !== nativeWeapon) return 0;
-        return (itemDef.look !== undefined) ? itemDef.look : 0;
+        const itemDef = (window.ITEM_DATABASE && window.ITEM_DATABASE[w.id]) || w;
+        return (itemDef.look !== undefined) ? itemDef.look : (w.look !== undefined ? w.look : 0);
     }
 
     getArmorLook() {
-        const nativeArmor = { warrior: 'plate', archer: 'leather', mage: 'robe' }[this.characterClass];
         const a = this.equipment && this.equipment.armor;
         if (!a) return 0;
-        const itemDef = window.ITEM_DATABASE[a.id] || a;
-        if (itemDef.armorType && itemDef.armorType !== nativeArmor) return 0;
-        return (itemDef.look !== undefined) ? itemDef.look : 0;
+        const itemDef = (window.ITEM_DATABASE && window.ITEM_DATABASE[a.id]) || a;
+        return (itemDef.look !== undefined) ? itemDef.look : (a.look !== undefined ? a.look : 0);
     }
 
     /**
@@ -787,6 +798,32 @@ class Enemy {
             this.expReward = 130;
             this.width = 32; this.height = 36;
             this.spriteKey = 'demon'; this.frameSize = 56;
+        }
+        else if (this.type === 'specter') {
+            this.name = 'Espectro del Vacío';
+            this.maxHp = Math.floor(210 * fMod);
+            this.atk = Math.floor(38 * fMod);
+            this.speed = 2.2;
+            this.expReward = 140;
+            this.width = 28; this.height = 32;
+            this.spriteKey = 'demon'; this.frameSize = 56;
+            this.isFlying = true; // Atraviesa obstáculos
+        } else if (this.type === 'golem') {
+            this.name = 'Coloso de Obsidiana';
+            this.maxHp = Math.floor(480 * fMod);
+            this.atk = Math.floor(52 * fMod);
+            this.speed = 1.3;
+            this.expReward = 180;
+            this.width = 38; this.height = 42;
+            this.spriteKey = 'skeleton'; this.frameSize = 48;
+        } else if (this.type === 'void_elf') {
+            this.name = 'Elfo del Vacío';
+            this.maxHp = Math.floor(190 * fMod);
+            this.atk = Math.floor(42 * fMod);
+            this.speed = 2.8;
+            this.expReward = 150;
+            this.width = 24; this.height = 28;
+            this.spriteKey = 'bandit'; this.frameSize = 48;
         }
         this.hp = this.maxHp;
     }
@@ -1154,7 +1191,239 @@ class BossHong {
         window.spriteManager.draw(ctx, 'hong', this.animFrame, row, 96, 96, Math.floor(this.x - 48), Math.floor(this.y - 58), 96, 96, false, this.flashRedTimer > 0);
     }
 }
+// =============================================================================
+// SUB-JEFE PISO 13: MALAKOR, EL PRIMERGÉNITO (LUGARTENIENTE DE SILMARION)
+// =============================================================================
+class BossMalakor {
+    constructor(x, y) {
+        this.name = 'Malakor, El Primogénito';
+        this.x = x; this.y = y;
+        this.maxHp = 6200;
+        this.hp = 6200;
+        this.atk = 75;
+        this.width = 46; this.height = 54;
+        this.state = 'stalk';
+        this.stateTimer = 0;
+        this.animFrame = 0;
+        this.activated = false;
+        this.slowTimer = 0;
+        this.flashRedTimer = 0;
+    }
 
+    update(player, world, projectiles, particles, floatingTexts) {
+        if (this.flashRedTimer > 0) this.flashRedTimer--;
+        if (this.slowTimer > 0) this.slowTimer--;
+
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        if (!this.activated) {
+            if (player.y < 16 * world.tileSize || dist < 260) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.startBgm(true);
+            } else return;
+        }
+
+        this.stateTimer++;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+
+        // Fase 2: Al 35% de vida se desata duplicando su agilidad
+        const isEnraged = (this.hp / this.maxHp) < 0.35;
+        const baseSpeed = isEnraged ? 2.5 : 1.7;
+
+        if (this.state === 'stalk') {
+            this.x += Math.cos(angle) * baseSpeed;
+            this.y += Math.sin(angle) * baseSpeed;
+            if (this.stateTimer % 8 === 0) this.animFrame = (this.animFrame + 1) % 4;
+
+            if (this.stateTimer > 90) {
+                this.stateTimer = 0;
+                const roll = Math.random();
+                if (roll < 0.40) {
+                    // ARTIMAÑA 1: Teleport a la espalda con señuelo explosivo
+                    this.state = 'clone_teleport';
+                } else if (roll < 0.75) {
+                    // ARTIMAÑA 2: Cuchillas de magma sombrío
+                    this.state = 'magma_slash';
+                } else {
+                    // ARTIMAÑA 3: Cadenas subterráneas
+                    this.state = 'chains';
+                }
+            }
+        } else if (this.state === 'clone_teleport') {
+            // Deja humo y se teleporta detrás del jugador
+            if (this.stateTimer === 10) {
+                for (let i = 0; i < 14; i++) {
+                    particles.push(new Particle(this.x, this.y, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 4, '#2c3e50', 5, 25));
+                }
+                const behindAngle = Math.atan2(player.y - this.y, player.x - this.x);
+                this.x = player.x - Math.cos(behindAngle) * 45;
+                this.y = player.y - Math.sin(behindAngle) * 45;
+                window.soundEngine.playSwordSlash();
+                player.takeDamage(this.atk + 15, this.x, this.y);
+            }
+            if (this.stateTimer > 35) { this.state = 'stalk'; this.stateTimer = 0; }
+        } else if (this.state === 'magma_slash') {
+            if (this.stateTimer === 15) {
+                window.soundEngine.playSwordSlash();
+                [-0.3, 0, 0.3].forEach(offset => {
+                    const a = angle + offset;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 6.0, Math.sin(a) * 6.0, 'slash', this.atk + 20, 'enemy'));
+                });
+            }
+            if (this.stateTimer > 40) { this.state = 'stalk'; this.stateTimer = 0; }
+        } else if (this.state === 'chains') {
+            if (this.stateTimer === 15) {
+                // Inmoviliza al jugador con cadenas oscuras
+                player.takeDamage(this.atk - 10, this.x, this.y);
+                player.slowTimer = 90; // Ralentizado severo
+                for (let i = 0; i < 20; i++) {
+                    particles.push(new Particle(player.x, player.y, (Math.random() - 0.5) * 3, -1, '#e74c3c', 4, 20));
+                }
+            }
+            if (this.stateTimer > 45) { this.state = 'stalk'; this.stateTimer = 0; }
+        }
+    }
+
+    takeDamage(damage, sourceX, sourceY) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.flashRedTimer = 6;
+        window.soundEngine.playHit();
+        return this.hp <= 0;
+    }
+
+    draw(ctx) {
+        // Dibuja a Malakor usando su silueta de espadachín de fuego sombrío
+        const dx = Math.floor(this.x - 24);
+        const dy = Math.floor(this.y - 32);
+        window.spriteManager.draw(ctx, 'bandit', this.animFrame, 0, 48, 48, dx, dy, 48, 54, false, this.flashRedTimer > 0);
+
+        // Aura de fuego negro y brasas
+        ctx.save();
+        ctx.fillStyle = 'rgba(231, 76, 60, 0.3)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// =============================================================================
+// JEFE FINAL ABSOLUTO PISO 15: SILMARION, EL SEÑOR OSCURO (2 FASES)
+// =============================================================================
+class BossSilmarion {
+    constructor(x, y) {
+        this.name = 'Silmarion, El Señor Oscuro';
+        this.x = x; this.y = y;
+        this.maxHp = 10500;
+        this.hp = 10500;
+        this.atk = 110;
+        this.width = 64; this.height = 70;
+        this.state = 'idle';
+        this.stateTimer = 0;
+        this.animFrame = 0;
+        this.activated = false;
+        this.phase = 1;
+        this.flashRedTimer = 0;
+    }
+
+    update(player, world, projectiles, particles) {
+        if (this.flashRedTimer > 0) this.flashRedTimer--;
+
+        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+
+        if (!this.activated) {
+            if (player.y < 16 * world.tileSize || dist < 280) {
+                this.activated = true;
+                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.startBgm(true);
+            } else return;
+        }
+
+        this.stateTimer++;
+        const angle = Math.atan2(player.y - this.y, player.x - this.x);
+
+        // TRANSICIÓN A FASE 2: ESENCIA INDESTRUCTIBLE DESATADA
+        if (this.phase === 1 && (this.hp / this.maxHp) <= 0.45) {
+            this.phase = 2;
+            this.state = 'storm';
+            this.stateTimer = 0;
+            window.soundEngine.playBossRoar();
+        }
+
+        if (this.phase === 1) {
+            // FASE 1: El Portador de Soles Caído
+            if (this.state === 'idle') {
+                this.x += Math.cos(angle) * 1.6;
+                this.y += Math.sin(angle) * 1.6;
+                if (this.stateTimer > 100) {
+                    this.stateTimer = 0;
+                    this.state = Math.random() < 0.5 ? 'shadow_sun' : 'solar_cleave';
+                }
+            } else if (this.state === 'shadow_sun') {
+                // Dispara un sol oscuro giratorio de 8 llamas
+                if (this.stateTimer === 20) {
+                    for (let i = 0; i < 8; i++) {
+                        const a = (i * Math.PI * 2) / 8;
+                        projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 4.2, Math.sin(a) * 4.2, 'void', this.atk + 25, 'enemy'));
+                    }
+                }
+                if (this.stateTimer > 50) { this.state = 'idle'; this.stateTimer = 0; }
+            } else if (this.state === 'solar_cleave') {
+                if (this.stateTimer === 25) {
+                    window.soundEngine.playSwordSlash();
+                    if (dist < 90) player.takeDamage(this.atk + 35, this.x, this.y);
+                }
+                if (this.stateTimer > 55) { this.state = 'idle'; this.stateTimer = 0; }
+            }
+        } else {
+            // FASE 2: Tormenta Primordial del Núcleo
+            if (this.state === 'storm' || this.stateTimer % 60 === 0) {
+                // Lluvia de meteoros sombríos alrededor del jugador
+                for (let i = 0; i < 4; i++) {
+                    const rx = player.x + (Math.random() - 0.5) * 120;
+                    const ry = player.y + (Math.random() - 0.5) * 120;
+                    projectiles.push(new Projectile(rx, ry - 180, 0, 5.5, 'void', this.atk + 30, 'enemy'));
+                }
+            }
+
+            this.x += Math.cos(angle) * 2.4;
+            this.y += Math.sin(angle) * 2.4;
+
+            if (this.stateTimer % 80 === 0) {
+                // Rayo expansivo en 360°
+                for (let i = 0; i < 12; i++) {
+                    const a = (i * Math.PI * 2) / 12;
+                    projectiles.push(new Projectile(this.x, this.y, Math.cos(a) * 5.0, Math.sin(a) * 5.0, 'slash', this.atk + 20, 'enemy'));
+                }
+            }
+        }
+    }
+
+    takeDamage(damage, sourceX, sourceY) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.flashRedTimer = 6;
+        window.soundEngine.playHit();
+        return this.hp <= 0;
+    }
+
+    draw(ctx) {
+        const dx = Math.floor(this.x - 48);
+        const dy = Math.floor(this.y - 54);
+        window.spriteManager.draw(ctx, 'hong', this.animFrame, 0, 96, 96, dx, dy, 96, 96, false, this.flashRedTimer > 0);
+
+        // Corona pálida y fuego solar oscuro sobre su cabeza
+        ctx.save();
+        ctx.fillStyle = '#f1c40f';
+        ctx.font = '8px "Press Start 2P"';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.phase === 1 ? '👑 SILMARION' : '🔥 ESENCIA DESATADA', this.x, this.y - 45);
+        ctx.restore();
+    }
+}
+
+window.BossMalakor = BossMalakor;
+window.BossSilmarion = BossSilmarion;
 window.Player = Player;
 window.Enemy = Enemy;
 window.BossAbracadabra = BossAbracadabra;

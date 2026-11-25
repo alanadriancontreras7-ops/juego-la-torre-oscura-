@@ -1,5 +1,5 @@
 /**
- * MOTOR PRINCIPAL DEL VIDEOJUEGO 'LA TORRE OSCURA'
+ * MOTOR PRINCIPAL DEL VIDEOJUEGO 'LA TORRE OSCURA' (PISOS 1 AL 15)
  */
 
 class DarkTowerGame {
@@ -19,6 +19,7 @@ class DarkTowerGame {
         this.state = this.STATE_TITLE;
 
         this.player = null;
+        this.companion = null;
         this.world = null;
         this.enemies = [];
         this.activeBoss = null;
@@ -46,26 +47,20 @@ class DarkTowerGame {
             this.mousePos.x = e.clientX - rect.left + this.camera.x;
             this.mousePos.y = e.clientY - rect.top + this.camera.y;
         });
-        // Abrir el libro de crónicas
+
         const loreBookBtn = document.getElementById('btn-lore-book');
         if (loreBookBtn) {
             loreBookBtn.addEventListener('click', () => {
-                window.soundEngine.init();
+                if (window.soundEngine) window.soundEngine.init();
                 window.uiManager.showLoreBook();
             });
         }
 
-        // Botones de pasar página dentro del libro
         const nextBtn = document.getElementById('btn-next-page');
-        if (nextBtn) {
-            nextBtn.addEventListener('click', () => window.uiManager.nextLorePage());
-        }
+        if (nextBtn) nextBtn.addEventListener('click', () => window.uiManager.nextLorePage());
 
         const prevBtn = document.getElementById('btn-prev-page');
-        if (prevBtn) {
-            prevBtn.addEventListener('click', () => window.uiManager.prevLorePage());
-        }
-
+        if (prevBtn) prevBtn.addEventListener('click', () => window.uiManager.prevLorePage());
 
         this.canvas.addEventListener('mousedown', (e) => {
             if (this.state === this.STATE_PLAYING && this.player && e.button === 0) {
@@ -74,37 +69,33 @@ class DarkTowerGame {
         });
 
         document.getElementById('btn-new-game').addEventListener('click', () => {
-            window.soundEngine.init();
+            if (window.soundEngine) window.soundEngine.init();
             document.getElementById('class-select-modal').style.display = 'flex';
         });
 
         document.getElementById('btn-load-game').addEventListener('click', () => {
-            window.soundEngine.init();
+            if (window.soundEngine) window.soundEngine.init();
             window.uiManager.showSavesModal();
         });
 
         document.getElementById('btn-hall-of-fame').addEventListener('click', () => {
-            window.soundEngine.init();
+            if (window.soundEngine) window.soundEngine.init();
             window.uiManager.showHallOfFame();
         });
 
         document.getElementById('btn-how-to-play').addEventListener('click', () => {
-            window.soundEngine.init();
+            if (window.soundEngine) window.soundEngine.init();
             document.getElementById('how-to-play-modal').style.display = 'flex';
         });
 
-
         window.spriteManager.loadAll(() => {
             window.uiManager.init();
-
-            // Comprobar si el jugador ya completó el juego antes:
             if (window.uiManager.updateBookUnlockStatus) {
                 window.uiManager.updateBookUnlockStatus();
             }
-
             this.lastTime = performance.now();
             requestAnimationFrame((time) => this.loop(time));
-        })
+        });
     }
 
     resize() {
@@ -134,6 +125,7 @@ class DarkTowerGame {
             if (e.key === 'e' || e.key === 'E' || e.key === 'Escape') {
                 window.uiManager.closeLoreModal();
                 window.uiManager.closeShopModal();
+                if (window.uiManager.closeBlacksmithModal) window.uiManager.closeBlacksmithModal();
             }
         }
     }
@@ -144,8 +136,6 @@ class DarkTowerGame {
 
     startNewGame(characterClass, companionType = 'wolf') {
         document.getElementById('title-screen').style.display = 'none';
-
-        // ¡ESTA LÍNEA DEBE ESTAR PRESENTE!
         const hud = document.getElementById('game-hud');
         if (hud) hud.style.display = 'block';
 
@@ -156,7 +146,7 @@ class DarkTowerGame {
 
         this.loadFloor(1);
         this.state = this.STATE_PLAYING;
-        window.soundEngine.startBgm(false);
+        if (window.soundEngine) window.soundEngine.startBgm(false);
     }
 
     loadFloor(floorNumber) {
@@ -170,6 +160,11 @@ class DarkTowerGame {
 
         const spawnPos = this.world.getStartingPosition();
         this.player.spawnPlayer(spawnPos.x, spawnPos.y);
+
+        if (this.companion) {
+            this.companion.x = this.player.x - 25;
+            this.companion.y = this.player.y;
+        }
 
         this.camera.x = Math.max(0, Math.min(this.world.cols * this.world.tileSize - this.camera.width, this.player.x - this.camera.width / 2));
         this.camera.y = Math.max(0, Math.min(this.world.rows * this.world.tileSize - this.camera.height, this.player.y - (this.camera.height / 2 + 35)));
@@ -185,11 +180,19 @@ class DarkTowerGame {
         } else if (floorNumber === 10) {
             this.activeBoss = new BossHong(cx, 11 * this.world.tileSize);
             this.spawnAnteRoomEnemies(10);
+        } else if (floorNumber === 13) {
+            this.activeBoss = new BossMalakor(cx, 10 * this.world.tileSize);
+            this.spawnAnteRoomEnemies(13);
+        } else if (floorNumber === 15) {
+            this.activeBoss = new BossSilmarion(cx, 9 * this.world.tileSize);
+            this.spawnAnteRoomEnemies(15);
         } else {
             this.spawnFloorEnemies(floorNumber);
         }
 
-        window.soundEngine.startBgm(floorNumber === 5 || floorNumber === 8 || floorNumber === 10);
+        if (window.soundEngine) {
+            window.soundEngine.startBgm(floorNumber === 5 || floorNumber === 8 || floorNumber === 10 || floorNumber === 13 || floorNumber === 15);
+        }
         this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, `PISO ${floorNumber}`, '#ffcc00', true));
     }
 
@@ -201,7 +204,9 @@ class DarkTowerGame {
         else if (floor <= 4) types.push('bandit', 'skeleton', 'spider', 'rat');
         else if (floor <= 6) types.push('spider', 'werewolf', 'rat');
         else if (floor <= 7) types.push('werewolf', 'demon');
-        else if (floor === 9) types.push('demon', 'werewolf');
+        else if (floor <= 10) types.push('demon', 'werewolf');
+        else if (floor <= 12) types.push('specter', 'void_elf');
+        else if (floor <= 14) types.push('specter', 'golem', 'void_elf');
 
         for (let i = 0; i < count; i++) {
             let placed = false;
@@ -232,7 +237,7 @@ class DarkTowerGame {
     }
 
     spawnAnteRoomEnemies(floor) {
-        const types = floor === 5 ? ['werewolf', 'skeleton'] : ['demon', 'werewolf'];
+        const types = floor === 5 ? ['werewolf', 'skeleton'] : (floor >= 13 ? ['specter', 'void_elf'] : ['demon', 'werewolf']);
         const cx = Math.floor(this.world.cols / 2);
         for (let i = 0; i < 4; i++) {
             const ex = (cx - 4 + i * 2) * this.world.tileSize + 16;
@@ -245,16 +250,22 @@ class DarkTowerGame {
         const p = this.player;
         const w = this.world;
 
-        // 1. PNJ Comerciante / Herrero Kaelen
+        // Comerciante Kaelen
         if (w.merchant && Math.hypot(p.x - w.merchant.x, p.y - w.merchant.y) < 56) {
             window.uiManager.showShopModal();
             return;
         }
 
-        // 2. Altar de Sangre o Bendición
+        // Herrero Gunnar
+        if (w.blacksmith && Math.hypot(p.x - w.blacksmith.x, p.y - w.blacksmith.y) < 56) {
+            window.uiManager.showBlacksmithModal();
+            return;
+        }
+
+        // Altar Místico
         if (w.shrine && !w.shrine.used && Math.hypot(p.x - w.shrine.x, p.y - w.shrine.y) < 48) {
             w.shrine.used = true;
-            window.soundEngine.playLevelUp();
+            if (window.soundEngine) window.soundEngine.playLevelUp();
             if (w.shrine.type === 'blood') {
                 p.hp = Math.max(10, Math.floor(p.hp * 0.7));
                 p.strength += 3;
@@ -267,13 +278,13 @@ class DarkTowerGame {
             return;
         }
 
-        // 3. Puerta de Sala del Tesoro cerrada con Llave
+        // Puerta con Llave
         if (w.lockedDoor && !w.lockedDoor.opened && Math.hypot(p.x - (w.lockedDoor.x + 16), p.y - (w.lockedDoor.y + 16)) < 48) {
             const keyIdx = p.inventory.findIndex(it => it && it.id === 'dungeon_key');
             if (keyIdx !== -1) {
                 p.inventory[keyIdx] = null;
                 w.lockedDoor.opened = true;
-                window.soundEngine.playItemPickup();
+                if (window.soundEngine) window.soundEngine.playItemPickup();
                 this.floatingTexts.push(new FloatingText(w.lockedDoor.x, w.lockedDoor.y - 15, '¡PUERTA DESBLOQUEADA!', '#f1c40f', true));
             } else {
                 this.floatingTexts.push(new FloatingText(p.x, p.y - 25, '¡Necesitas la Llave!', '#ff4444'));
@@ -281,16 +292,16 @@ class DarkTowerGame {
             return;
         }
 
-        // 4. Pergamino de Lore
+        // Pergamino de Lore
         if (w.loreScroll && !w.loreScroll.collected && Math.hypot(p.x - (w.loreScroll.x + 16), p.y - (w.loreScroll.y + 16)) < 56) {
             w.loreScroll.collected = true;
             this.fetchAndShowLore(w.floor);
             return;
         }
 
-        // 5. Escaleras o Portal de Victoria
+        // Escaleras de piso
         if (w.stairs && w.stairsUnlocked && Math.hypot(p.x - (w.stairs.x + 16), p.y - (w.stairs.y + 16)) < 48) {
-            if (w.floor < 10) {
+            if (w.floor < 15) {
                 this.loadFloor(w.floor + 1);
                 this.saveGame(1, true);
             } else {
@@ -298,17 +309,12 @@ class DarkTowerGame {
             }
             return;
         }
-        // Interacción con el Herrero Gunnar
-        if (w.blacksmith && Math.hypot(p.x - w.blacksmith.x, p.y - w.blacksmith.y) < 56) {
-            window.uiManager.showBlacksmithModal();
-            return;
-        }
 
-        // 6. Abrir cofres
+        // Abrir cofres
         w.chests.forEach(chest => {
             if (!chest.opened && Math.hypot(p.x - (chest.x + 16), p.y - (chest.y + 16)) < 48) {
                 chest.opened = true;
-                window.soundEngine.playItemPickup();
+                if (window.soundEngine) window.soundEngine.playItemPickup();
                 this.dropLoot('chest', chest.x + 16, chest.y + 16);
             }
         });
@@ -339,18 +345,13 @@ class DarkTowerGame {
         if (itemIdx !== -1) window.uiManager.handleSlotClick(itemIdx);
     }
 
-    // =========================================================================
-    // BOTÍN INTELIGENTE (SMART LOOT): ADAPTADO AL HÉROE ACTUAL Y RAREZAS
-    // =========================================================================
     dropLoot(sourceType, x, y) {
         const floor = (this.world && this.world.floor) ? this.world.floor : 1;
-        const isBoss = (sourceType === 'lucian' || sourceType === 'abracadabra' || sourceType === 'hong');
+        const isBoss = (sourceType === 'lucian' || sourceType === 'abracadabra' || sourceType === 'hong' || sourceType === 'malakor' || sourceType === 'silmarion');
         const playerClass = (this.player && this.player.characterClass) ? this.player.characterClass : 'warrior';
 
-        // Barriles: 40% de soltar algo
         if (sourceType === 'barrel' && Math.random() > 0.40) return;
 
-        // Enemigos comunes: 50% de las veces solo dan oro para no saturar
         if (!isBoss && sourceType !== 'chest' && sourceType !== 'barrel') {
             if (Math.random() > 0.50) {
                 this.lootDrops.push(new GroundItem(x, y, null, true, Math.floor(Math.random() * 8) + 4));
@@ -369,17 +370,20 @@ class DarkTowerGame {
         let equipmentDropped = 0;
         const maxEquipment = isBoss ? 2 : 1;
 
-        // Matriz de conversión automática: Si cae un ítem de otra clase, se transforma al de tu héroe
         const EQUIVALENTS = {
             weapon: {
                 0: { warrior: 'sword_short', archer: 'bow_short', mage: 'staff_apprentice' },
-                1: { warrior: 'blade_demonic', archer: 'bow_dark', mage: 'staff_dark' },
-                2: { warrior: 'sword_legend', archer: 'bow_legend', mage: 'staff_legend' }
+                1: { warrior: 'sword_bone', archer: 'bow_bone', mage: 'staff_bone' },
+                2: { warrior: 'sword_wolf', archer: 'bow_wolf', mage: 'staff_wolf' },
+                3: { warrior: 'blade_demonic', archer: 'bow_dark', mage: 'staff_dark' },
+                4: { warrior: 'sword_legend', archer: 'bow_legend', mage: 'staff_legend' }
             },
             armor: {
                 0: { warrior: 'armor_plate', archer: 'armor_leather', mage: 'armor_robe' },
-                1: { warrior: 'armor_plate_dark', archer: 'armor_leather_dark', mage: 'armor_robe_dark' },
-                2: { warrior: 'armor_plate_legend', archer: 'armor_leather_legend', mage: 'armor_robe_legend' }
+                1: { warrior: 'armor_bone_warrior', archer: 'armor_bone_archer', mage: 'armor_bone_mage' },
+                2: { warrior: 'armor_wolf_warrior', archer: 'armor_wolf_archer', mage: 'armor_wolf_mage' },
+                3: { warrior: 'armor_plate_dark', archer: 'armor_leather_dark', mage: 'armor_robe_dark' },
+                4: { warrior: 'armor_plate_legend', archer: 'armor_leather_legend', mage: 'armor_robe_legend' }
             }
         };
 
@@ -395,23 +399,13 @@ class DarkTowerGame {
 
             const isEquipment = (itemData.type === 'weapon' || itemData.type === 'armor');
 
-            // Máximo 1 pieza de equipo por baja para enemigos normales
             if (isEquipment && equipmentDropped >= maxEquipment) return;
-
-            // Pisos 1-3: Prohibido soltar Épicas o Legendarias
             if (floor <= 3 && (itemData.rarity === 'EPIC' || itemData.rarity === 'LEGENDARY')) return;
-
-            // Pisos 4-6: Prohibido soltar Legendarias de enemigos comunes
             if (floor <= 6 && !isBoss && itemData.rarity === 'LEGENDARY') return;
 
-            // =================================================================
-            // TRANSFORMACIÓN INTELIGENTE DE BOTÍN
-            // =================================================================
             if (isEquipment) {
-                const itemType = itemData.type; // 'weapon' o 'armor'
+                const itemType = itemData.type;
                 const lookTier = (itemData.look !== undefined) ? itemData.look : 0;
-
-                // Si el ítem no es de tu clase, transfórmalo al equivalente que SÍ puedes usar
                 if (itemData.classReq && itemData.classReq !== playerClass) {
                     if (EQUIVALENTS[itemType] && EQUIVALENTS[itemType][lookTier]) {
                         const targetId = EQUIVALENTS[itemType][lookTier][playerClass];
@@ -420,16 +414,8 @@ class DarkTowerGame {
                         }
                     }
                 }
-            } else if (itemData.type === 'consumable') {
-                // Adaptación de pociones: Magos reciben más maná, Guerreros más vida
-                if (playerClass === 'mage' && itemData.id === 'potion_health' && Math.random() < 0.6) {
-                    itemData = window.ITEM_DATABASE['potion_mana'];
-                } else if (playerClass === 'warrior' && itemData.id === 'potion_mana' && Math.random() < 0.6) {
-                    itemData = window.ITEM_DATABASE['potion_health'];
-                }
             }
 
-            // Probabilidades: Épicas 10%, Legendarias 1%, Jefes 60%
             let chance = entry.chance;
             if (!isBoss) {
                 if (itemData.rarity === 'EPIC') chance = 0.10;
@@ -441,26 +427,25 @@ class DarkTowerGame {
             if (Math.random() <= chance) {
                 const modifiedItem = window.applyRandomAffix ? window.applyRandomAffix(itemData) : itemData;
                 this.lootDrops.push(new GroundItem(x, y, { ...modifiedItem, qty: entry.qty || 1 }));
-
-                if (isEquipment) {
-                    equipmentDropped++;
-                }
+                if (isEquipment) equipmentDropped++;
             }
         });
     }
+
     triggerGameOver() {
         this.state = this.STATE_GAMEOVER;
-        window.soundEngine.stopBgm();
+        if (window.soundEngine) window.soundEngine.stopBgm();
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'flex';
     }
 
     triggerVictory() {
         this.state = this.STATE_VICTORY;
-        window.soundEngine.stopBgm();
-        window.soundEngine.playLevelUp();
+        if (window.soundEngine) {
+            window.soundEngine.stopBgm();
+            window.soundEngine.playLevelUp();
+        }
 
-        // Enviar al backend los datos exactos del héroe vencedor para guardarlo en la cuenta
         fetch('/api/record_victory', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -486,29 +471,30 @@ class DarkTowerGame {
                     window.uiManager.currentUser.cleared_heroes = data.cleared_heroes;
                     window.uiManager.updateAuthUI(true, window.uiManager.currentUser.username);
                 }
-            });
+            })
+            .catch(() => { });
 
-        // Desbloquear Libro de Crónicas
         localStorage.setItem('dark_tower_game_cleared', 'true');
-        if (window.uiManager) window.uiManager.updateBookUnlockStatus();
+        if (window.uiManager && window.uiManager.updateBookUnlockStatus) {
+            window.uiManager.updateBookUnlockStatus();
+        }
 
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'flex';
     }
+
     startCustomFloorRun(characterClass, floorNumber) {
         document.getElementById('title-screen').style.display = 'none';
-        document.getElementById('game-hud').style.display = 'block';
+        const hud = document.getElementById('game-hud');
+        if (hud) hud.style.display = 'block';
 
         const currentUser = window.uiManager.currentUser;
         const cleared = (currentUser && currentUser.cleared_heroes) || {};
         const savedHero = cleared[characterClass];
 
-        // 1. Crear el jugador
         this.player = new Player(characterClass, currentUser ? currentUser.username : 'Héroe');
 
-        // 2. Comprobar si esta clase específica ya completó el juego
         if (savedHero) {
-            // ¡CARGAR SU INVENTARIO Y EQUIPO DE VICTORIA!
             this.player.level = savedHero.level;
             this.player.hp = savedHero.max_hp;
             this.player.maxHp = savedHero.max_hp;
@@ -525,15 +511,16 @@ class DarkTowerGame {
             this.player.equipment = Object.fromEntries(
                 Object.entries(savedHero.equipment || {}).map(([s, it]) => [s, refresh(it)])
             );
-
             this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 50, '¡HÉROE VENCEDOR CARGADO!', '#f1c40f', true));
         } else {
-            // No ha ganado con esta clase: empieza limpio con equipo básico
             this.player.giveInitialEquipment();
             this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 50, 'NUEVO HÉROE (EQUIPO BÁSICO)', '#a4b0be', true));
         }
 
-        // 3. Cargar el piso elegido
+        if (window.Companion) {
+            this.companion = new Companion(window.uiManager.selectedPet || 'wolf', this.player.x - 20, this.player.y);
+        }
+
         this.loadFloor(floorNumber);
         this.state = this.STATE_PLAYING;
     }
@@ -544,7 +531,7 @@ class DarkTowerGame {
         document.getElementById('game-hud').style.display = 'none';
         document.getElementById('game-over-screen').style.display = 'none';
         document.getElementById('victory-screen').style.display = 'none';
-        window.soundEngine.stopBgm();
+        if (window.soundEngine) window.soundEngine.stopBgm();
     }
 
     async saveGame(slot = 1, silent = false) {
@@ -585,9 +572,7 @@ class DarkTowerGame {
                 document.getElementById('saves-modal').style.display = 'none';
                 this.resumeFromModal();
             }
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { }
     }
 
     async loadGame(slot = 1) {
@@ -625,11 +610,13 @@ class DarkTowerGame {
             this.player.enemiesKilled = data.enemies_killed || 0;
             this.player.playtimeSeconds = data.playtime_seconds || 0;
 
+            if (window.Companion) {
+                this.companion = new Companion('wolf', this.player.x - 20, this.player.y);
+            }
+
             this.loadFloor(data.floor_reached || 1);
             this.state = this.STATE_PLAYING;
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { }
     }
 
     loop(timestamp) {
@@ -647,20 +634,21 @@ class DarkTowerGame {
         this.player.playtimeSeconds += dt;
         this.player.update(this.keys, this.world, this.projectiles, this.particles);
 
+        if (this.companion) {
+            this.companion.update(this.player, this.world, this.enemies, this.lootDrops, this.particles, this.floatingTexts);
+        }
+
         if (this.player.hp <= 0) {
             this.triggerGameOver();
             return;
         }
 
-        // =====================================================================
-        // EMBOSCADAS ESCALADAS SEGÚN EL PISO (SIN LOBOS EN PISOS BAJOS)
-        // =====================================================================
         if (this.world.ambushRoom && !this.world.ambushRoom.triggered) {
             const ar = this.world.ambushRoom;
             if (this.player.x > ar.x && this.player.x < ar.x + ar.w && this.player.y > ar.y && this.player.y < ar.y + ar.h) {
                 this.world.ambushRoom.triggered = true;
                 this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 30, '¡EMBOSCADA!', '#e74c3c', true));
-                window.soundEngine.playBossRoar();
+                if (window.soundEngine) window.soundEngine.playBossRoar();
 
                 const floor = this.world.floor;
                 let ambushType = 'bandit';
@@ -668,7 +656,8 @@ class DarkTowerGame {
                 else if (floor <= 4) ambushType = Math.random() < 0.5 ? 'skeleton' : 'spider';
                 else if (floor <= 6) ambushType = 'spider';
                 else if (floor <= 8) ambushType = 'werewolf';
-                else ambushType = 'demon';
+                else if (floor <= 10) ambushType = 'demon';
+                else ambushType = 'specter';
 
                 for (let i = 0; i < 3; i++) {
                     const ex = ar.x + 30 + (i % 2) * 60;
@@ -678,9 +667,6 @@ class DarkTowerGame {
             }
         }
 
-        // =====================================================================
-        // DESTRUCCIÓN DE BARRILES Y CAJAS (ATAQUE CUERPO A CUERPO)
-        // =====================================================================
         if (this.player.slashHitbox) {
             const hb = this.player.slashHitbox;
             this.enemies.forEach((enemy, idx) => {
@@ -697,21 +683,19 @@ class DarkTowerGame {
                 if (isDead) this.killBoss();
             }
 
-            // Romper barriles
             this.world.barrels.forEach(b => {
                 if (!b.broken && Math.hypot(b.x + 16 - hb.x, b.y + 16 - hb.y) < hb.radius) {
                     b.broken = true;
-                    window.soundEngine.playHit();
+                    if (window.soundEngine) window.soundEngine.playHit();
                     this.dropLoot('barrel', b.x + 16, b.y + 16);
                 }
             });
 
-            // Romper cajas
             if (this.world.crates) {
                 this.world.crates.forEach(c => {
                     if (!c.broken && Math.hypot(c.x + 16 - hb.x, c.y + 16 - hb.y) < hb.radius) {
                         c.broken = true;
-                        window.soundEngine.playHit();
+                        if (window.soundEngine) window.soundEngine.playHit();
                         this.dropLoot('barrel', c.x + 16, c.y + 16);
                     }
                 });
@@ -721,11 +705,8 @@ class DarkTowerGame {
         }
 
         this.enemies.forEach(enemy => enemy.update(this.player, this.world, this.projectiles, this.particles));
-        if (this.activeBoss) this.activeBoss.update(this.player, this.world, this.projectiles, this.particles);
+        if (this.activeBoss) this.activeBoss.update(this.player, this.world, this.projectiles, this.particles, this.floatingTexts);
 
-        // =====================================================================
-        // PROYECTILES (FLECHAS Y MAGIA TAMBIÉN ROMPEN BARRILES Y CAJAS)
-        // =====================================================================
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             p.update(this.world, this.particles);
@@ -743,23 +724,21 @@ class DarkTowerGame {
                     }
                 });
 
-                // Flechas y magia rompen barriles
                 this.world.barrels.forEach(b => {
                     if (!b.broken && Math.hypot(b.x + 16 - p.x, b.y + 16 - p.y) < 16 + p.radius) {
                         b.broken = true;
                         p.life = 0;
-                        window.soundEngine.playHit();
+                        if (window.soundEngine) window.soundEngine.playHit();
                         this.dropLoot('barrel', b.x + 16, b.y + 16);
                     }
                 });
 
-                // Flechas y magia rompen cajas
                 if (this.world.crates) {
                     this.world.crates.forEach(c => {
                         if (!c.broken && Math.hypot(c.x + 16 - p.x, c.y + 16 - p.y) < 16 + p.radius) {
                             c.broken = true;
                             p.life = 0;
-                            window.soundEngine.playHit();
+                            if (window.soundEngine) window.soundEngine.playHit();
                             this.dropLoot('barrel', c.x + 16, c.y + 16);
                         }
                     });
@@ -823,6 +802,9 @@ class DarkTowerGame {
         this.enemies.splice(index, 1);
     }
 
+    // =========================================================================
+    // DERROTA DE JEFES Y FLUJO DE LOS 15 PISOS
+    // =========================================================================
     killBoss() {
         const boss = this.activeBoss;
         this.player.enemiesKilled++;
@@ -832,51 +814,45 @@ class DarkTowerGame {
         let lootTable = 'abracadabra';
 
         if (boss.name.includes('Lucian')) {
-            expReward = 850;
-            lootTable = 'lucian';
-
-            const armors = {
-                warrior: 'armor_plate_legend',
-                archer: 'armor_leather_legend',
-                mage: 'armor_robe_legend'
-            };
+            expReward = 850; lootTable = 'lucian';
+            const armors = { warrior: 'armor_plate_legend', archer: 'armor_leather_legend', mage: 'armor_robe_legend' };
             const aData = window.ITEM_DATABASE[armors[pClass] || 'armor_plate_legend'];
-            if (aData) {
-                this.lootDrops.push(new GroundItem(boss.x, boss.y, { ...aData, qty: 1 }));
-                this.floatingTexts.push(new FloatingText(boss.x, boss.y - 35, '¡ARMADURA LEGENDARIA!', '#f1c40f', true));
-            }
+            if (aData) this.lootDrops.push(new GroundItem(boss.x, boss.y, { ...aData, qty: 1 }));
         } else if (boss.name.includes('Abracadabra')) {
-            expReward = 1200;
-            lootTable = 'abracadabra';
-
-            const weapons = {
-                warrior: 'sword_legend',
-                archer: 'bow_legend',
-                mage: 'staff_legend'
-            };
+            expReward = 1200; lootTable = 'abracadabra';
+            const weapons = { warrior: 'sword_legend', archer: 'bow_legend', mage: 'staff_legend' };
             const wData = window.ITEM_DATABASE[weapons[pClass] || 'sword_legend'];
-            if (wData) {
-                this.lootDrops.push(new GroundItem(boss.x, boss.y, { ...wData, qty: 1 }));
-                this.floatingTexts.push(new FloatingText(boss.x, boss.y - 35, '¡ARMA LEGENDARIA!', '#f1c40f', true));
-            }
+            if (wData) this.lootDrops.push(new GroundItem(boss.x, boss.y, { ...wData, qty: 1 }));
         } else if (boss.name.includes('Hong')) {
-            expReward = 2000;
-            lootTable = 'hong';
+            expReward = 2000; lootTable = 'hong';
+        } else if (boss.name.includes('Malakor')) {
+            expReward = 3500; lootTable = 'malakor';
+        } else if (boss.name.includes('Silmarion')) {
+            expReward = 10000; lootTable = 'silmarion';
         }
 
         this.player.gainExp(expReward, this.floatingTexts);
         this.dropLoot(lootTable, boss.x, boss.y);
 
         this.activeBoss = null;
-        window.soundEngine.startBgm(false);
+        if (window.soundEngine) window.soundEngine.startBgm(false);
 
-        if (this.world.floor === 5 || this.world.floor === 8) {
+        // Desbloquear escaleras de jefes intermedios
+        if (this.world.floor === 5 || this.world.floor === 8 || this.world.floor === 13) {
             this.world.stairsUnlocked = true;
             this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡ESCALERAS DESBLOQUEADAS!', '#ffd700', true));
-        } else if (this.world.floor === 10) {
-            this.world.stairs = { x: 20 * this.world.tileSize, y: 6 * this.world.tileSize };
+        }
+
+        // PISO 10: RUPTURA DEL SELLO Y PORTAL AL PISO 11
+        if (this.world.floor === 10) {
+            this.world.stairs = { x: Math.floor(this.world.cols / 2) * this.world.tileSize, y: 6 * this.world.tileSize };
             this.world.stairsUnlocked = true;
-            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡PORTAL DESBLOQUEADO!', '#ffd700', true));
+            this.floatingTexts.push(new FloatingText(this.player.x, this.player.y - 40, '¡EL SELLO SE ROMPE! (PISO 11 DESBLOQUEADO)', '#e74c3c', true));
+        }
+
+        // PISO 15: VICTORIA DEFINITIVA
+        if (this.world.floor === 15) {
+            this.triggerVictory();
         }
     }
 
@@ -889,6 +865,7 @@ class DarkTowerGame {
         this.lootDrops.forEach(drop => drop.draw(this.ctx));
         this.enemies.forEach(e => e.draw(this.ctx));
         if (this.activeBoss) this.activeBoss.draw(this.ctx);
+        if (this.companion) this.companion.draw(this.ctx);
         this.player.draw(this.ctx);
         this.projectiles.forEach(p => p.draw(this.ctx));
         this.particles.forEach(pt => pt.draw(this.ctx));

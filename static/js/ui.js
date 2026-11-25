@@ -1,15 +1,16 @@
 /**
- * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES / TIENDA / HERRERO / MENÚ CONTEXTUAL / SESIONES)
+ * GESTOR DE INTERFAZ DE USUARIO (UI / HUD / MODALES / TIENDA / HERRERO / MENÚ CONTEXTUAL / SESIONES / 15 PISOS)
  */
 
 class UIManager {
     constructor() {
         this.selectedClass = 'warrior';
+        this.selectedPet = 'wolf'; // Mascota por defecto
         this.selectedInventorySlot = null;
         this.tooltip = document.getElementById('item-tooltip');
 
         this.currentUser = null;
-        this.authMode = 'login'; // 'login' o 'register'
+        this.authMode = 'login';
         this.selectedPortalClass = 'warrior';
         this.selectedPortalFloor = 1;
     }
@@ -19,9 +20,9 @@ class UIManager {
         this.createShopModalDOM();
         this.createBlacksmithModalDOM();
         this.createContextMenuDOM();
-        this.createAuthModalDOM();         // Crea el modal de Login si no existe
-        this.createFloorSelectModalDOM();  // Crea el selector de pisos si no existe
-        this.initAuthSystem();             // <-- ¡AQUÍ SE CONECTAN LOS BOTONES!
+        this.createAuthModalDOM();
+        this.createFloorSelectModalDOM();
+        this.initAuthSystem();
     }
 
     bindEvents() {
@@ -33,6 +34,7 @@ class UIManager {
             });
         });
 
+        // Selección de clase
         document.querySelectorAll('.class-card').forEach(card => {
             card.addEventListener('click', () => {
                 document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
@@ -41,9 +43,19 @@ class UIManager {
             });
         });
 
+        // Selección de mascota
+        document.querySelectorAll('.pet-choice-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.pet-choice-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.selectedPet = card.getAttribute('data-pet');
+            });
+        });
+
+        // Confirmar partida enviando CLASE y MASCOTA
         document.getElementById('confirm-class-btn').addEventListener('click', () => {
             document.getElementById('class-select-modal').style.display = 'none';
-            if (window.game) window.game.startNewGame(this.selectedClass);
+            if (window.game) window.game.startNewGame(this.selectedClass, this.selectedPet);
         });
 
         document.getElementById('btn-hud-inv').addEventListener('click', () => this.toggleInventory());
@@ -80,9 +92,6 @@ class UIManager {
         });
     }
 
-    // =========================================================================
-    // CREACIÓN GARANTIZADA DE MODALES DE AUTENTICACIÓN Y SELECTOR DE PISOS
-    // =========================================================================
     createAuthModalDOM() {
         if (document.getElementById('login-modal')) return;
         const div = document.createElement('div');
@@ -114,8 +123,8 @@ class UIManager {
         div.className = 'game-modal';
         div.style.display = 'none';
         div.innerHTML = `
-            <div class="modal-window" style="width: 580px; padding: 20px; background: #140f1c; border: 3px solid #f1c40f; border-radius: 6px;">
-                <h3 style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:8px;">🏰 SALA DE PORTALES</h3>
+            <div class="modal-window" style="width: 600px; padding: 20px; background: #140f1c; border: 3px solid #f1c40f; border-radius: 6px;">
+                <h3 style="font-family:'Cinzel',serif; color:#f1c40f; text-align:center; margin-bottom:8px;">🏰 SALA DE PORTALES (15 PISOS)</h3>
                 <p style="font-size:13px; color:#aaa; text-align:center; margin-bottom:14px;">Elige el piso al que deseas descender y tu héroe:</p>
 
                 <div style="margin-bottom: 14px;">
@@ -149,7 +158,12 @@ class UIManager {
                         <button class="floor-pick-btn" data-floor="7">PISO 7</button>
                         <button class="floor-pick-btn" data-floor="8" style="border-color:#2ecc71;">PISO 8 🧪</button>
                         <button class="floor-pick-btn" data-floor="9">PISO 9</button>
-                        <button class="floor-pick-btn" data-floor="10" style="border-color:#f1c40f;">PISO 10 👑</button>
+                        <button class="floor-pick-btn" data-floor="10" style="border-color:#e67e22;">PISO 10 👑</button>
+                        <button class="floor-pick-btn" data-floor="11">PISO 11</button>
+                        <button class="floor-pick-btn" data-floor="12">PISO 12</button>
+                        <button class="floor-pick-btn" data-floor="13" style="border-color:#9b59b6;">PISO 13 ⚔️</button>
+                        <button class="floor-pick-btn" data-floor="14">PISO 14</button>
+                        <button class="floor-pick-btn" data-floor="15" style="border-color:#f1c40f;">PISO 15 🔥</button>
                     </div>
                 </div>
 
@@ -162,11 +176,7 @@ class UIManager {
         document.body.appendChild(div);
     }
 
-    // =========================================================================
-    // INICIALIZADOR DEL SISTEMA DE SESIÓN
-    // =========================================================================
     initAuthSystem() {
-        // 1. Comprobar si hay sesión iniciada al cargar
         fetch('/api/me')
             .then(res => res.json())
             .then(data => {
@@ -179,7 +189,6 @@ class UIManager {
             })
             .catch(() => this.updateAuthUI(false));
 
-        // 2. Conectar botón de Abrir Login
         const openLoginBtn = document.getElementById('btn-open-login');
         if (openLoginBtn) {
             openLoginBtn.onclick = () => {
@@ -188,7 +197,6 @@ class UIManager {
             };
         }
 
-        // 3. Alternar entre Entrar y Registrarse
         const toggleBtn = document.getElementById('btn-toggle-auth-mode');
         if (toggleBtn) {
             toggleBtn.onclick = () => {
@@ -200,13 +208,11 @@ class UIManager {
             };
         }
 
-        // 4. Enviar formulario
         const submitBtn = document.getElementById('btn-auth-submit');
         if (submitBtn) {
             submitBtn.onclick = () => this.handleAuthSubmit();
         }
 
-        // 5. Cerrar sesión
         const logoutBtn = document.getElementById('btn-logout');
         if (logoutBtn) {
             logoutBtn.onclick = () => {
@@ -218,7 +224,6 @@ class UIManager {
             };
         }
 
-        // 6. Botón selector de pisos
         const selectFloorBtn = document.getElementById('btn-select-floor');
         if (selectFloorBtn) {
             selectFloorBtn.onclick = () => this.showFloorSelectModal();
@@ -528,6 +533,19 @@ class UIManager {
 
                 buyBtn.onclick = () => {
                     if (player.gold >= itemInfo.price) {
+                        // 1. Si es poción o material, buscar si ya existe en la mochila para apilar
+                        if (item.type === 'consumable' || item.type === 'material') {
+                            const existingIdx = player.inventory.findIndex(s => s && s.id === item.id);
+                            if (existingIdx !== -1) {
+                                player.gold -= itemInfo.price;
+                                player.inventory[existingIdx].qty = (player.inventory[existingIdx].qty || 1) + 1;
+                                window.soundEngine.playItemPickup();
+                                this.renderShopTab('buy');
+                                return;
+                            }
+                        }
+
+                        // 2. Si no existe o es equipo, buscar casilla vacía
                         const emptyIdx = player.inventory.findIndex(s => s === null);
                         if (emptyIdx !== -1) {
                             player.gold -= itemInfo.price;
@@ -776,7 +794,7 @@ class UIManager {
     }
 
     // =========================================================================
-    // HUD Y MINIMAPA
+    // HUD Y MINIMAPA (ACTUALIZADO A 15 PISOS)
     // =========================================================================
     updateHUD(player, world) {
         if (!player) return;
@@ -793,7 +811,26 @@ class UIManager {
         document.getElementById('hud-exp-text').innerText = `EXP: ${player.exp} / ${player.nextExp}`;
 
         document.getElementById('hud-player-name').innerText = `${player.name} (Nv. ${player.level})`;
-        document.getElementById('hud-floor-num').innerText = `PISO ${world.floor} / 10`;
+        document.getElementById('hud-floor-num').innerText = `PISO ${world.floor} / 15`;
+
+        const floorNames = [
+            "El Umbral Olvidado",
+            "Catacumbas del Despertar",
+            "El Sepulcro de las Mil Telas",
+            "La Guardia Profanada",
+            "Las Fauces de Azufre: Lucian",
+            "Altar de los Condenados",
+            "La Antesala Demoniaca",
+            "Rotonda Virulenta: Abracadabra",
+            "La Cúspide del Abismo",
+            "Trono de Hong Devorador de Hombres",
+            "Galerías del Sello Quebrantado",
+            "Catacumbas de los Primogénitos",
+            "Cámara de la Cadena Rota: Malakor",
+            "Vórtice del Magma Primordial",
+            "Trono de Ceniza: Silmarion"
+        ];
+        document.getElementById('hud-floor-name').innerText = floorNames[world.floor - 1] || "Torre Oscura";
 
         let hpPots = 0; let mpPots = 0;
         player.inventory.forEach(item => {
@@ -856,9 +893,6 @@ class UIManager {
         ctx.fillRect((player.x / world.tileSize) * scaleX - 1, (player.y / world.tileSize) * scaleY - 1, scaleX * 2, scaleY * 2);
     }
 
-    // =========================================================================
-    // INVENTARIO
-    // =========================================================================
     toggleInventory() {
         const modal = document.getElementById('inventory-modal');
         this.hideContextMenu();
@@ -970,7 +1004,7 @@ class UIManager {
             return;
         }
 
-        if (item.type === 'weapon' || item.type === 'armor') {
+        if (item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory') {
             if (item.classReq && item.classReq !== player.characterClass) return;
 
             const targetSlot = item.type;
@@ -1069,37 +1103,55 @@ class UIManager {
         if (!player) return;
         const total = player.getTotalStats();
 
-        document.getElementById('stat-level-val').innerText = player.level;
-        document.getElementById('stat-pts-val').innerText = player.attributePoints;
-        document.getElementById('stat-str-val').innerText = `${player.strength} (Total: ${total.str})`;
-        document.getElementById('stat-dex-val').innerText = `${player.dexterity} (Total: ${total.dex})`;
-        document.getElementById('stat-mag-val').innerText = `${player.magic} (Total: ${total.mag})`;
-        document.getElementById('stat-con-val').innerText = `${player.constitution} (Total: ${total.con})`;
-        document.getElementById('stat-atk-total').innerText = total.atk;
-        document.getElementById('stat-def-total').innerText = total.def;
-        document.getElementById('stat-crit-total').innerText = `${total.critChance}%`;
+        const lvlEl = document.getElementById('stat-level-val');
+        if (lvlEl) lvlEl.innerText = player.level;
+        const ptsEl = document.getElementById('stat-pts-val');
+        if (ptsEl) ptsEl.innerText = player.attributePoints;
 
-        let setEl = document.getElementById('set-bonus-indicator');
-        if (!setEl) {
-            setEl = document.createElement('div');
-            setEl.id = 'set-bonus-indicator';
-            setEl.style.cssText = 'color:#f1c40f;font-size:10px;margin-top:8px;font-family:"Press Start 2P";';
-            document.getElementById('stats-modal').querySelector('.modal-content').appendChild(setEl);
+        const strEl = document.getElementById('stat-str-val');
+        if (strEl) strEl.innerText = `${player.strength} (Total: ${total.str})`;
+        const dexEl = document.getElementById('stat-dex-val');
+        if (dexEl) dexEl.innerText = `${player.dexterity} (Total: ${total.dex})`;
+        const magEl = document.getElementById('stat-mag-val');
+        if (magEl) magEl.innerText = `${player.magic} (Total: ${total.mag})`;
+        const conEl = document.getElementById('stat-con-val');
+        if (conEl) conEl.innerText = `${player.constitution} (Total: ${total.con})`;
+
+        const atkEl = document.getElementById('stat-atk-total');
+        if (atkEl) atkEl.innerText = total.atk;
+        const defEl = document.getElementById('stat-def-total');
+        if (defEl) defEl.innerText = total.def;
+        const critEl = document.getElementById('stat-crit-total');
+        if (critEl) critEl.innerText = `${total.critChance}%`;
+
+        // Indicador del bono de set activo (buscando .modal-window de forma segura)
+        const modalWin = document.getElementById('stats-modal').querySelector('.modal-window');
+        if (modalWin) {
+            let setEl = document.getElementById('set-bonus-indicator');
+            if (!setEl) {
+                setEl = document.createElement('div');
+                setEl.id = 'set-bonus-indicator';
+                setEl.style.cssText = 'color:#f1c40f;font-size:10px;margin-top:12px;font-family:"Press Start 2P";text-align:center;';
+                modalWin.appendChild(setEl);
+            }
+            setEl.innerText = total.setBonus || 'Sin bono de conjunto';
         }
-        setEl.innerText = total.setBonus || 'Sin bono de conjunto';
 
+        // Activar los botones [+]
         const hasPoints = player.attributePoints > 0;
         ['str', 'dex', 'mag', 'con'].forEach(attr => {
             const btn = document.getElementById(`btn-add-${attr}`);
             if (btn) {
                 btn.style.display = hasPoints ? 'inline-block' : 'none';
-                btn.onclick = () => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
                     if (player.attributePoints > 0) {
                         if (attr === 'str') player.strength++;
                         if (attr === 'dex') player.dexterity++;
                         if (attr === 'mag') { player.magic++; player.maxMp += 5; }
                         if (attr === 'con') { player.constitution++; player.maxHp += 10; player.hp += 10; }
                         player.attributePoints--;
+                        if (window.soundEngine) window.soundEngine.playItemPickup();
                         this.renderStatsModal();
                     }
                 };
@@ -1160,7 +1212,7 @@ class UIManager {
                 slotDiv.innerHTML = save ? `
                     <div>
                         <div style="font-family:'Press Start 2P';font-size:11px;color:#f1c40f;">SLOT ${slotNum}: ${save.player_name}</div>
-                        <div style="font-size:13px;color:#aaa;">Piso: ${save.floor_reached} / 10 | Nivel: ${save.level}</div>
+                        <div style="font-size:13px;color:#aaa;">Piso: ${save.floor_reached} / 15 | Nivel: ${save.level}</div>
                     </div>
                     <div style="display:flex;gap:8px;">
                         <button class="pixel-btn" id="load-slot-${slotNum}">CARGAR</button>
@@ -1182,7 +1234,7 @@ class UIManager {
 }
 
 // =============================================================================
-// LIBRO DE CRÓNICAS ILUSTRADO (SOLO TRAS LA VICTORIA)
+// LIBRO DE CRÓNICAS ILUSTRADO (11 CAPÍTULOS COMPLETOS)
 // =============================================================================
 const LORE_CHAPTERS = [
     {
@@ -1193,7 +1245,7 @@ const LORE_CHAPTERS = [
             <h4>El Dios Absoluto Ainor</h4>
             <p>En el principio, cuando solo existía la nada y la oscuridad absoluta, habitaba un ser supremo: el Dios Absoluto <b>Ainor</b>. Poseía el poder primordial de dar origen a la vida y destruirla a voluntad, y morando en la inmensidad del vacío concibió el gran plan de la existencia.</p>
             <h4>Los Cinco Eonaris</h4>
-            <p>Deseando compañía para la eternidad y para ejecutar su designio divino, Ainor dio forma a <b>cinco seres de luz pura</b> llamados los <b>Eonaris</b>, manantiales incandescentes de poder divino manifestados en el vacío sin cuerpo físico.</p>
+            <p>Deseando compañía para la eternidad, Ainor dio forma a <b>cinco seres de luz pura</b> llamados los <b>Eonaris</b>. Aunque todos nacieron de su voluntad, dos de ellos destellaron con una magnitud incomparable desde el primer instante: <b>Silmarion y Kataida</b>, tan afines en fuerza y esencia que eran considerados prácticamente gemelos.</p>
             <h4>La Gran Sinfonía de la Creación</h4>
             <p>Ainor y los Eonaris alzaron su voz en un canto sagrado. Mientras la voz de Ainor moldeaba planetas y estrellas, la resonancia de los Eonaris daba origen a cada uno de los conceptos y aspectos del universo en expansión.</p>
         `,
@@ -1205,8 +1257,8 @@ const LORE_CHAPTERS = [
         titleLeft: "II. Los Soles, la Tierra y los Primogénitos",
         image: "/static/assets/lore/creacion.jpg",
         textLeft: `
-            <h4>El Eonari de los Soles</h4>
-            <p>Entre los cinco seres divinos, uno sobresalía con singular resplandor: su canto era tan cálido e intenso que con cada nota lograba dar origen a soles resplandecientes en la oscuridad, avivando el calor de la existencia.</p>
+            <h4>Los Gemelos del Firmamento</h4>
+            <p>Entre los cinco seres divinos, <b>Silmarion</b> sobresalía por encender soles resplandecientes con cada nota de su canto, mientras que solo su gemelo en poder, <b>Kataida</b>, igualaba la intensidad de su voz rasgando el cosmos con los primeros relámpagos primordiales.</p>
             <h4>La Creación de la Tierra</h4>
             <p>Tras incontables milenios, Ainor moldeó un mundo con sus propias manos y lo pobló con ríos, montañas y criaturas vivientes. Sin embargo, al contemplar su obra sintió un vacío: los animales no bastaban para llenar el mundo.</p>
             <h4>Las Cuatro Razas y los Espíritus</h4>
@@ -1222,10 +1274,10 @@ const LORE_CHAPTERS = [
         textLeft: `
             <h4>El Mandato de la Custodia</h4>
             <p>Para proteger su creación mientras los mortales dormían, Ainor envió a los cinco Eonaris a la Tierra. Al ser energía pura que rompería la mente mortal, adoptaron formas físicas basadas en los elementos que más ayudaron a cantar en la Creación.</p>
-            <h4>Aethelgard, Kataida y Okeanos</h4>
-            <p><b>Aethelgard</b> tomó la forma de la Tierra Inmutable y la fuerza indomable. <b>Kataida</b> asumió el manto de la Justicia y los Rayos de la tormenta. <b>Okeanos</b> tomó el dominio de la Marea Ancestral, custodiando la Sabiduría, la Verdad y el Tiempo.</p>
-            <h4>Valariel y Silmarion</h4>
-            <p><b>Valariel</b> tomó el aspecto de la Vida Astral, la Misericordia y la Esperanza. Por último, <b>Silmarion</b> (creador de soles) asumió la forma del Fuego Solar, la Justicia Inquebrantable, la Ley y la Claridad para guiar al panteón.</p>
+            <h4>Aethelgard, Okeanos y Valariel</h4>
+            <p><b>Aethelgard</b> tomó la forma de la Tierra Inmutable y la fuerza indomable; <b>Okeanos</b> el dominio de la Marea Ancestral, la Sabiduría y el Tiempo; y <b>Valariel</b> el aspecto de la Vida Astral, la Misericordia y la Esperanza.</p>
+            <h4>Kataida y Silmarion, los Pilares Supremos</h4>
+            <p>Los dos gemelos en poder encabezaron el panteón: <b>Kataida</b> asumió el manto de la Justicia y los Rayos de la tormenta, mientras <b>Silmarion</b> tomó la forma del Fuego Solar, la Ley y la Claridad.</p>
         `,
         titleRight: "Los Protectores Manifestados",
         textRight: "<i>«La energía pura tomó la forma de carne y elemento para velar por el mundo sin cegar a los mortales.»</i>"
@@ -1233,7 +1285,7 @@ const LORE_CHAPTERS = [
     {
         num: 4,
         titleLeft: "IV. El Despertar y el Silencio de Ainor",
-        image: "/static/assets/lore/simarion.png",
+        image: "/static/assets/lore/descanzo.jpg",
         textLeft: `
             <h4>La Era de Oro Primordial</h4>
             <p>Con las cinco deidades guardianas velando en los cuatro confines y las razas listas para despertar de su largo reposo, Ainor se retiró al descanso divino. El mundo quedó bajo la vigilancia eterna de los Eonaris en una era de esplendor y armonía.</p>
@@ -1244,15 +1296,15 @@ const LORE_CHAPTERS = [
     {
         num: 5,
         titleLeft: "V. La Caída del Portador de Soles",
-        image: "/static/assets/lore/caida_silmarion.png",
+        image: "/static/assets/lore/Fuego y Relámpago.png",
         textLeft: `
             <h4>La Envidia de Silmarion</h4>
-            <p>Siendo el más brillante de los cinco Eonaris, el corazón de <b>Silmarion</b> se llenó de oscuridad y avaricia. Quiso igualar a <b>Ainor</b> y crear vida propia, pero al fracasar, optó por corromper y modificar cruelmente a los seres vivos del mundo.</p>
-            <h4>La Rebelión y el Destierro</h4>
-            <p>Sus hermanos intentaron detenerlo, pero Silmarion era tan poderoso que casi logra vencerlos a todos. Ante tal amenaza, <b>Ainor</b> intervino directamente: al ver en qué se había convertido, le quitó su poder, lo despojó de su brillo solar y lo desterró a la Tierra.</p>
+            <p>Consciente de su inmensa supremacía, el corazón de <b>Silmarion</b> se llenó de oscuridad y avaricia. Quiso igualar a <b>Ainor</b> y crear vida propia, pero al fracasar, optó por corromper y modificar cruelmente a los seres vivos del mundo.</p>
+            <h4>El Duelo de los Gemelos y el Destierro</h4>
+            <p>Cuando sus hermanos intentaron detenerlo, Silmarion superó con facilidad a Aethelgard, Okeanos y Valariel; <b>únicamente Kataida pudo hacerle frente en un combate 1 contra 1</b>, desatando un choque titánico entre el rayo y el fuego solar. Ante el riesgo de que la batalla destruyera la creación, <b>Ainor</b> intervino: le arrebató su poder, lo despojó de su brillo y lo desterró a la Tierra.</p>
         `,
         titleRight: "El Eonari Caído",
-        textRight: "<i>«De aquel que encendía los soles solo quedó el rencor de una estrella caída.»</i>"
+        textRight: "<i>«Solo Kataida pudo mirar a los ojos a su hermano gemelo en batalla antes de que el Creador dictara sentencia.»</i>"
     },
     {
         num: 6,
@@ -1270,7 +1322,7 @@ const LORE_CHAPTERS = [
     {
         num: 7,
         titleLeft: "VII. El Despertar de los Pueblos Libres",
-        image: "/static/assets/lore/despertar_razas.png",
+        image: "/static/assets/lore/reyes.jpg",
         textLeft: `
             <h4>La Llamada en la Oscuridad</h4>
             <p>Sintiendo el avance de la sombra bajo la tierra, los cuatro Eonaris —<b>Aethelgard</b>, <b>Kataida</b>, <b>Okeanos</b> y <b>Valariel</b>— despertaron antes de tiempo a los <b>humanos, elfos, enanos y espíritus</b> para evitar que fueran devorados en su letargo.</p>
@@ -1299,17 +1351,17 @@ const LORE_CHAPTERS = [
         image: "/static/assets/lore/Guardianes.png",
         textLeft: `
             <h4>El Descenso de los Guardianes</h4>
-            <p>Al ver a los pueblos libres al borde de la extinción, los cuatro Eonaris intervinieron: <b>Aethelgard</b> quebró las fortalezas oscuras, <b>Kataida</b> descargó tormentas de rayos, <b>Okeanos</b> desató mareas purificadoras y <b>Valariel</b> protegió las almas con luz astral.</p>
-            <h4>El Enfrentamiento Final</h4>
-            <p>Acorralado en el corazón de su dominio, Silmarion desató el fuego del núcleo terrestre, pero la unión perfecta de los cuatro elementos primordiales logró doblegar su cuerpo y dispersar sus legiones.</p>
+            <p>Al ver a los pueblos libres al borde de la extinción, los cuatro Eonaris intervinieron: <b>Aethelgard</b> quebró las fortalezas oscuras, <b>Okeanos</b> desató mareas purificadoras y <b>Valariel</b> protegió las almas con luz astral mientras abrían paso hasta el trono negro.</p>
+            <h4>El Choque Definitivo</h4>
+            <p>En el corazón del dominio oscuro, <b>Kataida</b> volvió a enfrentar mano a mano a su antiguo gemelo <b>Silmarion</b>, conteniendo el fuego del núcleo terrestre con tormentas implacables hasta que la unión de los cuatro elementos logró doblegar el cuerpo del Señor Oscuro.</p>
         `,
         titleRight: "La Furia de los Cuatro",
-        textRight: "<i>«Cuatro fuerzas de la Creación unidas contra el hermano que eligió la penumbra.»</i>"
+        textRight: "<i>«El rayo contuvo de nuevo a la llama caída para que los cuatro hermanos sellaran la penumbra.»</i>"
     },
     {
         num: 10,
         titleLeft: "X. El Abismo Sellado y el Origen de la Torre",
-        image: "/static/assets/lore/torre_sello.png",
+        image: "/static/assets/lore/Señor oscuro.png",
         textLeft: `
             <h4>Una Esencia Indestructible</h4>
             <p>Tras derrotar su forma física, los cuatro Eonaris comprendieron que la esencia de <b>Silmarion</b> no podía ser destruida por completo, pues al haber nacido de la mano de Ainor seguía ligada a la existencia misma.</p>
@@ -1318,6 +1370,21 @@ const LORE_CHAPTERS = [
         `,
         titleRight: "La Prisión Corrupta",
         textRight: "<i>«No pudieron destruir su esencia eterna; así que levantaron una prisión que el tiempo convertiría en pesadilla.»</i>"
+    },
+    {
+        num: 11,
+        titleLeft: "XI. La Forja de la Voluntad Quebrada",
+        image: "/static/assets/lore/malakor.png",
+        textLeft: `
+            <h4>El Primer Mártir</h4>
+            <p>Entre los humanos que despertaron en la oscuridad, uno poseía un espíritu tan noble e inquebrantable que se negó a arrodillarse ante las llamas sombrías. Su nombre era <b>Malakor</b>, y su desafío selló su condena.</p>
+            <h4>Quinientos Años de Agonía</h4>
+            <p>Silmarion comprendió que una fuerza bruta no bastaría para quebrar un alma pura. Durante <b>quinientos años</b>, en las profundidades de la forja abisal, desolló su carne, reemplazó su sangre por magma corrupto y grabó en sus huesos cada una de sus derrotas.</p>
+            <h4>El Alumno de la Traición</h4>
+            <p>Silmarion no solo lo torturó: lo instruyó. Le enseñó el arte de la mentira, el engaño táctico y la hechicería de fuego negro. Tras cinco siglos, el humano murió y nació el lugarteniente perfecto: <b>astuto, cruel y leal únicamente al Señor Oscuro</b>.</p>
+        `,
+        titleRight: "La Mano Derecha del Abismo",
+        textRight: "<i>«Quinientos años bastaron para que el mártir olvidara su nombre y renaciera como el reflejo más despiadado de su maestro.»</i>"
     }
 ];
 

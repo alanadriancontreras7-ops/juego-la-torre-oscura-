@@ -34,10 +34,10 @@ class SpriteManager {
         // Registrar dinámicamente las 15 variantes visuales (3 armas x 5 armaduras) de cada héroe
 
         ['warrior', 'archer', 'mage'].forEach(cls => {
-            for (let w = 0; w < 3; w++) {
+            for (let w = 0; w < 5; w++) {
                 for (let a = 0; a < 5; a++) {
                     const key = `player_${cls}_w${w}_a${a}`;
-                    this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=5`;
+                    this.assetUrls[key] = `/static/assets/sprites/${key}.png?v=9`;
                 }
             }
         });

@@ -104,27 +104,29 @@ EYE_ORANGE = (255, 170, 60, 255)
 EYE_CYAN   = (90, 230, 255, 255)
 
 WARRIOR_ARMOR = [
-    dict(S=P_STEEL,   G=P_GOLD,    C=P_BLUE,       R=P_RED,    eye=EYE_N),
-    dict(S=P_OBSID,   G=P_CRIMSON, C=P_BLOODCAPE,  R=P_PURPLE, eye=EYE_RED),
-    dict(S=P_PALADIN, G=P_GOLD,    C=P_CELESTE,    R=P_GOLD,   eye=EYE_BLUE),
-    dict(S=P_OLDBONE, G=P_CRIMSON, C=P_HIDE,       R=P_OLDBONE, eye=EYE_ORANGE),   # 3 = hueso
-    dict(S=P_WSLATE,  G=P_AQUA,    C=P_PELT,       R=P_FURI,   eye=EYE_CYAN),      # 4 = lobo
-]
-ARCHER_ARMOR = [
-    dict(G=P_GREEN, T=P_LEATHER,      PANTS=P_PANTS,        eye=EYE_N,    trim=P_GOLD),
-    dict(G=P_NIGHT, T=P_BLACKLEATHER, PANTS=P_BLACKLEATHER, eye=EYE_RED,  trim=P_CRIMSON),
-    dict(G=P_ELVEN, T=P_GOLDLEATHER,  PANTS=P_CREAM,        eye=EYE_BLUE, trim=P_GOLD),
-    dict(G=P_HIDE,  T=P_OLDBONE,      PANTS=P_BLACKLEATHER, eye=EYE_ORANGE, trim=P_CRIMSON),   # 3 = hueso
-    dict(G=P_PELT,  T=P_WSLATE,       PANTS=P_WSLATE,       eye=EYE_CYAN,   trim=P_AQUA),      # 4 = lobo
-]
-MAGE_ARMOR = [
-    dict(M=P_PURPLE,    G=P_GOLD,    eye=EYE_N),
-    dict(M=P_NIGHTROBE, G=P_CRIMSON, eye=EYE_RED),
-    dict(M=P_CELESTE,   G=P_GOLD,    eye=EYE_BLUE),
-    dict(M=P_DARKROBE,  G=P_OLDBONE, eye=EYE_ORANGE),   # 3 = hueso
-    dict(M=P_WSLATE,    G=P_FURI,    eye=EYE_CYAN),     # 4 = lobo
+    dict(S=P_STEEL, G=P_GOLD, C=P_BLUE, R=P_RED, eye=EYE_N),                       # 0: Acero básico
+    dict(S=P_BONE, G=P_LEATHER, C=P_WOOD, R=P_BONE2, eye=EYE_N),                   # 1: Hueso
+    dict(S=P_WOLF_FUR, G=P_STEEL, C=P_WOLF_MANE, R=P_CELESTE, eye=EYE_BLUE),       # 2: Lobo
+    dict(S=P_OBSID, G=P_CRIMSON, C=P_BLOODCAPE, R=P_PURPLE, eye=EYE_RED),         # 3: Demoníaco
+    dict(S=P_PALADIN, G=P_GOLD, C=P_CELESTE, R=P_GOLD, eye=EYE_BLUE),              # 4: Legendario
 ]
 
+ARCHER_ARMOR = [
+    dict(G=P_GREEN, T=P_LEATHER, PANTS=P_PANTS, eye=EYE_N, trim=P_GOLD),           # 0: Cuero verde
+    dict(G=P_BONE, T=P_LEATHER, PANTS=P_WOOD, eye=EYE_N, trim=P_BONE2),            # 1: Costillas de hueso
+    dict(G=P_WOLF_FUR, T=P_WOLF_MANE, PANTS=P_WOLF_FUR, eye=EYE_BLUE, trim=P_WHITE), # 2: Lobo con capucha y ojos cian
+    dict(G=P_NIGHT, T=P_BLACKLEATHER, PANTS=P_BLACKLEATHER, eye=EYE_RED, trim=P_CRIMSON), # 3: Cuero oscuro
+    dict(G=P_ELVEN, T=P_GOLDLEATHER, PANTS=P_CREAM, eye=EYE_BLUE, trim=P_GOLD),    # 4: Elfo celestial
+]
+
+MAGE_ARMOR = [
+    dict(M=P_PURPLE, G=P_GOLD, eye=EYE_N),                                         # 0: Púrpura básico
+    dict(M=P_BONE2, G=P_PURPLE, eye=EYE_N),                                        # 1: Túnica de osario
+    dict(M=P_WOLF_MANE, G=P_CELESTE, eye=EYE_BLUE),                                # 2: Chamán de lobo
+    dict(M=P_NIGHTROBE, G=P_CRIMSON, eye=EYE_RED),                                 # 3: Ropaje oscuro
+    dict(M=P_CELESTE, G=P_GOLD, eye=EYE_BLUE),                                     # 4: Túnica celestial
+]
+  
 def _dn(R):
     return [R[1], R[2], R[3], R[4], R[4]]
 
@@ -274,6 +276,66 @@ def _blade(L, hand, tip, R=P_STEEL, look=0):
     sx, sy = hx + ux * 3, hy + uy * 3
     pmx, pmy = int(hx - ux * 3), int(hy - uy * 3)
 
+    if look == 1: # Hueso
+        L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], P_WOOD[DK], 2)
+        L.line([(sx, sy), (tx, ty)], P_BONE[MD], 3)
+        L.line([(sx - nx, sy - ny), (tx - nx, ty - ny)], P_BONE[HI], 1)
+        for i in range(3, int(ln) - 2, 3):
+            L.px(int(round(hx + ux * i + nx * 2)), int(round(hy + uy * i + ny * 2)), (180, 50, 50, 255))
+        return
+
+    if look == 2: # Lobo
+        L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], P_WOLF_MANE[DK], 2)
+        L.line([(sx, sy), (tx, ty)], P_STEEL[LT], 3)
+        L.line([(sx - nx, sy - ny), (tx - nx, ty - ny)], P_CELESTE[HI], 1)
+        L.px(int(gx), int(gy), P_BONE[HI])
+        return
+
+    if look == 3: # Demoníaco
+        O, F = P_OBSID, P_LAVA
+        L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], O[DK], 2)
+        L.line([(sx, sy), (tx, ty)], O[MD], 3)
+        L.line([(sx - nx, sy - ny), (tx - nx, ty - ny)], O[LT], 1)
+        L.line([(sx + ux * 2, sy + uy * 2), (tx - ux, ty - uy)], F[MD], 1)
+        L.px(int(tx), int(ty), F[HI])
+        return
+
+    if look == 4: # Legendario
+        H, Gd = P_HOLY, P_GOLD
+        L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], Gd[DK], 2)
+        L.line([(sx, sy), (tx, ty)], H[LT], 4)
+        L.line([(sx, sy), (tx, ty)], H[HI], 2)
+        L.px(int(gx), int(gy), P_AQUA[MD])
+        return
+
+    # Look 0: Acero estándar
+    L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], P_WOOD[DK], 2)
+    L.line([(sx, sy), (tx, ty)], R[MD], 3)
+    L.line([(sx - nx, sy - ny), (tx - nx, ty - ny)], R[HI], 1)
+
+def _blade_fx(hand, tip, look, size=48):
+    fx = _L(noline=True, size=size)
+    if look == 0 or look == 1:
+        return fx
+    if look == 2:
+        col, hi = (70, 210, 255), (230, 250, 255)
+    elif look == 3:
+        col, hi = (255, 100, 50), (255, 210, 120)
+    else:
+        col, hi = (140, 220, 255), (255, 252, 210)
+    fx.line([hand, tip], col + (34,), 9)
+    fx.line([hand, tip], col + (60,), 6)
+    return fx
+
+    hx, hy = hand
+    tx, ty = tip
+    ln = math.hypot(tx - hx, ty - hy) or 1
+    ux, uy = (tx - hx) / ln, (ty - hy) / ln
+    nx, ny = -uy, ux
+    gx, gy = hx + ux * 2, hy + uy * 2
+    sx, sy = hx + ux * 3, hy + uy * 3
+    pmx, pmy = int(hx - ux * 3), int(hy - uy * 3)
+
     if look == 1:
         O, F = P_OBSID, P_LAVA
         L.line([(hx - ux * 2, hy - uy * 2), (hx, hy)], O[DK], 2)
@@ -329,6 +391,171 @@ def _blade_fx(hand, tip, look, size=48):
     return fx
 
 def _bow(L, dr, ai, look=0, fx=None):
+    # Proteccion contra indices fuera de rango (seguro para 0, 1, 2, 3, 4)
+    lk = min(4, max(0, look))
+    W = [P_WOOD, P_BONE, P_WOLF_MANE, P_OBSID, P_GOLD][lk]
+    string = [
+        (236, 230, 204, 255), # 0 Madera
+        (200, 190, 175, 255), # 1 Hueso
+        (70, 230, 255, 255),  # 2 Lobo
+        (255, 96, 120, 255),  # 3 Demonio
+        (190, 246, 255, 255)  # 4 Legendario
+    ][lk]
+    tipc = [None, (160, 50, 40, 255), (160, 150, 170, 255), P_LAVA[HI], P_WHITE[HI]][lk]
+    glow = [None, None, (70, 220, 255), (255, 70, 110), (140, 225, 255)][lk]
+    a_shaft = [P_WOOD[LT], P_BONE[LT], P_WOLF_FUR[LT], P_OBSID[LT], P_GOLD[LT]][lk]
+    a_head = [P_STEEL[HI], P_BONE[HI], (70, 230, 255, 255), P_LAVA[MD], P_AQUA[HI]][lk]
+    a_fl = [P_RED[MD], (140, 40, 40, 255), P_WHITE[HI], P_PURPLE[DK], P_WHITE[HI]][lk]
+
+    def tips(pts):
+        if tipc:
+            for (x, y) in pts: L.px(x, y, tipc)
+
+    def deco(x, y0, y1):
+        if lk == 4:
+            L.poly([(x - 3, y0 + 3), (x - 8, y0), (x - 6, y0 + 5)], P_WHITE[LT])
+            L.poly([(x - 3, y1 - 3), (x - 8, y1), (x - 6, y1 - 5)], P_WHITE[LT])
+        elif lk == 3:
+            L.line([(x, y0), (x - 2, y0 - 2)], P_OBSID[LT])
+            L.line([(x, y1), (x - 2, y1 + 2)], P_OBSID[LT])
+
+    def glow_arc(box, a0, a1):
+        if fx is not None and glow:
+            fx.arc(box, a0, a1, glow + (50,), 6)
+
+    if dr in (0, 3):
+        sg = 1 if dr == 0 else -1
+        if ai is None:
+            box = (10, 14, 20, 40)
+            L.arc(box, 90, 270, W[MD], 2)
+            glow_arc(box, 90, 270)
+            L.line([(15, 14), (15, 40)], string, 1)
+            tips([(15, 14), (15, 40)])
+            deco(15, 14, 40)
+            return
+        box = (12, 19, 36, 33)
+        a0, a1 = (0, 180) if dr == 0 else (180, 360)
+        L.arc(box, a0, a1, W[MD], 2)
+        glow_arc(box, a0, a1)
+        pull = {0: 2, 1: 6, 2: 0}[ai] * (-sg)
+        L.line([(12, 26), (24, 26 + pull)], string, 1)
+        L.line([(24, 26 + pull), (36, 26)], string, 1)
+        tips([(12, 26), (36, 26)])
+        if ai in (0, 1):
+            y0 = 26 + pull
+            y1 = y0 + sg * 17
+            L.line([(24, y0), (24, y1)], a_shaft, 1)
+            L.px(24, y1, a_head)
+            L.px(24, y1 + sg, a_head)
+            L.px(23, y0 + sg, a_fl)
+            L.px(25, y0 + sg, a_fl)
+        return
+
+    if ai is None:
+        box = (8, 14, 18, 40)
+        L.arc(box, 90, 270, W[MD], 2)
+        glow_arc(box, 90, 270)
+        L.line([(13, 14), (13, 40)], string, 1)
+        tips([(13, 14), (13, 40)])
+        deco(13, 14, 40)
+        return
+    box = (7, 14, 17, 40)
+    L.arc(box, 90, 270, W[MD], 2)
+    glow_arc(box, 90, 270)
+    pull = {0: 3, 1: 8, 2: 0}[ai]
+    L.line([(12, 14), (12 + pull, 27)], string, 1)
+    L.line([(12 + pull, 27), (12, 40)], string, 1)
+    tips([(12, 14), (12, 40)])
+    deco(12, 14, 40)
+    if ai in (0, 1):
+        x1 = 12 + pull
+        L.line([(2, 27), (x1 + 2, 27)], a_shaft, 1)
+        L.px(1, 27, a_head)
+        L.px(2, 27, a_head)
+        L.px(x1 + 1, 26, a_fl)
+        L.px(x1 + 1, 28, a_fl)
+    lk = min(4, max(0, look))
+    W = [P_WOOD, P_BONE, P_WOLF_MANE, P_OBSID, P_GOLD][lk]
+    string = [
+        (236, 230, 204, 255),
+        (200, 190, 175, 255),
+        (70, 230, 255, 255),  # Lobo
+        (255, 96, 120, 255),  # Demon
+        (190, 246, 255, 255)  # Legend
+    ][lk]
+    tipc = [None, (160, 50, 40, 255), (160, 150, 170, 255), P_LAVA[HI], P_WHITE[HI]][lk]
+    glow = [None, None, (70, 220, 255), (255, 70, 110), (140, 225, 255)][lk]
+    a_shaft = [P_WOOD[LT], P_BONE[LT], P_WOLF_FUR[LT], P_OBSID[LT], P_GOLD[LT]][lk]
+    a_head = [P_STEEL[HI], P_BONE[HI], (70, 230, 255, 255), P_LAVA[MD], P_AQUA[HI]][lk]
+    a_fl = [P_RED[MD], (140, 40, 40, 255), P_WHITE[HI], P_PURPLE[DK], P_WHITE[HI]][lk]
+
+    def tips(pts):
+        if tipc:
+            for (x, y) in pts: L.px(x, y, tipc)
+
+    def deco(x, y0, y1):
+        if lk == 4:
+            L.poly([(x - 3, y0 + 3), (x - 8, y0), (x - 6, y0 + 5)], P_WHITE[LT])
+            L.poly([(x - 3, y1 - 3), (x - 8, y1), (x - 6, y1 - 5)], P_WHITE[LT])
+        elif lk == 3:
+            L.line([(x, y0), (x - 2, y0 - 2)], P_OBSID[LT])
+            L.line([(x, y1), (x - 2, y1 + 2)], P_OBSID[LT])
+
+    def glow_arc(box, a0, a1):
+        if fx is not None and glow:
+            fx.arc(box, a0, a1, glow + (50,), 6)
+
+    if dr in (0, 3):
+        sg = 1 if dr == 0 else -1
+        if ai is None:
+            box = (10, 14, 20, 40)
+            L.arc(box, 90, 270, W[MD], 2)
+            glow_arc(box, 90, 270)
+            L.line([(15, 14), (15, 40)], string, 1)
+            tips([(15, 14), (15, 40)])
+            deco(15, 14, 40)
+            return
+        box = (12, 19, 36, 33)
+        a0, a1 = (0, 180) if dr == 0 else (180, 360)
+        L.arc(box, a0, a1, W[MD], 2)
+        glow_arc(box, a0, a1)
+        pull = {0: 2, 1: 6, 2: 0}[ai] * (-sg)
+        L.line([(12, 26), (24, 26 + pull)], string, 1)
+        L.line([(24, 26 + pull), (36, 26)], string, 1)
+        tips([(12, 26), (36, 26)])
+        if ai in (0, 1):
+            y0 = 26 + pull
+            y1 = y0 + sg * 17
+            L.line([(24, y0), (24, y1)], a_shaft, 1)
+            L.px(24, y1, a_head)
+            L.px(24, y1 + sg, a_head)
+            L.px(23, y0 + sg, a_fl)
+            L.px(25, y0 + sg, a_fl)
+        return
+
+    if ai is None:
+        box = (8, 14, 18, 40)
+        L.arc(box, 90, 270, W[MD], 2)
+        glow_arc(box, 90, 270)
+        L.line([(13, 14), (13, 40)], string, 1)
+        tips([(13, 14), (13, 40)])
+        deco(13, 14, 40)
+        return
+    box = (7, 14, 17, 40)
+    L.arc(box, 90, 270, W[MD], 2)
+    glow_arc(box, 90, 270)
+    pull = {0: 3, 1: 8, 2: 0}[ai]
+    L.line([(12, 14), (12 + pull, 27)], string, 1)
+    L.line([(12 + pull, 27), (12, 40)], string, 1)
+    tips([(12, 14), (12, 40)])
+    deco(12, 14, 40)
+    if ai in (0, 1):
+        x1 = 12 + pull
+        L.line([(2, 27), (x1 + 2, 27)], a_shaft, 1)
+        L.px(1, 27, a_head)
+        L.px(2, 27, a_head)
+        L.px(x1 + 1, 26, a_fl)
+        L.px(x1 + 1, 28, a_fl)
     W = [P_WOOD, P_OBSID, P_GOLD][look]
     string = [(236, 230, 204, 255), (255, 96, 120, 255), (190, 246, 255, 255)][look]
     tipc = [None, P_LAVA[HI], P_WHITE[HI]][look]
@@ -411,6 +638,63 @@ def _bow(L, dr, ai, look=0, fx=None):
             fx.px(0, 27, glow + (220,))
 
 def _warrior_extra(dr, b, ak):
+    if ak == 0 or ak == 1:
+        return None, None
+    behind, front = _L(), _L()
+    if ak == 4: # Legendario (Alas)
+        wl_ = [(17, 13 + b), (10, 9 + b), (8, 12 + b), (11, 13 + b), (9, 16 + b), (13, 16 + b), (17, 17 + b)]
+        ws_ = [(26, 13 + b), (33, 9 + b), (35, 12 + b), (32, 13 + b), (34, 16 + b), (30, 16 + b), (26, 17 + b)]
+        for w in ([ws_] if dr == 1 else [wl_, _mir(wl_)]):
+            behind.poly(w, P_WHITE[LT])
+            behind.line([w[0], w[2]], P_WHITE[MD])
+        if dr == 0:
+            front.rect(23, 24 + b, 24, 25 + b, P_AQUA[MD])
+    elif ak == 3: # Demoníaco (Cuernos)
+        hl = [(18, 11 + b), (14, 9 + b), (13, 3 + b), (16, 7 + b), (19, 9 + b)]
+        hs = [(25, 10 + b), (25, 3 + b), (29, 7 + b), (28, 10 + b)]
+        for h in ([hs] if dr == 1 else [hl, _mir(hl)]):
+            front.poly(h, P_OBSID[LT])
+            front.px(h[1][0], h[1][1], P_LAVA[MD])
+    elif ak == 2: # Lobo (Pelaje hombreras)
+        sl = [(15, 21 + b), (13, 16 + b), (18, 20 + b)]
+        for sp in [sl, _mir(sl)]:
+            front.poly(sp, P_WOLF_FUR[LT])
+    return behind, front
+
+def _archer_extra(dr, b, ak):
+    if ak == 0 or ak == 1:
+        return None
+    L = _L()
+    if ak == 3: # Demon
+        sl = [(17, 21 + b), (14, 17 + b), (19, 20 + b)]
+        for sp in [sl, _mir(sl)]:
+            L.poly(sp, P_NIGHT[LT])
+            L.px(sp[1][0], sp[1][1], P_CRIMSON[MD])
+    elif ak == 4: # Elfo
+        pts = [(30, 5 + b), (36, 2 + b), (37, 6 + b), (32, 8 + b)] if dr == 1 else [(28, 4 + b), (34, 1 + b), (36, 5 + b), (31, 6 + b)]
+        L.poly(pts, P_WHITE[LT])
+        L.line([pts[0], pts[2]], P_GOLD[MD])
+    elif ak == 2: # Orejas de lobo en capucha
+        ear_l = [(18, 8 + b), (16, 3 + b), (20, 6 + b)]
+        ear_r = [(29, 8 + b), (31, 3 + b), (27, 6 + b)]
+        L.poly(ear_l, P_WOLF_MANE[DK])
+        L.poly(ear_r, P_WOLF_MANE[DK])
+    return L
+
+def _mage_extra(dr, b, ak):
+    if ak == 0 or ak == 1:
+        return None
+    L = _L()
+    if ak == 3:
+        hl = [(15, 11 + b), (12, 5 + b), (18, 9 + b)]
+        for h in [hl, _mir(hl)]:
+            L.poly(h, P_BONE2[LT])
+            L.px(h[1][0], h[1][1], P_CRIMSON[MD])
+    elif ak == 4:
+        if dr != 3:
+            for dx, dy in ((0, -1), (-1, 0), (0, 0), (1, 0), (0, 1)):
+                L.px(24 + dx, 8 + b + dy, P_GOLD[HI])
+    return L
     if ak == 0:
         return None, None
     behind, front = _L(), _L()
@@ -868,9 +1152,13 @@ def _mage_layers(dr, p, ai, anim, wl=0, ak=0):
     AM = MAGE_ARMOR[ak]
     M, G, K, Wh, Wd = AM['M'], AM['G'], P_SKIN, P_WHITE, P_WOOD
     eye = AM['eye']
-    gc = [((255, 190, 90), (255, 225, 130), (255, 245, 190)),
-          ((190, 80, 255), (232, 160, 255), (246, 200, 255)),
-          ((130, 225, 255), (226, 250, 255), (255, 255, 255))][wl]
+    gc = [
+        ((255, 190, 90), (255, 225, 130), (255, 245, 190)),  # 0 Madera básica
+        ((240, 240, 220), (255, 255, 240), (255, 255, 255)),  # 1 Hueso
+        ((40, 210, 255), (140, 240, 255), (255, 255, 255)),   # 2 Lobo
+        ((190, 80, 255), (232, 160, 255), (246, 200, 255)),   # 3 Demonio
+        ((130, 225, 255), (226, 250, 255), (255, 255, 255))   # 4 Legendario
+    ][min(4, max(0, wl))][wl]
     out = []
     sway = 1 if p['s'] > 0 else (-1 if p['s'] < 0 else 0)
 
@@ -922,7 +1210,13 @@ def _mage_layers(dr, p, ai, anim, wl=0, ak=0):
             L2.line([(hx - 1, hy), (tx - 1, ty)], Wd[LT], 1)
             L2.px(tx + 1, ty + 2, P_GOLD[MD]); L2.px(tx - 1, ty + 3, P_GOLD[MD])
             _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_ORB)
-        elif wl == 1:
+        elif wl == 1: # Hueso
+            L2.line([(hx, hy), (tx, ty)], Wd[DK], 2)
+            _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_BONE2)
+        elif wl == 2: # Lobo
+            L2.line([(hx, hy), (tx, ty)], P_WOLF_MANE[DK], 2)
+            _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_CELESTE)
+        elif wl == 3: # Demoníaco (antes wl == 1)
             O = P_OBSID
             L2.line([(hx, hy), (tx, ty)], O[MD], 2)
             L2.line([(hx - 1, hy), (tx - 1, ty)], O[LT], 1)
@@ -933,15 +1227,14 @@ def _mage_layers(dr, p, ai, anim, wl=0, ak=0):
             for sg in (-1, 1):
                 L2.line([(tx, ty + 3), (tx + sg * 4, ty), (tx + sg * 3, ty - 5)], O[MD], 1)
             _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_VOID)
-        else:
+        else: # Legendario (antes wl == 2)
             Gd = P_GOLD
             L2.line([(hx, hy), (tx, ty)], Gd[MD], 2)
             L2.line([(hx - 1, hy), (tx - 1, ty)], Gd[LT], 1)
             for sg in (-1, 1):
-                L2.poly([(tx, ty + 2), (tx + sg * 7, ty - 1), (tx + sg * 6, ty - 5), (tx + sg * 3, ty - 3)], P_WHITE[LT])
+                L2.poly([(tx, ty + 2), (tx + sg * 7, ty - 1), (tx + sg * 6, ty - 5), (tx + sg * 3, ty - 2)], P_WHITE[LT])
                 L2.line([(tx + sg * 2, ty), (tx + sg * 6, ty - 4)], P_WHITE[DK])
             _ball(L2, tx - 3, ty - 4, tx + 3, ty + 2, P_HOLYORB)
-
     if dr == 1:
         L = _L()
         staff(L)
@@ -2937,6 +3230,126 @@ def generate_icons():
 # ==============================================================================
 
 def build_all_spritesheets():
+    print("Generando spritesheets...")
+    
+    # 1. Jugadores: 25 combinaciones (5 armas x 5 armaduras) por clase
+    # 0: Común | 1: Hueso | 2: Lobo | 3: Oscura | 4: Legendaria
+    classes = [
+        ('warrior', draw_warrior_frame),
+        ('archer', draw_archer_frame),
+        ('mage', draw_mage_frame),
+    ]
+    for cls, drawer in classes:
+        for wl in range(5):        # 5 armas (0 a 4)
+            for ak in range(5):    # 5 armaduras (0 a 4)
+                sheet = create_canvas(48 * 7, 48 * 4)
+                for direction in range(4):
+                    for frame in range(4):
+                        f_img = drawer(direction, frame, is_attack=False, wl=wl, ak=ak)
+                        sheet.paste(f_img, (frame * 48, direction * 48))
+                    for atk in range(3):
+                        f_img = drawer(direction, atk, is_attack=True, wl=wl, ak=ak)
+                        sheet.paste(f_img, ((4 + atk) * 48, direction * 48))
+                sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}_w{wl}_a{ak}.png'))
+                if wl == 0 and ak == 0:
+                    sheet.save(os.path.join(ASSETS_DIR, f'player_{cls}.png'))
+        print(f"Creado: player_{cls}_w*_a*.png (25 combinaciones)")
+
+    # 2. Enemigos comunes 48x48
+    enemies_48 = [
+        ('enemy_bandit.png', draw_bandit_frame),
+        ('enemy_skeleton.png', draw_skeleton_frame),
+        ('enemy_rat.png', draw_rat_frame),
+    ]
+    for filename, drawer in enemies_48:
+        sheet = create_canvas(48 * 6, 48 * 4)
+        for direction in range(4):
+            for frame in range(4):
+                f_img = drawer(direction, frame, is_attack=False)
+                sheet.paste(f_img, (frame * 48, direction * 48))
+            for atk in range(2):
+                f_img = drawer(direction, atk, is_attack=True)
+                sheet.paste(f_img, ((4 + atk) * 48, direction * 48))
+        sheet.save(os.path.join(ASSETS_DIR, filename))
+        print(f"Creado: {filename}")
+        
+    # 3. Araña 48x48
+    spider_sheet = create_canvas(48 * 4, 48 * 4)
+    for direction in range(4):
+        for frame in range(4):
+            f_img = draw_spider_frame(direction, frame)
+            spider_sheet.paste(f_img, (frame * 48, direction * 48))
+    spider_sheet.save(os.path.join(ASSETS_DIR, 'enemy_spider.png'))
+    print("Creado: enemy_spider.png")
+    
+    # 4. Enemigos Grandes 56x56
+    enemies_56 = [
+        ('enemy_werewolf.png', draw_werewolf_frame),
+        ('enemy_demon.png', draw_demon_frame),
+    ]
+    for filename, drawer in enemies_56:
+        sheet = create_canvas(56 * 6, 56 * 4)
+        for direction in range(4):
+            for frame in range(4):
+                f_img = drawer(direction, frame, is_attack=False)
+                sheet.paste(f_img, (frame * 56, direction * 56))
+            for atk in range(2):
+                f_img = drawer(direction, atk, is_attack=True)
+                sheet.paste(f_img, ((4 + atk) * 56, direction * 56))
+        sheet.save(os.path.join(ASSETS_DIR, filename))
+        print(f"Creado: {filename}")
+        
+    # ==============================================================================
+    # JEFES: EXTRAER Y EXPORTAR DIRECTAMENTE DEL SPRITESHEET DE ALTA CALIDAD
+    # ==============================================================================
+    ref_path = os.path.join(os.path.dirname(__file__), 'bosses_reference.png')
+    
+    if os.path.exists(ref_path):
+        print("Procesando jefes desde bosses_reference.png con calidad profesional...")
+        ref_img = Image.open(ref_path).convert("RGBA")
+        rw, rh = ref_img.size
+        
+        # La hoja tiene 4 columnas y 4 filas
+        cell_w = rw // 4
+        cell_h = rh // 4
+        
+        # 1. ABRACADABRA (Fila 0 = Idle/Walk, Fila 1 = Vómito) -> 72x72
+        abra_sheet = create_canvas(72 * 4, 72 * 4)
+        for fila_origen, row_dest in [(0, 0), (0, 1), (1, 2), (1, 3)]:
+            for col in range(4):
+                box = (col * cell_w, fila_origen * cell_h, (col + 1) * cell_w, (fila_origen + 1) * cell_h)
+                frame = ref_img.crop(box).resize((72, 72), Image.Resampling.NEAREST)
+                abra_sheet.paste(frame, (col * 72, row_dest * 72))
+        abra_sheet.save(os.path.join(ASSETS_DIR, 'boss_abracadabra.png'))
+        print("Creado: boss_abracadabra.png (Calidad HD Pixel Art)")
+
+        # 2. HONG DEVORADOR (Fila 2 = Guardia y Ataque de Núcleo) -> 96x96
+        hong_sheet = create_canvas(96 * 4, 96 * 2)
+        for col in range(4):
+            box = (col * cell_w, 2 * cell_h, (col + 1) * cell_w, 3 * cell_h)
+            frame = ref_img.crop(box).resize((96, 96), Image.Resampling.NEAREST)
+            hong_sheet.paste(frame, (col * 96, 0))
+            hong_sheet.paste(frame, (col * 96, 96))
+        hong_sheet.save(os.path.join(ASSETS_DIR, 'boss_hong.png'))
+        print("Creado: boss_hong.png (Calidad HD Pixel Art)")
+
+        # 3. LUCIAN (Fila 3 = Salto, Zarpazos y Anillo de Escarcha) -> 72x72
+        lucian_sheet = create_canvas(72 * 4, 72 * 4)
+        for row_dest in range(4):
+            for col in range(4):
+                box = (col * cell_w, 3 * cell_h, (col + 1) * cell_w, 4 * cell_h)
+                frame = ref_img.crop(box).resize((72, 72), Image.Resampling.NEAREST)
+                lucian_sheet.paste(frame, (col * 72, row_dest * 72))
+        lucian_sheet.save(os.path.join(ASSETS_DIR, 'boss_lucian.png'))
+        print("Creado: boss_lucian.png (Calidad HD Pixel Art)")
+    else:
+        print(f"ADVERTENCIA: No se encontró {ref_path}. Coloca bosses_reference.png en la raíz.")
+    
+    # 8. Tilesets, Utilería e Iconos
+    generate_tiles()
+    generate_props()
+    generate_icons()
+    print("Generación completada con éxito.")
     print("Generando spritesheets...")
     
     # 1. Jugadores: 9 combinaciones por clase

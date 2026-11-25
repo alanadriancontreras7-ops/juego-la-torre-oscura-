@@ -326,10 +326,10 @@
         </div>
 
         <!-- ================================================================
-             6. MODAL DE ATRIBUTOS Y ESTADÍSTICAS
+             5. MODAL DE ATRIBUTOS Y ESTADÍSTICAS (CORREGIDO)
              ================================================================ -->
         <div id="stats-modal" class="game-modal">
-            <div class="modal-window" style="width: 500px; padding: 20px;">
+            <div class="modal-window" style="width: 580px; max-width: 95vw; padding: 20px;">
                 <div class="modal-header" style="margin:-20px -20px 20px -20px;">
                     <h3>ATRIBUTOS Y PROGRESIÓN</h3>
                     <button class="close-modal-btn">X</button>
@@ -342,44 +342,44 @@
                 </div>
 
                 <div
-                    style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px; font-family:'Press Start 2P'; font-size:10px;">
+                    style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px; font-family:'Press Start 2P'; font-size:9px;">
                     <div
-                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px; border-radius:4px;">
+                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px 14px; border-radius:4px; border:1px solid #3d2c50;">
                         <span>FUERZA (Ataque Físico)</span>
-                        <div>
-                            <span id="stat-str-val" style="margin-right:10px; color:#fff;">14</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="stat-str-val" style="color:#fff; min-width:85px; text-align:right;">14</span>
                             <button id="btn-add-str" class="pixel-btn btn-gold"
-                                style="padding:2px 8px; font-size:10px;">+</button>
+                                style="padding:4px 8px; font-size:10px;">+</button>
                         </div>
                     </div>
 
                     <div
-                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px; border-radius:4px;">
-                        <span>DESTREZA (Crítico / Velocidad)</span>
-                        <div>
-                            <span id="stat-dex-val" style="margin-right:10px; color:#fff;">8</span>
+                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px 14px; border-radius:4px; border:1px solid #3d2c50;">
+                        <span>DESTREZA (Crítico / Vel.)</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="stat-dex-val" style="color:#fff; min-width:85px; text-align:right;">15</span>
                             <button id="btn-add-dex" class="pixel-btn btn-gold"
-                                style="padding:2px 8px; font-size:10px;">+</button>
+                                style="padding:4px 8px; font-size:10px;">+</button>
                         </div>
                     </div>
 
                     <div
-                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px; border-radius:4px;">
-                        <span>MAGIA (Poder Hechizos / PM)</span>
-                        <div>
-                            <span id="stat-mag-val" style="margin-right:10px; color:#fff;">4</span>
+                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px 14px; border-radius:4px; border:1px solid #3d2c50;">
+                        <span>MAGIA (Hechizos / PM)</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="stat-mag-val" style="color:#fff; min-width:85px; text-align:right;">6</span>
                             <button id="btn-add-mag" class="pixel-btn btn-gold"
-                                style="padding:2px 8px; font-size:10px;">+</button>
+                                style="padding:4px 8px; font-size:10px;">+</button>
                         </div>
                     </div>
 
                     <div
-                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px; border-radius:4px;">
-                        <span>CONSTITUCIÓN (Vida Máx / Def)</span>
-                        <div>
-                            <span id="stat-con-val" style="margin-right:10px; color:#fff;">14</span>
+                        style="display:flex; justify-content:space-between; align-items:center; background:#1c1426; padding:10px 14px; border-radius:4px; border:1px solid #3d2c50;">
+                        <span>CONSTITUCIÓN (Vida / Def)</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span id="stat-con-val" style="color:#fff; min-width:85px; text-align:right;">10</span>
                             <button id="btn-add-con" class="pixel-btn btn-gold"
-                                style="padding:2px 8px; font-size:10px;">+</button>
+                                style="padding:4px 8px; font-size:10px;">+</button>
                         </div>
                     </div>
                 </div>
@@ -570,6 +570,11 @@
                         <button class="floor-pick-btn" data-floor="8" style="border-color:#2ecc71;">PISO 8 🧪</button>
                         <button class="floor-pick-btn" data-floor="9">PISO 9</button>
                         <button class="floor-pick-btn" data-floor="10" style="border-color:#f1c40f;">PISO 10 👑</button>
+                        <button class="floor-pick-btn" data-floor="11">PISO 11</button>
+                        <button class="floor-pick-btn" data-floor="12">PISO 12</button>
+                        <button class="floor-pick-btn" data-floor="13" style="border-color:#9b59b6;">PISO 13 ⚔️</button>
+                        <button class="floor-pick-btn" data-floor="14">PISO 14</button>
+                        <button class="floor-pick-btn" data-floor="15" style="border-color:#f1c40f;">PISO 15 👑</button>
                     </div>
                 </div>
 

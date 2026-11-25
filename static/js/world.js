@@ -58,7 +58,9 @@ class World {
         if (this.floor <= 4) return 'crypt';
         if (this.floor <= 7) return 'demon';
         if (this.floor === 8) return 'acid';
-        return 'apex';
+        if (this.floor <= 10) return 'apex';
+        if (this.floor <= 13) return 'void';  // Pisos 11 a 13: El Sello Quebrantado
+        return 'demon';                        // Pisos 14 y 15: Vórtice de Magma de Silmarion
     }
 
     generateFloor() {
@@ -89,6 +91,10 @@ class World {
             this.generateArenaRotunda();
         } else if (this.floor === 10) {
             this.generateArenaApex();
+        } else if (this.floor === 13) {
+            this.generateArenaMalakor();
+        } else if (this.floor === 15) {
+            this.generateArenaSilmarion();
         } else {
             this.generateDungeonRooms();
         }
@@ -299,6 +305,25 @@ class World {
         this.blacksmith = { x: (cx + 7) * this.tileSize, y: 36 * this.tileSize, name: 'Gunnar el Herrero' };
     }
 
+    generateArenaMalakor() {
+        // PISO 13: LA CÁMARA DE LA CADENA ROTA
+        const cx = Math.floor(this.cols / 2);
+        for (let r = 33; r <= 41; r++) for (let c = cx - 6; c <= cx + 6; c++) this.grid[r][c] = 0;
+        for (let r = 20; r <= 33; r++) for (let c = cx - 1; c <= cx + 1; c++) this.grid[r][c] = 0;
+        // Gran sala de duelo octogonal
+        for (let r = 4; r <= 20; r++) for (let c = cx - 13; c <= cx + 13; c++) this.grid[r][c] = 0;
+        this.merchant = { x: (cx + 4) * this.tileSize, y: 36 * this.tileSize, name: 'Kaelen el Renegado' };
+        this.blacksmith = { x: (cx - 4) * this.tileSize, y: 36 * this.tileSize, name: 'Gunnar el Herrero' };
+    }
+
+    generateArenaSilmarion() {
+        // PISO 15: EL TRONO DE CENIZA Y PRISIÓN DEL SEÑOR OSCURO
+        const cx = Math.floor(this.cols / 2);
+        for (let r = 33; r <= 41; r++) for (let c = cx - 6; c <= cx + 6; c++) this.grid[r][c] = 0;
+        for (let r = 20; r <= 33; r++) for (let c = cx - 1; c <= cx + 1; c++) this.grid[r][c] = 0;
+        for (let r = 3; r <= 20; r++) for (let c = cx - 16; c <= cx + 16; c++) this.grid[r][c] = 0;
+    }
+
     generateArenaRotunda() {
         const cx = Math.floor(this.cols / 2);
         for (let r = 33; r <= 41; r++) for (let c = cx - 6; c <= cx + 6; c++) this.grid[r][c] = 0;
@@ -367,11 +392,11 @@ class World {
 
     placeStairs() {
         const cx = Math.floor(this.cols / 2);
-        if (this.floor === 5 || this.floor === 8) {
+        if (this.floor === 5 || this.floor === 8 || this.floor === 10 || this.floor === 13) {
             this.stairs = { x: cx * this.tileSize, y: 5 * this.tileSize };
             return;
-        } else if (this.floor === 10) {
-            this.stairs = null;
+        } else if (this.floor === 15) {
+            this.stairs = null; // El piso 15 es el final absoluto
             return;
         }
         if (this.rooms && this.rooms.length > 0) {
@@ -383,6 +408,7 @@ class World {
             return;
         }
         this.stairs = { x: (this.cols - 5) * this.tileSize, y: (this.rows - 5) * this.tileSize };
+
     }
 
     placeTorches() {
